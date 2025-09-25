@@ -1,0 +1,284 @@
+/* OxiWorld Forex Academy Brand Colors */
+:root {
+  /* Main Brand Colors */
+  --brand-navy: #000ABE;
+  --brand-teal-green: #00B38F;
+  --brand-cyan: #00B39F;
+  
+  /* Extended Gradient Palette */
+  --brand-light-cyan: #57F8E7;
+  --brand-medium-teal: #42DAD9;
+  --brand-medium-cyan: #30B2BE;
+  --brand-medium-blue: #20BCA2;
+  --brand-dark-teal: #208CA2;
+  --brand-darker-blue: #145886;
+  --brand-darkest-blue: #032DA0;
+  
+  /* Professional Accent Colors */
+  --brand-electric: #00E5CC;
+  --brand-mint: #7FFFD4;
+  --brand-aqua: #40E0D0;
+  --brand-steel: #4682B4;
+  --brand-deep: #003366;
+  
+  /* Hover States */
+  --brand-teal-hover: #00A87D;
+  --brand-cyan-hover: #00A58D;
+  
+  /* Opacity Variants */
+  --brand-cyan-10: rgba(0, 179, 159, 0.1);
+  --brand-cyan-20: rgba(0, 179, 159, 0.2);
+  --brand-cyan-30: rgba(0, 179, 159, 0.3);
+  --brand-teal-10: rgba(0, 179, 143, 0.1);
+  --brand-teal-20: rgba(0, 179, 143, 0.2);
+  --brand-navy-10: rgba(0, 10, 190, 0.1);
+  --brand-navy-20: rgba(0, 10, 190, 0.2);
+}
+
+/* Creative Gradient Classes */
+.gradient-brand-primary {
+  background: linear-gradient(135deg, var(--brand-teal-green), var(--brand-cyan), var(--brand-electric));
+}
+
+.gradient-brand-secondary {
+  background: linear-gradient(135deg, var(--brand-navy), var(--brand-darkest-blue), var(--brand-teal-green));
+}
+
+.gradient-brand-hero {
+  background: linear-gradient(135deg, var(--brand-deep), var(--brand-navy), var(--brand-darkest-blue), var(--brand-teal-green));
+}
+
+.gradient-brand-electric {
+  background: linear-gradient(135deg, var(--brand-electric), var(--brand-aqua), var(--brand-mint));
+}
+
+.gradient-brand-ocean {
+  background: linear-gradient(135deg, var(--brand-navy), var(--brand-steel), var(--brand-cyan));
+}
+
+.gradient-brand-text {
+  background: linear-gradient(135deg, var(--brand-cyan), var(--brand-light-cyan), var(--brand-electric));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-brand-glow {
+  background: linear-gradient(135deg, var(--brand-electric), var(--brand-cyan));
+  box-shadow: 0 0 30px rgba(0, 229, 204, 0.3);
+}
+
+/* Professional Shadow Variants */
+.shadow-brand {
+  box-shadow: 0 10px 25px -5px rgba(0, 179, 159, 0.1), 0 4px 6px -2px rgba(0, 179, 159, 0.05);
+}
+
+.shadow-brand-lg {
+  box-shadow: 0 25px 50px -12px rgba(0, 179, 159, 0.15), 0 8px 16px -4px rgba(0, 179, 159, 0.1);
+}
+
+/* Hover Effects */
+.hover-brand-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 40px -8px rgba(0, 179, 159, 0.2);
+}
+
+/* Creative Animations */
+.animate-gradient-x {
+  background-size: 400% 400%;
+  animation: gradient-x 8s ease infinite;
+}
+
+.animate-gradient-flow {
+  background-size: 300% 300%;
+  animation: gradient-flow 10s ease infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background-size: 200% 200%;
+  animation: shimmer 3s linear infinite;
+}
+
+@keyframes gradient-x {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes gradient-flow {
+  0%, 100% {
+    background-position: 0% 0%;
+  }
+  25% {
+    background-position: 100% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
+  75% {
+    background-position: 0% 100%;
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(0, 229, 204, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(0, 229, 204, 0.7);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% -200%;
+  }
+  100% {
+    background-position: 200% 200%;
+  }
+}
+
+/* Brand Button Styles */
+.btn-brand-primary {
+  background: linear-gradient(135deg, var(--brand-teal-green), var(--brand-cyan));
+  color: white;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  transition: all 0.3s ease;
+  transform: scale(1);
+  box-shadow: 0 10px 25px -5px rgba(0, 179, 159, 0.1), 0 4px 6px -2px rgba(0, 179, 159, 0.05);
+}
+
+.btn-brand-primary:hover {
+  background: linear-gradient(135deg, var(--brand-teal-hover), var(--brand-cyan-hover));
+  transform: scale(1.05);
+}
+
+.btn-brand-secondary {
+  border: 2px solid var(--brand-cyan);
+  color: white;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  backdrop-filter: blur(12px);
+  transition: all 0.3s ease;
+}
+
+.btn-brand-secondary:hover {
+  background-color: var(--brand-cyan-10);
+}
+
+/* Creative Card Styles */
+.card-brand {
+  background: linear-gradient(135deg, rgba(0, 179, 143, 0.05), rgba(0, 179, 159, 0.08));
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 229, 204, 0.2);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 179, 159, 0.1);
+  transition: all 0.3s ease;
+}
+
+.card-brand:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 60px rgba(0, 229, 204, 0.2);
+  border-color: rgba(0, 229, 204, 0.4);
+}
+
+.card-brand-glow {
+  background: linear-gradient(135deg, rgba(0, 10, 190, 0.1), rgba(0, 179, 159, 0.1));
+  border: 1px solid rgba(0, 229, 204, 0.3);
+  box-shadow: 0 0 40px rgba(0, 229, 204, 0.15);
+}
+
+/* Form Styles */
+.input-brand {
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(0, 179, 159, 0.2);
+  border-radius: 12px;
+  color: white;
+  padding: 14px 18px;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.input-brand:focus {
+  border-color: var(--brand-electric);
+  box-shadow: 0 0 0 4px rgba(0, 229, 204, 0.1);
+  outline: none;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.input-brand::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Navigation Enhancements */
+.nav-brand {
+  background: linear-gradient(135deg, var(--brand-navy), var(--brand-darkest-blue));
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(0, 229, 204, 0.2);
+}
+
+/* Page Backgrounds */
+.bg-brand-page {
+  background: linear-gradient(135deg, var(--brand-deep), var(--brand-navy), var(--brand-darkest-blue));
+  min-height: 100vh;
+}
+
+.bg-brand-auth {
+  background: linear-gradient(135deg, var(--brand-navy), var(--brand-darkest-blue), var(--brand-teal-green));
+  position: relative;
+  overflow: hidden;
+}
+
+.bg-brand-auth::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2300E5CC' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  animation: float 20s ease-in-out infinite;
+}
+
+/* Loading States */
+.loading-brand {
+  background: linear-gradient(90deg, transparent, rgba(0, 229, 204, 0.2), transparent);
+  animation: shimmer 2s infinite;
+}
+
+/* Success/Error States */
+.alert-success {
+  background: linear-gradient(135deg, rgba(0, 179, 143, 0.1), rgba(0, 229, 204, 0.1));
+  border: 1px solid var(--brand-teal-green);
+  color: var(--brand-electric);
+}
+
+.alert-error {
+  background: linear-gradient(135deg, rgba(220, 38, 127, 0.1), rgba(239, 68, 68, 0.1));
+  border: 1px solid #ef4444;
+  color: #fca5a5;
+}
