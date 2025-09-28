@@ -1,11 +1,12 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
-import { User } from 'firebase/auth';
-import { onAuthChange, logout, handleRedirectResult } from '../auth';
+import { createContext, useContext } from 'react';
+import { useSession, signOut } from 'next-auth/react';
+import { Session } from 'next-auth';
 
 interface AuthContextType {
-  user: User | null;
+  session: Session | null;
+  user: Session['user'] | null;
   loading: boolean;
   logout: () => Promise<void>;
 }
@@ -13,31 +14,16 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Check for redirect result first
-    handleRedirectResult().then((redirectUser) => {
-      if (redirectUser) {
-        console.log('Redirect authentication successful:', redirectUser);
-      }
-    }).catch((error) => {
-      console.error('Redirect result error:', error);
-    });
-
-    // Set up auth state listener
-    const unsubscribe = onAuthChange((user) => {
-      setUser(user);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
+  const { data: session, status } = useSession();
+  
+  const logout = async () => {
+    await signOut({ callbackUrl: '/' });
+  };
 
   const value = {
-    user,
-    loading,
+    session,
+    user: session?.user || null,
+    loading: status === 'loading',
     logout,
   };
 

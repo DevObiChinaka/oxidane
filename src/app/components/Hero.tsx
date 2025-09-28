@@ -15,10 +15,10 @@ export default function Hero() {
 
   const getSessionStatus = () => {
     if (sessions.london.isOpen && sessions.newYork.isOpen) return { text: 'PEAK TRADING', color: 'bg-green-500' };
-    if (sessions.london.isOpen) return { text: 'LONDON OPEN', color: 'bg-blue-500' };
+    if (sessions.london.isOpen) return { text: 'LONDON OPEN', color: 'bg-[#000ABE]' };
     if (sessions.newYork.isOpen) return { text: 'NEW YORK OPEN', color: 'bg-green-500' };
-    if (sessions.tokyo.isOpen) return { text: 'TOKYO OPEN', color: 'bg-purple-500' };
-    if (sessions.sydney.isOpen) return { text: 'SYDNEY OPEN', color: 'bg-yellow-500' };
+    if (sessions.tokyo.isOpen) return { text: 'TOKYO OPEN', color: 'bg-[#00B39F]' };
+    if (sessions.sydney.isOpen) return { text: 'SYDNEY OPEN', color: 'bg-[#00B38F]' };
     return { text: 'MARKET CLOSED', color: 'bg-gray-500' };
   };
 
@@ -28,35 +28,41 @@ export default function Hero() {
     <section className="relative min-h-screen overflow-hidden">
       {/* Professional Background */}
       <div className="absolute inset-0">
-        {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#000ABE] via-[#032DA0] to-[#00B38F]"></div>
+        {/* Enhanced Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#000856] via-[#002A5C] to-[#004A42]"></div>
         
         {/* Financial Pattern Background */}
-        <div className="absolute inset-0 opacity-10">
+        <div className="absolute inset-0 opacity-8">
           <div className="absolute inset-0" style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
           }}></div>
         </div>
 
         {/* Subtle Chart Lines */}
-        <div className="absolute inset-0 opacity-5">
+        <div className="absolute inset-0 opacity-10">
           <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
             <path
               d="M0,50 Q25,30 50,40 T100,35"
-              stroke="white"
-              strokeWidth="0.5"
+              stroke="#00B38F"
+              strokeWidth="0.8"
               fill="none"
               className="animate-pulse"
             />
             <path
               d="M0,60 Q25,40 50,50 T100,45"
-              stroke="white"
-              strokeWidth="0.3"
+              stroke="#00B39F"
+              strokeWidth="0.6"
               fill="none"
               className="animate-pulse"
               style={{ animationDelay: '1s' }}
             />
           </svg>
+        </div>
+
+        {/* Subtle Glow Effects */}
+        <div className="absolute inset-0">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#00B38F]/5 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#000ABE]/5 rounded-full blur-3xl"></div>
         </div>
       </div>
 
@@ -65,7 +71,7 @@ export default function Hero() {
           {/* Left Column - Main Content */}
           <div className="space-y-8 text-white">
             {/* Professional Badge */}
-            <div className="inline-flex items-center px-4 py-2 bg-white/10 backdrop-blur-md border border-[#00B39F]/30 rounded-full text-sm font-medium">
+            <div className="inline-flex items-center px-4 py-2 bg-white/15 backdrop-blur-xl border border-white/20 rounded-full text-sm font-medium shadow-xl">
               <div className={`w-2 h-2 ${sessionStatus.color} rounded-full mr-2 animate-pulse`}></div>
               OxiWorld • Professional Since 2021
             </div>
@@ -74,7 +80,7 @@ export default function Hero() {
             <div className="space-y-6">
               <h1 className="text-5xl lg:text-7xl font-bold leading-relaxed pb-6">
                 Master Forex
-                <span className="block bg-gradient-to-r from-[#00B39F] to-[#578E7] bg-clip-text text-transparent pb-3">
+                <span className="block bg-gradient-to-r from-[#00B38F] to-[#00B39F] bg-clip-text text-transparent pb-3">
                   Trading
                 </span>
               </h1>
@@ -88,19 +94,19 @@ export default function Hero() {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 py-8">
               <div className="text-center">
                 <div className="text-3xl font-bold text-[#00B39F]">$2.5B+</div>
-                <div className="text-sm text-gray-400">Volume Traded</div>
+                <div className="text-sm text-gray-300">Volume Traded</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold text-[#00B38F]">78%</div>
-                <div className="text-sm text-gray-400">Success Rate</div>
+                <div className="text-sm text-gray-300">Success Rate</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-[#578E7]">5,247</div>
-                <div className="text-sm text-gray-400">Students</div>
+                <div className="text-3xl font-bold text-white">5,247</div>
+                <div className="text-sm text-gray-300">Students</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-[#42DAD9]">24/7</div>
-                <div className="text-sm text-gray-400">Support</div>
+                <div className="text-3xl font-bold text-[#00B38F]">24/7</div>
+                <div className="text-sm text-gray-300">Support</div>
               </div>
             </div>
 
@@ -114,7 +120,7 @@ export default function Hero() {
               </Link>
               <Link 
                 href="/market-analysis" 
-                className="border-2 border-[#00B39F]/50 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-[#00B39F]/10 backdrop-blur-md transition-all duration-300"
+                className="border-2 border-white/30 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-white/10 backdrop-blur-xl transition-all duration-200 hover:border-white/50"
               >
                 View Market Analysis
               </Link>
@@ -142,10 +148,10 @@ export default function Hero() {
           {/* Right Column - Live Market Data */}
           <div className="space-y-6">
             {/* Live Market Feed */}
-            <div className="bg-white/10 backdrop-blur-md border border-[#00B39F]/20 rounded-2xl p-6">
+            <div className="bg-white/8 backdrop-blur-2xl border border-white/15 rounded-2xl p-6 shadow-2xl">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-bold text-white">Live Market Rates</h3>
-                <div className="flex items-center space-x-2 text-sm text-gray-300">
+                <div className="flex items-center space-x-2 text-sm text-gray-200 bg-white/5 px-3 py-1 rounded-full backdrop-blur-md border border-white/10">
                   <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                   <span>Live • {mounted ? lastUpdate.toLocaleTimeString() : '--:--:--'}</span>
                 </div>
@@ -162,17 +168,17 @@ export default function Hero() {
               ) : (
                 <div className="space-y-3">
                   {rates.slice(0, 4).map((rate, index) => (
-                    <div key={index} className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-colors">
+                    <div key={index} className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10 hover:bg-white/8 transition-all duration-200 backdrop-blur-md hover:border-white/20">
                       <div className="flex items-center space-x-4">
                         <div>
-                          <div className="text-lg font-semibold text-white">{rate.symbol}</div>
-                          <div className="text-xs text-gray-400">Spread: {rate.spread} pips</div>
+                          <div className="text-lg font-bold text-white">{rate.symbol}</div>
+                          <div className="text-xs text-gray-300 bg-white/5 px-2 py-0.5 rounded-md">Spread: {rate.spread} pips</div>
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-lg font-bold text-white">{rate.price}</div>
-                        <div className={`text-sm font-medium flex items-center ${rate.isPositive ? 'text-green-400' : 'text-red-400'}`}>
-                          <span className="mr-1">{rate.isPositive ? '↗' : '↘'}</span>
+                        <div className="text-xl font-bold text-white">{rate.price}</div>
+                        <div className={`text-sm font-bold flex items-center justify-end px-2 py-1 rounded-md ${rate.isPositive ? 'text-green-300 bg-green-500/20' : 'text-red-300 bg-red-500/20'}`}>
+                          <span className="mr-1 text-base">{rate.isPositive ? '↗' : '↘'}</span>
                           {rate.change >= 0 ? '+' : ''}{rate.change} ({rate.changePercent >= 0 ? '+' : ''}{rate.changePercent}%)
                         </div>
                       </div>
@@ -182,14 +188,14 @@ export default function Hero() {
               )}
               
               <div className="mt-4 pt-4 border-t border-white/10">
-                <p className="text-xs text-gray-400 text-center">
+                <p className="text-xs text-gray-300 text-center bg-white/3 px-3 py-2 rounded-lg backdrop-blur-md">
                   Real-time institutional feeds • Spreads from 0.1 pips • ECN execution
                 </p>
               </div>
             </div>
 
             {/* Market Session Status */}
-            <div className="bg-white/10 backdrop-blur-md border border-[#00B39F]/20 rounded-2xl p-6">
+            <div className="bg-white/8 backdrop-blur-2xl border border-white/15 rounded-2xl p-6 shadow-2xl">
               <div className="flex items-center justify-between mb-4">
                 <h4 className="text-lg font-bold text-white">Market Status</h4>
                 <div className="flex items-center space-x-2">
@@ -229,7 +235,7 @@ export default function Hero() {
             </div>
 
             {/* Trading Opportunity Alert */}
-            <div className="bg-gradient-to-r from-[#000ABE]/20 to-[#00B38F]/20 backdrop-blur-md border border-[#00B39F]/30 rounded-2xl p-6">
+            <div className="bg-gradient-to-r from-[#00B38F]/10 to-[#00B39F]/10 backdrop-blur-2xl border border-white/15 rounded-2xl p-6 shadow-2xl">
               <h4 className="text-lg font-bold text-white mb-3 flex items-center">
                 <span className="text-yellow-400 mr-2">⚡</span>
                 Trading Opportunity

@@ -23,10 +23,10 @@ Current Domain Info:
 - Origin: ${info.origin}
 - Full URL: ${info.href}
 
-Add to Firebase Authorized Domains:
-✅ ${info.hostname} (primary)
-✅ 127.0.0.1 (alternative)
-✅ ${info.origin} (if above don't work)
+Add to Google OAuth Authorized URLs:
+✅ ${info.origin} (JavaScript origins)
+✅ ${info.origin}/api/auth/callback/google (Redirect URIs)
+✅ http://localhost:3000/api/auth/callback/google (Development)
       `);
     }
   };
@@ -49,7 +49,7 @@ Add to Firebase Authorized Domains:
       )}
       
       <div className="mt-3 text-sm text-yellow-700">
-        <p><strong>Tip:</strong> Copy the hostname from above and paste it in Firebase Console → Authentication → Settings → Authorized domains</p>
+        <p><strong>Tip:</strong> Copy the hostname from above and add it to your OAuth provider's authorized domains in Google Cloud Console</p>
       </div>
     </div>
   );
