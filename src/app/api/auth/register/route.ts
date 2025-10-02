@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Call Django backend to register user
+    // Call Django backend to register user (send OTP, no account created yet)
     const backendResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/auth/register/`, {
       method: 'POST',
       headers: {
@@ -41,7 +41,6 @@ export async function POST(request: NextRequest) {
         name,
         email,
         password,
-        send_verification_email: true,
       }),
     });
 
@@ -56,8 +55,11 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       { 
-        message: 'Registration successful. Please check your email for verification.',
-        user: responseData.user 
+        message: responseData.message,
+        email: responseData.email,
+        otp_sent: responseData.otp_sent,
+        requires_verification: responseData.requires_verification,
+        account_created: responseData.account_created
       },
       { status: 201 }
     );

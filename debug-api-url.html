@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API URL Debug Test</title>
+</head>
+<body>
+    <h1>API URL Debug Test</h1>
+    <button onclick="testAPIURL()">Test API URL Construction</button>
+    <div id="results"></div>
+
+    <script>
+        // Import the API base URL (simulate the same logic)
+        const API_BASE_URL = 'http://127.0.0.1:8000/api';
+        
+        function testAPIURL() {
+            const results = document.getElementById('results');
+            
+            // Test URL construction
+            const loginUrl = `${API_BASE_URL}/admin-auth/login/`;
+            
+            results.innerHTML = `
+                <h2>URL Construction Test:</h2>
+                <p><strong>API_BASE_URL:</strong> ${API_BASE_URL}</p>
+                <p><strong>Constructed URL:</strong> ${loginUrl}</p>
+                <p><strong>Expected:</strong> http://127.0.0.1:8000/api/admin-auth/login/</p>
+                <p><strong>Match:</strong> ${loginUrl === 'http://127.0.0.1:8000/api/admin-auth/login/' ? '✅ YES' : '❌ NO'}</p>
+            `;
+            
+            console.log('API_BASE_URL:', API_BASE_URL);
+            console.log('Constructed URL:', loginUrl);
+            
+            // Test actual fetch
+            fetch(loginUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    username: 'test',
+                    password: 'test'
+                })
+            }).then(response => {
+                results.innerHTML += `<p><strong>Fetch Status:</strong> ${response.status}</p>`;
+                return response.text();
+            }).then(text => {
+                results.innerHTML += `<p><strong>Response Preview:</strong> ${text.substring(0, 100)}...</p>`;
+            }).catch(error => {
+                results.innerHTML += `<p><strong>Fetch Error:</strong> ${error.message}</p>`;
+            });
+        }
+    </script>
+</body>
+</html>

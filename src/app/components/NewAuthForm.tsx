@@ -15,7 +15,7 @@ export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps)
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');useState('');
+  const [success, setSuccess] = useState('');
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [emailVerificationSent, setEmailVerificationSent] = useState(false);
   const [showOtpVerification, setShowOtpVerification] = useState(false);
@@ -87,13 +87,7 @@ export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps)
       const data = await response.json();
 
       if (!response.ok) {
-        if (data.error === 'Email not verified' && !isLogin) {
-          setEmailForVerification(email);
-          setShowOtpVerification(true);
-          setSuccess('Please verify your email to complete registration');
-        } else {
-          setError(data.error || 'Authentication failed');
-        }
+        setError(data.error || 'Authentication failed');
         setLoading(false);
         return;
       }
@@ -103,8 +97,15 @@ export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps)
         // Handle successful login (redirect, store token, etc.)
         window.location.href = '/dashboard';
       } else {
-        setEmailVerificationSent(true);
-        setSuccess('Registration successful! Please check your email to verify your account.');
+        // Registration: Show OTP verification screen
+        if (data.otp_sent || data.requires_verification) {
+          setEmailForVerification(email);
+          setShowOtpVerification(true);
+          setSuccess('Verification code sent! Please check your email and enter the code to complete your registration.');
+        } else {
+          setEmailVerificationSent(true);
+          setSuccess('Registration successful! Please check your email to verify your account.');
+        }
       }
     } catch (error) {
       setError('An error occurred. Please try again.');
@@ -203,13 +204,17 @@ export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps)
         return;
       }
 
-      setSuccess('Email verified successfully! Your account is now active.');
+      setSuccess('🎉 Account created successfully! Your registration is complete. You can now sign in with your credentials.');
       setTimeout(() => {
         setShowOtpVerification(false);
-        setIsLogin(true);
+        setIsLogin(true); // Switch to login form
         setEmail(emailForVerification);
         setPassword(''); // Clear password for security
-      }, 2000);
+        setName(''); // Clear name
+        setConfirmPassword(''); // Clear confirm password
+        setOtp(''); // Clear OTP
+        setError(''); // Clear any errors
+      }, 3000); // Give user time to read success message
     } catch (error) {
       setError('An error occurred. Please try again.');
     }
@@ -220,11 +225,42 @@ export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps)
   // OTP Verification Screen
   if (showOtpVerification) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#000856] via-[#001A7A] to-[#000856] flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-x-hidden">
+      <div className="min-h-screen bg-gradient-to-br from-[#000856] via-[#002A5C] to-[#004A42] flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden">
+        {/* Hero-Inspired Background Design - same as main form */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-32 w-80 h-80 bg-[#00B38F] rounded-full mix-blend-multiply filter blur-xl opacity-60 animate-pulse"></div>
-          <div className="absolute -bottom-40 -left-32 w-80 h-80 bg-[#000ABE] rounded-full mix-blend-multiply filter blur-xl opacity-60 animate-pulse animation-delay-2000"></div>
-          <div className="absolute top-1/3 left-1/3 w-96 h-96 bg-[#00B38F] rounded-full mix-blend-multiply filter blur-xl opacity-40 animate-pulse animation-delay-4000"></div>
+          {/* Financial Pattern Background */}
+          <div className="absolute inset-0 opacity-8">
+            <div className="absolute inset-0" style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+            }}></div>
+          </div>
+
+          {/* Animated Chart Lines */}
+          <div className="absolute inset-0 opacity-15">
+            <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+              <path
+                d="M0,50 Q25,30 50,40 T100,35"
+                stroke="#00B38F"
+                strokeWidth="0.5"
+                fill="none"
+                className="animate-pulse"
+              />
+              <path
+                d="M0,60 Q25,45 50,50 T100,45"
+                stroke="#00B38F"
+                strokeWidth="0.3"
+                fill="none"
+                opacity="0.6"
+                className="animate-pulse"
+                style={{ animationDelay: '1s' }}
+              />
+            </svg>
+          </div>
+
+          {/* Floating Elements */}
+          <div className="absolute top-20 right-20 w-32 h-32 bg-[#00B38F]/10 rounded-full blur-xl animate-float"></div>
+          <div className="absolute bottom-32 left-20 w-48 h-48 bg-[#004A42]/20 rounded-full blur-2xl animate-float-delayed"></div>
+          <div className="absolute top-1/3 left-1/4 w-24 h-24 bg-[#002A5C]/15 rounded-full blur-lg animate-pulse"></div>
         </div>
 
         <div className="relative z-10 sm:mx-auto sm:w-full sm:max-w-md">
@@ -265,6 +301,18 @@ export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps)
                   placeholder="000000"
                 />
                 <p className="text-xs text-slate-300 mt-2">Enter the 6-digit code from your email</p>
+              </div>
+
+              <div className="bg-[#00B38F]/20 border border-[#00B38F]/30 rounded-xl p-4">
+                <div className="flex items-start">
+                  <svg className="w-5 h-5 text-[#00B38F] mr-3 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                  </svg>
+                  <div className="text-[#00B38F]/90 text-sm">
+                    <p className="font-medium mb-1">After verification:</p>
+                    <p>Your account will be created and you'll be redirected to the sign-in form to access your new OxiWorld account.</p>
+                  </div>
+                </div>
               </div>
 
               {error && (

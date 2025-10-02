@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Connection Test</title>
+</head>
+<body>
+    <h1>API Connection Test</h1>
+    <button onclick="testConnection()">Test Connection</button>
+    <div id="results"></div>
+
+    <script>
+        async function testConnection() {
+            const results = document.getElementById('results');
+            results.innerHTML = 'Testing...';
+            
+            try {
+                // Test 1: Basic connection to Django
+                console.log('Testing basic Django connection...');
+                const response1 = await fetch('http://127.0.0.1:8000/api/admin-auth/check-session/');
+                console.log('Response 1:', response1.status, await response1.text());
+                
+                // Test 2: Dashboard metrics (should be 401)
+                console.log('Testing dashboard metrics...');
+                const response2 = await fetch('http://127.0.0.1:8000/api/admin/dashboard/metrics/');
+                console.log('Response 2:', response2.status, await response2.text());
+                
+                results.innerHTML = `
+                    <h2>Connection Test Results:</h2>
+                    <p>Auth endpoint: ${response1.status}</p>
+                    <p>Dashboard endpoint: ${response2.status}</p>
+                    <p>Check console for details</p>
+                `;
+                
+            } catch (error) {
+                console.error('Connection failed:', error);
+                results.innerHTML = `<p style="color: red;">Connection failed: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
