@@ -153,6 +153,59 @@ export interface APIResponse<T = any> {
   message?: string;
 }
 
+// Subscription types
+export interface Subscription {
+  id: string;
+  user: {
+    id: string;
+    username: string;
+    email: string;
+    telegram_id?: string;
+    is_verified: boolean;
+  };
+  plan_type: 'monthly' | 'yearly' | 'lifetime';
+  payment_status: 'pending' | 'completed' | 'failed' | 'cancelled' | 'refunded';
+  telegram_status: 'none' | 'pending' | 'verified' | 'expired';
+  start_date: string;
+  end_date?: string;
+  amount: string;
+  currency: string;
+  payment_method: string;
+  payment_reference?: string;
+  created_at: string;
+  updated_at: string;
+  is_active: boolean;
+}
+
+export interface SubscriptionListResponse {
+  results: Subscription[];
+  count: number;
+  next?: string;
+  previous?: string;
+}
+
+export interface SubscriptionAnalytics {
+  total_subscriptions: number;
+  active_subscriptions: number;
+  revenue_this_month: string;
+  revenue_growth: number;
+  top_plans: Array<{
+    plan_type: string;
+    count: number;
+    revenue: string;
+  }>;
+  payment_status_distribution: Array<{
+    status: string;
+    count: number;
+    percentage: number;
+  }>;
+  monthly_trends: Array<{
+    month: string;
+    subscriptions: number;
+    revenue: string;
+  }>;
+}
+
 // Error types
 export interface APIError {
   message: string;

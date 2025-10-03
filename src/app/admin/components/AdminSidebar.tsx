@@ -30,7 +30,6 @@ export default function AdminSidebar() {
       items: [
         { name: 'Courses', href: '/admin/courses', icon: '📚' },
         { name: 'Lessons', href: '/admin/lessons', icon: '🎥' },
-        { name: 'Course Analytics', href: '/admin/course-analytics', icon: '📋' },
       ]
     },
     {

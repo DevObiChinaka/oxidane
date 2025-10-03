@@ -67,25 +67,51 @@ export default function CourseFormModal({
     const difficultyText = difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
     const typeText = courseType === 'premium' ? 'Premium' : 'Free';
     
+    // Generate SEO-optimized meta_title (max 60 chars)
+    let metaTitle = '';
+    if (title) {
+      const baseSuffix = ' | OxiWorld Academy';
+      const maxTitleLength = 60 - baseSuffix.length;
+      
+      if (title.length <= maxTitleLength) {
+        metaTitle = `${title}${baseSuffix}`;
+      } else {
+        // Truncate at word boundary for better SEO
+        let truncated = title.substring(0, maxTitleLength - 3);
+        const lastSpace = truncated.lastIndexOf(' ');
+        if (lastSpace > 0) {
+          truncated = truncated.substring(0, lastSpace);
+        }
+        metaTitle = `${truncated}...${baseSuffix}`;
+      }
+    }
+    
     const baseSuggestions = {
-      meta_title: title ? `${title} - ${difficultyText} ${typeText} Forex Course | OxiWorld Academy` : '',
+      meta_title: metaTitle,
       meta_description: title ? 
         `Learn ${title.toLowerCase()} with our comprehensive ${difficulty} forex trading course. ${courseType === 'premium' ? 'Premium content with advanced strategies.' : 'Free course for beginners.'} Start trading forex professionally.` : 
         '',
-      keywords: [
-        'forex trading',
-        'currency trading',
-        `${difficulty} forex`,
-        'forex education',
-        'trading strategies',
-        'forex academy',
-        'trading course',
-        'forex learning',
-        ...(courseType === 'premium' ? ['premium trading', 'advanced forex'] : ['free forex course', 'forex basics']),
-        ...(difficulty === 'beginner' ? ['forex for beginners', 'learn forex'] : 
-           difficulty === 'intermediate' ? ['forex strategies', 'trading techniques'] : 
-           ['advanced trading', 'professional forex', 'forex mastery'])
-      ].join(', ')
+      keywords: (() => {
+        const baseKeywords = [
+          'forex trading',
+          'currency trading',
+          `${difficulty} forex`,
+          'forex education',
+          'trading strategies'
+        ];
+        
+        const typeKeywords = courseType === 'premium' ? ['premium trading'] : ['free forex course'];
+        const difficultyKeywords = difficulty === 'beginner' ? ['forex basics'] : 
+                                  difficulty === 'intermediate' ? ['forex strategies'] : 
+                                  ['advanced trading'];
+        
+        const allKeywords = [...baseKeywords, ...typeKeywords, ...difficultyKeywords];
+        const keywordString = allKeywords.join(', ');
+        
+        // Ensure we stay within 200 character limit
+        return keywordString.length <= 200 ? keywordString : 
+               allKeywords.slice(0, -1).join(', '); // Remove last keyword if too long
+      })()
     };
 
     return baseSuggestions;
@@ -155,6 +181,8 @@ export default function CourseFormModal({
       newErrors.title = 'Course title is required';
     } else if (formData.title.length < 3) {
       newErrors.title = 'Title must be at least 3 characters';
+    } else if (formData.title.length > 120) {
+      newErrors.title = 'Title must be 120 characters or less';
     }
 
     if (!formData.slug.trim()) {
@@ -179,6 +207,19 @@ export default function CourseFormModal({
 
     if (formData.estimated_duration <= 0) {
       newErrors.estimated_duration = 'Estimated duration must be greater than 0';
+    }
+
+    // Validate SEO field lengths
+    if (formData.meta_title.length > 60) {
+      newErrors.meta_title = 'Meta title must be 60 characters or less';
+    }
+
+    if (formData.meta_description.length > 160) {
+      newErrors.meta_description = 'Meta description must be 160 characters or less';
+    }
+
+    if (formData.keywords.length > 200) {
+      newErrors.keywords = 'Keywords must be 200 characters or less';
     }
 
     setErrors(newErrors);
@@ -265,20 +306,27 @@ export default function CourseFormModal({
             <div className="lg:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Course Title *
+                <span className={`ml-2 text-xs ${formData.title.length > 120 ? 'text-red-600' : 'text-gray-500'}`}>
+                  ({formData.title.length}/120 characters)
+                </span>
               </label>
               <input
                 type="text"
                 value={formData.title}
                 onChange={(e) => handleInputChange('title', e.target.value)}
-                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-black ${
-                  errors.title ? 'border-red-300 bg-red-50' : 'border-gray-300 bg-white'
+                maxLength={120}
+                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:border-transparent transition-all text-black ${
+                  errors.title ? 'border-red-300 bg-red-50 focus:ring-red-500' : 'border-gray-300 bg-white focus:ring-blue-500'
                 }`}
-                placeholder="Enter course title (e.g., Advanced Forex Trading Strategies)"
+                placeholder="Enter full course title (up to 120 characters)"
                 disabled={isSubmitting}
               />
               {errors.title && (
                 <p className="mt-1 text-sm text-red-600">{errors.title}</p>
               )}
+              <p className="mt-1 text-xs text-gray-500">
+                Full display title. SEO title will be auto-generated (60 chars max).
+              </p>
             </div>
 
             <div className="lg:col-span-2">
@@ -436,16 +484,30 @@ export default function CourseFormModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                SEO Title
+                SEO Title (Optional)
+                <span className={`ml-2 text-xs ${formData.meta_title.length > 60 ? 'text-red-600' : 'text-gray-500'}`}>
+                  ({formData.meta_title.length}/60 characters)
+                </span>
               </label>
               <input
                 type="text"
                 value={formData.meta_title}
                 onChange={(e) => handleInputChange('meta_title', e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
-                placeholder="SEO optimized title (optional)"
+                maxLength={60}
+                className={`w-full px-4 py-3 border bg-white rounded-xl focus:outline-none focus:ring-2 focus:border-transparent text-black ${
+                  formData.meta_title.length > 60 
+                    ? 'border-red-300 focus:ring-red-500' 
+                    : 'border-gray-300 focus:ring-blue-500'
+                }`}
+                placeholder="Auto-generated from title if empty"
                 disabled={isSubmitting}
               />
+              {formData.meta_title.length > 60 && (
+                <p className="text-red-600 text-xs mt-1">SEO title must be 60 characters or less</p>
+              )}
+              <p className="mt-1 text-xs text-gray-500">
+                Leave empty to auto-generate from course title. Used in search results.
+              </p>
             </div>
 
             <div>
@@ -466,29 +528,54 @@ export default function CourseFormModal({
             <div className="lg:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 SEO Description
+                <span className={`ml-2 text-xs ${formData.meta_description.length > 160 ? 'text-red-600' : 'text-gray-500'}`}>
+                  ({formData.meta_description.length}/160 characters)
+                </span>
               </label>
               <textarea
                 rows={2}
                 value={formData.meta_description}
                 onChange={(e) => handleInputChange('meta_description', e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
-                placeholder="SEO meta description (optional)"
+                maxLength={160}
+                className={`w-full px-4 py-3 border bg-white rounded-xl focus:outline-none focus:ring-2 focus:border-transparent text-black ${
+                  formData.meta_description.length > 160 
+                    ? 'border-red-300 focus:ring-red-500' 
+                    : 'border-gray-300 focus:ring-blue-500'
+                }`}
+                placeholder="SEO meta description (max 160 characters)"
                 disabled={isSubmitting}
               />
+              {formData.meta_description.length > 160 && (
+                <p className="text-red-600 text-xs mt-1">Description must be 160 characters or less</p>
+              )}
             </div>
 
             <div className="lg:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Keywords
+                <span className={`ml-2 text-xs ${formData.keywords.length > 200 ? 'text-red-600' : 'text-gray-500'}`}>
+                  ({formData.keywords.length}/200 characters)
+                </span>
               </label>
               <input
                 type="text"
                 value={formData.keywords}
                 onChange={(e) => handleInputChange('keywords', e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-black"
-                placeholder="Comma-separated keywords (e.g., forex, trading, strategies)"
+                maxLength={200}
+                className={`w-full px-4 py-3 border bg-white rounded-xl focus:outline-none focus:ring-2 focus:border-transparent text-black ${
+                  formData.keywords.length > 200 
+                    ? 'border-red-300 focus:ring-red-500' 
+                    : 'border-gray-300 focus:ring-blue-500'
+                }`}
+                placeholder="Comma-separated keywords (max 200 characters)"
                 disabled={isSubmitting}
               />
+              {formData.keywords.length > 200 && (
+                <p className="text-red-600 text-xs mt-1">Keywords must be 200 characters or less</p>
+              )}
+              <p className="mt-1 text-xs text-gray-500">
+                Separate keywords with commas for better SEO targeting.
+              </p>
             </div>
           </div>
 

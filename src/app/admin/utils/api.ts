@@ -197,6 +197,10 @@ export class AdminAPIClient {
   }
 
   async createCourse(courseData: any) {
+    console.log('🌐 API: Creating course with data:', courseData);
+    console.log('🌐 API: JSON stringify result:', JSON.stringify(courseData));
+    console.log('🌐 API: Endpoint: /admin/courses/');
+    
     return this.request('/admin/courses/', {
       method: 'POST',
       body: JSON.stringify(courseData),
@@ -300,6 +304,187 @@ export class AdminAPIClient {
   // Course analytics
   async getCourseAnalytics(courseId: string) {
     return this.request(`/admin/courses/${courseId}/analytics/`);
+  }
+
+  // Dashboard analytics
+  async getDashboardAnalytics() {
+    return this.request('/admin/dashboard/analytics/');
+  }
+
+  // User management
+  async getUsers(params: {
+    page?: number;
+    per_page?: number;
+    search?: string;
+    status?: string;
+    subscription?: string;
+    date_from?: string;
+    date_to?: string;
+  } = {}) {
+    const queryParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value) queryParams.append(key, value.toString());
+    });
+    
+    const endpoint = `/admin/users/${queryParams.toString() ? `?${queryParams}` : ''}`;
+    return this.request(endpoint);
+  }
+
+  async getUserDetail(userId: string) {
+    return this.request(`/admin/users/${userId}/`);
+  }
+
+  async userAction(userId: string, action: string) {
+    return this.request(`/admin/users/${userId}/action/`, {
+      method: 'POST',
+      body: JSON.stringify({ action }),
+    });
+  }
+
+  async getUsersAnalytics() {
+    return this.request('/admin/users-analytics/');
+  }
+
+  // Subscription Management Methods
+  async getSubscriptions(params: {
+    page?: number;
+    limit?: number;
+    payment_status?: string;
+    plan_type?: string;
+    telegram_status?: string;
+    search?: string;
+    date_from?: string;
+    date_to?: string;
+  } = {}) {
+    const queryParams = new URLSearchParams();
+    
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        queryParams.append(key, String(value));
+      }
+    });
+
+    const endpoint = `/admin/subscriptions/${queryParams.toString() ? `?${queryParams}` : ''}`;
+    return this.request(endpoint);
+  }
+
+  async getSubscriptionDetail(subscriptionId: string) {
+    return this.request(`/admin/subscriptions/${subscriptionId}/`);
+  }
+
+  async updateSubscription(subscriptionId: string, updates: any, reason?: string) {
+    return this.request(`/admin/subscriptions/${subscriptionId}/`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        ...updates,
+        admin_reason: reason
+      }),
+    });
+  }
+
+  async verifyPayment(subscriptionId: string, data?: any) {
+    return this.request(`/admin/subscriptions/${subscriptionId}/verify/`, {
+      method: 'POST',
+      body: JSON.stringify(data || {}),
+    });
+  }
+
+  async getSubscriptionAnalytics(params: {
+    period?: 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+    days_back?: number;
+  } = {}) {
+    const queryParams = new URLSearchParams();
+    
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) {
+        queryParams.append(key, String(value));
+      }
+    });
+
+    const endpoint = `/admin/analytics/dashboard/${queryParams.toString() ? `?${queryParams}` : ''}`;
+    return this.request(endpoint);
+  }
+
+  async getPerformanceMetrics(params: {
+    hours?: number;
+    category?: string;
+  } = {}) {
+    const queryParams = new URLSearchParams();
+    
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) {
+        queryParams.append(key, String(value));
+      }
+    });
+
+    const endpoint = `/admin/performance/metrics/${queryParams.toString() ? `?${queryParams}` : ''}`;
+    return this.request(endpoint);
+  }
+
+  // Email Template Management
+  async getEmailTemplates(params: {
+    page?: number;
+    page_size?: number;
+    type?: string;
+    status?: string;
+    search?: string;
+  } = {}) {
+    const queryParams = new URLSearchParams();
+    
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) {
+        queryParams.append(key, String(value));
+      }
+    });
+
+    const endpoint = `/users/admin/email-templates/${queryParams.toString() ? `?${queryParams}` : ''}`;
+    return this.request(endpoint);
+  }
+
+  async getEmailTemplateTypes() {
+    return this.request('/users/admin/email-template-types/');
+  }
+
+  async getEmailAnalytics() {
+    return this.request('/users/admin/email-analytics/');
+  }
+
+  async getEmailTemplate(templateId: string) {
+    return this.request(`/users/admin/email-templates/${templateId}/`);
+  }
+
+  async createEmailTemplate(templateData: any) {
+    return this.request('/users/admin/email-templates/', {
+      method: 'POST',
+      body: JSON.stringify(templateData),
+    });
+  }
+
+  async updateEmailTemplate(templateId: string, templateData: any) {
+    return this.request(`/users/admin/email-templates/${templateId}/`, {
+      method: 'PUT',
+      body: JSON.stringify(templateData),
+    });
+  }
+
+  async deleteEmailTemplate(templateId: string) {
+    return this.request(`/users/admin/email-templates/${templateId}/`, {
+      method: 'DELETE',
+    });
+  }
+
+  async previewEmailTemplate(templateId: string, sampleData: any) {
+    return this.request(`/users/admin/email-templates/${templateId}/preview/`, {
+      method: 'POST',
+      body: JSON.stringify(sampleData),
+    });
+  }
+
+  async sendTestEmail(templateId: string, testData: any) {
+    return this.request(`/users/admin/email-templates/${templateId}/test/`, {
+      method: 'POST',
+      body: JSON.stringify(testData),
+    });
   }
 }
 

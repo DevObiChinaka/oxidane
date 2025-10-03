@@ -10,6 +10,10 @@ import {
   CourseAnalytics, 
   APIError 
 } from '../types/admin';
+import { 
+  Subscription, 
+  SubscriptionAnalytics 
+} from '../../../types/subscription';
 
 const apiClient = new AdminAPIClient();
 
@@ -123,9 +127,19 @@ export function useCourseActions() {
     try {
       setLoading(true);
       setError(null);
+      console.log('🔍 useCourseActions: Creating course with data:', courseData);
+      console.log('🔍 useCourseActions: Data keys:', Object.keys(courseData));
+      console.log('🔍 useCourseActions: Required fields check:');
+      console.log('  - title:', courseData.title);
+      console.log('  - description:', courseData.description);
+      console.log('  - short_description:', courseData.short_description);
+      console.log('  - slug:', courseData.slug);
+      
       const course = await apiClient.createCourse(courseData);
+      console.log('✅ useCourseActions: Course created successfully:', course);
       return course;
     } catch (err) {
+      console.error('❌ useCourseActions: Course creation failed:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to create course';
       setError(errorMessage);
       throw new Error(errorMessage);
@@ -287,30 +301,157 @@ export function useSearch() {
 //     };
 
 //     checkAuth();
-//   }, []);
+// User management hooks
+export function useUsers(params?: {
+  page?: number;
+  per_page?: number;
+  search?: string;
+  status?: string;
+  subscription?: string;
+  date_from?: string;
+  date_to?: string;
+}) {
+  return useAPI(
+    () => apiClient.getUsers(params || {}),
+    [params?.page, params?.per_page, params?.search, params?.status, params?.subscription, params?.date_from, params?.date_to]
+  );
+}
 
-//   const login = async (username: string, password: string) => {
-//     const result = await apiClient.login(username, password);
-//     if (result.success) {
-//       setIsAuthenticated(true);
-//     }
-//     return result;
-//   };
+export function useUsersAnalytics() {
+  return useAPI(() => apiClient.getUsersAnalytics());
+}
 
-//   const logout = async () => {
-//     try {
-//       await apiClient.logout();
-//       setIsAuthenticated(false);
-//     } catch (err) {
-//       // Handle logout error if needed
-//       console.error('Logout error:', err);
-//     }
-//   };
+export function useUserActions() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-//   return {
-//     isAuthenticated,
-//     login,
-//     logout,
-//     loading
-//   };
-// }
+  const performAction = useCallback(async (userId: string, action: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await apiClient.userAction(userId, action);
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Action failed';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { performAction, loading, error };
+}
+
+// Subscription management hooks
+export function useSubscriptions(params?: {
+  page?: number;
+  limit?: number;
+  payment_status?: string;
+  plan_type?: string;
+  telegram_status?: string;
+  search?: string;
+  date_from?: string;
+  date_to?: string;
+}) {
+  return useAPI<{results: Subscription[], count: number, next?: string, previous?: string}>(
+    () => apiClient.getSubscriptions(params || {}),
+    [params?.page, params?.limit, params?.payment_status, params?.plan_type, params?.telegram_status, params?.search, params?.date_from, params?.date_to]
+  );
+}
+
+export function useSubscriptionAnalytics(params?: {
+  period?: 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+  days_back?: number;
+}) {
+  return useAPI<SubscriptionAnalytics>(
+    () => apiClient.getSubscriptionAnalytics(params || {}),
+    [params?.period, params?.days_back]
+  );
+}
+
+export function useSubscriptionActions() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const updateSubscription = useCallback(async (subscriptionId: string, updates: any, reason?: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await apiClient.updateSubscription(subscriptionId, updates, reason);
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Update failed';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const verifyPayment = useCallback(async (subscriptionId: string, data?: any) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await apiClient.verifyPayment(subscriptionId, data);
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Verification failed';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { updateSubscription, verifyPayment, loading, error };
+}
+
+export function useUserDetail(userId: string | null) {
+  const [userDetailData, setUserDetailData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchUserDetail = useCallback(async () => {
+    if (!userId) {
+      setUserDetailData(null);
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await apiClient.getUserDetail(userId);
+      console.log('🔍 useUserDetail - Full response:', response);
+      console.log('🔍 useUserDetail - User data:', response.user);
+      
+      // Extract user data from the nested response structure
+      const userData = {
+        ...response.user,
+        subscription_history: response.subscription_history || [],
+        oauth_providers: response.oauth_providers || [],
+        metrics: response.metrics || {}
+      };
+      
+      console.log('🔍 useUserDetail - Processed user data:', userData);
+      setUserDetailData(userData);
+    } catch (err) {
+      console.error('❌ useUserDetail - Error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch user details');
+      setUserDetailData(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    fetchUserDetail();
+  }, [fetchUserDetail]);
+
+  return { 
+    data: userDetailData, 
+    loading, 
+    error,
+    refetch: fetchUserDetail 
+  };
+}
