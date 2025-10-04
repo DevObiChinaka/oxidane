@@ -77,51 +77,49 @@ export default function SubscriptionsManagement() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div>
-              <h1 className="text-2xl font-semibold text-gray-900">
-                Subscription Management
-              </h1>
-              <p className="mt-1 text-sm text-gray-600">
-                Manage user subscriptions, payments, and Telegram access
-              </p>
-            </div>
+      <div className="bg-white rounded-lg shadow-sm border p-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">
+              Subscription Management
+            </h1>
+            <p className="mt-1 text-sm text-gray-600">
+              Manage user subscriptions, payments, and Telegram access
+            </p>
+          </div>
             
-            {/* View Toggle */}
-            <div className="flex items-center space-x-4">
-              <div className="flex bg-gray-100 rounded-lg p-1">
-                <button
-                  onClick={() => setViewMode('table')}
-                  className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                    viewMode === 'table'
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  Subscriptions
-                </button>
-                <button
-                  onClick={() => setViewMode('analytics')}
-                  className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                    viewMode === 'analytics'
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  Analytics
-                </button>
-              </div>
+          {/* View Toggle */}
+          <div className="flex items-center space-x-4">
+            <div className="flex bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode('table')}
+                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                  viewMode === 'table'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Subscriptions
+              </button>
+              <button
+                onClick={() => setViewMode('analytics')}
+                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                  viewMode === 'analytics'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Analytics
+              </button>
             </div>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div>
         {(subscriptionsError || analyticsError || actionError) && (
           <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
             <div className="flex">

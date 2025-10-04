@@ -437,53 +437,66 @@ export class AdminAPIClient {
       }
     });
 
-    const endpoint = `/users/admin/email-templates/${queryParams.toString() ? `?${queryParams}` : ''}`;
+    const endpoint = `/admin/email-templates/${queryParams.toString() ? `?${queryParams}` : ''}`;
     return this.request(endpoint);
   }
 
   async getEmailTemplateTypes() {
-    return this.request('/users/admin/email-template-types/');
+    return this.request('/admin/email-template-types/');
   }
 
   async getEmailAnalytics() {
-    return this.request('/users/admin/email-analytics/');
+    return this.request('/admin/email-analytics/');
   }
 
   async getEmailTemplate(templateId: string) {
-    return this.request(`/users/admin/email-templates/${templateId}/`);
+    return this.request(`/admin/email-templates/${templateId}/`);
   }
 
   async createEmailTemplate(templateData: any) {
-    return this.request('/users/admin/email-templates/', {
+    return this.request('/admin/email-templates/', {
       method: 'POST',
       body: JSON.stringify(templateData),
     });
   }
 
   async updateEmailTemplate(templateId: string, templateData: any) {
-    return this.request(`/users/admin/email-templates/${templateId}/`, {
+    return this.request(`/admin/email-templates/${templateId}/`, {
       method: 'PUT',
       body: JSON.stringify(templateData),
     });
   }
 
   async deleteEmailTemplate(templateId: string) {
-    return this.request(`/users/admin/email-templates/${templateId}/`, {
+    return this.request(`/admin/email-templates/${templateId}/`, {
       method: 'DELETE',
     });
   }
 
   async previewEmailTemplate(templateId: string, sampleData: any) {
-    return this.request(`/users/admin/email-templates/${templateId}/preview/`, {
+    return this.request(`/admin/email-templates/${templateId}/preview/`, {
       method: 'POST',
       body: JSON.stringify(sampleData),
     });
   }
 
   async sendTestEmail(templateId: string, testData: any) {
-    return this.request(`/users/admin/email-templates/${templateId}/test/`, {
+    return this.request(`/admin/email-templates/${templateId}/test/`, {
       method: 'POST',
       body: JSON.stringify(testData),
+    });
+  }
+
+  async sendBulkEmail(templateId: string, sendData: {
+    recipientType: string;
+    specificUsers?: string[];
+    scheduleType: string;
+    scheduledDate?: string;
+    scheduledTime?: string;
+  }) {
+    return this.request(`/admin/email-templates/${templateId}/send/`, {
+      method: 'POST',
+      body: JSON.stringify(sendData),
     });
   }
 }

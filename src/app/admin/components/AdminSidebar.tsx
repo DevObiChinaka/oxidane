@@ -36,7 +36,8 @@ export default function AdminSidebar() {
       section: 'User Management',
       items: [
         { name: 'Users', href: '/admin/users', icon: '👥' },
-        { name: 'Subscriptions', href: '/admin/subscriptions', icon: '📡' },
+        { name: 'Signal Subscriptions', href: '/admin/subscriptions', icon: '📡' },
+        { name: 'Mentorship Program', href: '/admin/mentorship', icon: '🎓' },
         { name: 'Telegram Queue', href: '/admin/telegram', icon: '💬' },
       ]
     },

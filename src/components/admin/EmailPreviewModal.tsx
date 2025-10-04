@@ -1,24 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { adminAPI } from '../../utils/api';
-
-interface EmailTemplate {
-  id: string;
-  name: string;
-  template_type: string;
-  template_type_display: string;
-  subject_template: string;
-  html_content: string;
-}
-
-interface PreviewData {
-  success: boolean;
-  subject: string;
-  html_content: string;
-  variables_used: Record<string, string>;
-  template_name: string;
-}
+import { adminAPI } from '../../app/admin/utils/api';
+import { EmailTemplate, PreviewData } from '../../types/admin';
 
 interface EmailPreviewModalProps {
   template: EmailTemplate | null;
@@ -83,7 +67,7 @@ export default function EmailPreviewModal({ template, isOpen, onClose }: EmailPr
   };
 
   const loadPreview = async () => {
-    if (!template) return;
+    if (!template || !template.id) return;
 
     setLoading(true);
     try {
@@ -106,7 +90,7 @@ export default function EmailPreviewModal({ template, isOpen, onClose }: EmailPr
   };
 
   const sendTestEmail = async () => {
-    if (!template || !testEmail) return;
+    if (!template || !template.id || !testEmail) return;
 
     setSendingTest(true);
     setTestResult(null);

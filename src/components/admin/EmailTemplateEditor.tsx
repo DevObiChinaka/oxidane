@@ -1,23 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { adminAPI } from '../../utils/api';
-
-interface EmailTemplate {
-  id?: string;
-  name: string;
-  template_type: string;
-  template_type_display?: string;
-  status: 'active' | 'inactive' | 'draft';
-  subject_template: string;
-  html_content: string;
-  text_content: string;
-  description: string;
-  is_default: boolean;
-  from_email?: string;
-  from_name?: string;
-  available_variables?: Record<string, string>;
-}
+import { adminAPI } from '../../app/admin/utils/api';
+import { EmailTemplate } from '../../types/admin';
+import TemplateBuilder from './TemplateBuilder';
 
 interface EmailTemplateType {
   value: string;
@@ -43,6 +29,7 @@ export default function EmailTemplateEditor({
   const [formData, setFormData] = useState<EmailTemplate>({
     name: '',
     template_type: '',
+    template_type_display: '',
     status: 'draft',
     subject_template: '',
     html_content: '',
@@ -73,6 +60,7 @@ export default function EmailTemplateEditor({
       setFormData({
         name: '',
         template_type: '',
+        template_type_display: '',
         status: 'draft',
         subject_template: '',
         html_content: '',
@@ -126,6 +114,26 @@ export default function EmailTemplateEditor({
     // Clear error when field is modified
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+
+    // Smart auto-fill suggestions based on template type
+    if (field === 'template_type' && value && !formData.name) {
+      const suggestions = {
+        welcome: 'Welcome Email Template',
+        subscription_success: 'Subscription Success Email',
+        payment_failed: 'Payment Failed Notice',
+        renewal_reminder: 'Subscription Renewal Reminder'
+      };
+      
+      const suggestedName = suggestions[value as keyof typeof suggestions];
+      if (suggestedName) {
+        setFormData(prev => ({ 
+          ...prev, 
+          [field]: value,
+          name: suggestedName,
+          description: `Automated email template for ${value.replace('_', ' ')} notifications`
+        }));
+      }
     }
   };
 
@@ -204,7 +212,7 @@ export default function EmailTemplateEditor({
         templateId = tempTemplate.template.id;
       }
       
-      const response = await adminAPI.previewEmailTemplate(templateId, {
+      const response = await adminAPI.previewEmailTemplate(templateId!, {
         sample_data: {
           user: {
             first_name: 'John',
@@ -230,7 +238,8 @@ export default function EmailTemplateEditor({
       // Clean up temp template if we created one
       if (!formData.id && templateId) {
         await adminAPI.deleteEmailTemplate(templateId);
-      }    } catch (error) {
+      }
+    } catch (error) {
       console.error('Failed to generate preview:', error);
     }
   };
@@ -270,10 +279,10 @@ export default function EmailTemplateEditor({
       
       if (template?.id) {
         // Update existing template
-        response = await adminAPI.put(`/users/admin/email-templates/${template.id}/`, formData);
+        response = await adminAPI.updateEmailTemplate(template.id, formData);
       } else {
         // Create new template
-        response = await adminAPI.post('/users/admin/email-templates/', formData);
+        response = await adminAPI.createEmailTemplate(formData);
       }
       
       if (response.success) {
@@ -310,6 +319,19 @@ export default function EmailTemplateEditor({
           </button>
         </div>
 
+        {/* Template Auto-Generator */}
+        {!template && formData.template_type && (
+          <TemplateBuilder 
+            templateType={formData.template_type}
+            onTemplateGenerated={(generatedTemplate) => {
+              setFormData(prev => ({
+                ...prev,
+                ...generatedTemplate
+              }));
+            }}
+          />
+        )}
+
         <div className="mt-4 grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Left Panel - Form Fields */}
           <div className="lg:col-span-1 space-y-4">
@@ -322,7 +344,7 @@ export default function EmailTemplateEditor({
                 id="name"
                 value={formData.name}
                 onChange={(e) => handleInputChange('name', e.target.value)}
-                className={`mt-1 block w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                className={`mt-1 block w-full border rounded-md px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                   errors.name ? 'border-red-300' : 'border-gray-300'
                 }`}
                 placeholder="Enter template name"
@@ -338,7 +360,7 @@ export default function EmailTemplateEditor({
                 id="template_type"
                 value={formData.template_type}
                 onChange={(e) => handleInputChange('template_type', e.target.value)}
-                className={`mt-1 block w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                className={`mt-1 block w-full border rounded-md px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                   errors.template_type ? 'border-red-300' : 'border-gray-300'
                 }`}
               >
@@ -360,7 +382,7 @@ export default function EmailTemplateEditor({
                 id="status"
                 value={formData.status}
                 onChange={(e) => handleInputChange('status', e.target.value)}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="draft">Draft</option>
                 <option value="active">Active</option>
@@ -389,7 +411,7 @@ export default function EmailTemplateEditor({
                 rows={3}
                 value={formData.description}
                 onChange={(e) => handleInputChange('description', e.target.value)}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Describe when this template is used"
               />
             </div>
@@ -403,7 +425,7 @@ export default function EmailTemplateEditor({
                 id="from_name"
                 value={formData.from_name}
                 onChange={(e) => handleInputChange('from_name', e.target.value)}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="e.g., OxiWorld Support"
               />
             </div>
@@ -417,7 +439,7 @@ export default function EmailTemplateEditor({
                 id="from_email"
                 value={formData.from_email}
                 onChange={(e) => handleInputChange('from_email', e.target.value)}
-                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Leave blank to use default"
               />
             </div>
@@ -473,7 +495,7 @@ export default function EmailTemplateEditor({
                 id="subject-template"
                 value={formData.subject_template}
                 onChange={(e) => handleInputChange('subject_template', e.target.value)}
-                className={`mt-1 block w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                className={`mt-1 block w-full border rounded-md px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                   errors.subject_template ? 'border-red-300' : 'border-gray-300'
                 }`}
                 placeholder="Enter email subject with variables like {{user.first_name}}"
@@ -532,7 +554,7 @@ export default function EmailTemplateEditor({
                     rows={20}
                     value={formData.html_content}
                     onChange={(e) => handleInputChange('html_content', e.target.value)}
-                    className={`block w-full border rounded-md px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    className={`block w-full border rounded-md px-3 py-2 text-sm text-gray-900 bg-white font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                       errors.html_content ? 'border-red-300' : 'border-gray-300'
                     }`}
                     placeholder="Enter HTML email content with variables"
@@ -548,7 +570,7 @@ export default function EmailTemplateEditor({
                     rows={20}
                     value={formData.text_content}
                     onChange={(e) => handleInputChange('text_content', e.target.value)}
-                    className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 bg-white font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Enter plain text version (optional - will be auto-generated if empty)"
                   />
                   <p className="mt-1 text-sm text-gray-500">
