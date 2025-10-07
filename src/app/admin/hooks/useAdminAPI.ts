@@ -14,6 +14,11 @@ import {
   Subscription, 
   SubscriptionAnalytics 
 } from '../../../types/subscription';
+import {
+  PaymentTransaction,
+  PaymentAnalytics,
+  PaymentFilters
+} from '../../../types/payment';
 
 const apiClient = new AdminAPIClient();
 
@@ -454,4 +459,457 @@ export function useUserDetail(userId: string | null) {
     error,
     refetch: fetchUserDetail 
   };
+}
+
+// Payment Management Hooks
+export function usePayments(params: {
+  page?: number;
+  limit?: number;
+  status?: string;
+  transaction_type?: string;
+  payment_method?: string;
+  currency?: string;
+  amount_min?: number;
+  amount_max?: number;
+  date_from?: string;
+  date_to?: string;
+  user_email?: string;
+  reference?: string;
+  sort_by?: string;
+  sort_order?: string;
+}) {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchPayments = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Build query string
+      const queryParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          queryParams.append(key, value.toString());
+        }
+      });
+
+      const response = await fetch(`/api/admin/payments?${queryParams}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch payments');
+      }
+
+      const result = await response.json();
+      setData(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch payments');
+    } finally {
+      setLoading(false);
+    }
+  }, [JSON.stringify(params)]);
+
+  useEffect(() => {
+    fetchPayments();
+  }, [fetchPayments]);
+
+  return { data, loading, error, refetch: fetchPayments };
+}
+
+export function usePaymentAnalytics(params: {
+  period?: string;
+  days_back?: number;
+}) {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchAnalytics = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const queryParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, value.toString());
+        }
+      });
+
+      const response = await fetch(`/api/admin/payment-analytics?${queryParams}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch payment analytics');
+      }
+
+      const result = await response.json();
+      setData(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch analytics');
+    } finally {
+      setLoading(false);
+    }
+  }, [JSON.stringify(params)]);
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, [fetchAnalytics]);
+
+  return { data, loading, error, refetch: fetchAnalytics };
+}
+
+export function usePaymentActions() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const verifyPayment = useCallback(async (paymentId: string, verificationData: any) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(`/api/admin/payments/${paymentId}/verify`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(verificationData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to verify payment');
+      }
+
+      const result = await response.json();
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to verify payment';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const processRefund = useCallback(async (paymentId: string, refundData: any) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(`/api/admin/payments/${paymentId}/refund`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(refundData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to process refund');
+      }
+
+      const result = await response.json();
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to process refund';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const updatePaymentStatus = useCallback(async (paymentId: string, statusData: any) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(`/api/admin/payments/${paymentId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(statusData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update payment status');
+      }
+
+      const result = await response.json();
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update status';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { 
+    verifyPayment, 
+    processRefund, 
+    updatePaymentStatus,
+    loading, 
+    error 
+  };
+}
+
+// Telegram Management Hooks
+export function useTelegramQueue(filters?: {
+  status?: string;
+  action_type?: string;
+  priority?: string;
+  group_name?: string;
+  user_search?: string;
+  date_from?: string;
+  date_to?: string;
+  page?: number;
+  limit?: number;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const performBulkAction = useCallback(async (action: string, itemIds: string[]) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Mock implementation - replace with actual API call
+      console.log('Performing bulk action:', action, 'on items:', itemIds);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      return {
+        success_count: itemIds.length,
+        error_count: 0,
+        errors: []
+      };
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Bulk action failed';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const retryItem = useCallback(async (itemId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Mock implementation - replace with actual API call
+      console.log('Retrying item:', itemId);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Retry failed';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const cancelItem = useCallback(async (itemId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Mock implementation - replace with actual API call
+      console.log('Cancelling item:', itemId);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Cancel failed';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return {
+    performBulkAction,
+    retryItem,
+    cancelItem,
+    loading,
+    error
+  };
+}
+
+export function useTelegramGroups() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const createGroup = useCallback(async (groupData: any) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Mock implementation - replace with actual API call
+      console.log('Creating group:', groupData);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      return {
+        id: Date.now().toString(),
+        ...groupData,
+        member_count: 0,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        permissions: {
+          can_send_messages: true,
+          can_add_users: true,
+          can_remove_users: true,
+          can_pin_messages: false,
+          can_delete_messages: false,
+          is_admin: true
+        }
+      };
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create group';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const updateGroup = useCallback(async (groupId: string, updates: any) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Mock implementation - replace with actual API call
+      console.log('Updating group:', groupId, updates);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      return {
+        id: groupId,
+        ...updates,
+        updated_at: new Date().toISOString()
+      };
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update group';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const deleteGroup = useCallback(async (groupId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Mock implementation - replace with actual API call
+      console.log('Deleting group:', groupId);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete group';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const toggleGroupStatus = useCallback(async (groupId: string, isActive: boolean) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Mock implementation - replace with actual API call
+      console.log('Toggling group status:', groupId, isActive);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      return {
+        id: groupId,
+        is_active: isActive,
+        updated_at: new Date().toISOString()
+      };
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to toggle group status';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return {
+    createGroup,
+    updateGroup,
+    deleteGroup,
+    toggleGroupStatus,
+    loading,
+    error
+  };
+}
+
+export function useTelegramAnalytics(params?: {
+  period?: 'daily' | 'weekly' | 'monthly';
+  days_back?: number;
+}) {
+  return useAPI(
+    () => {
+      // Mock implementation - replace with actual API call
+      return Promise.resolve({
+        queue_metrics: {
+          total_processed: 1247,
+          success_rate: 95.2,
+          average_processing_time: 3.4,
+          peak_processing_time: '14:30',
+          failed_operations: {
+            count: 58,
+            common_errors: [
+              { error_type: 'User not found', count: 23, percentage: 39.7 },
+              { error_type: 'Group full', count: 18, percentage: 31.0 },
+              { error_type: 'Rate limited', count: 17, percentage: 29.3 }
+            ]
+          }
+        },
+        group_metrics: {
+          total_groups: 3,
+          active_groups: 2,
+          total_members: 4680,
+          member_growth: [],
+          group_activity: []
+        },
+        bot_metrics: {
+          uptime_percentage: 99.2,
+          api_calls_today: 423,
+          rate_limit_hits: 12,
+          errors_count: 8,
+          response_times: {
+            average: 1.2,
+            p95: 2.8,
+            p99: 4.1
+          }
+        },
+        trends: {
+          daily_operations: [],
+          hourly_load: []
+        }
+      });
+    },
+    [params?.period, params?.days_back]
+  );
 }
