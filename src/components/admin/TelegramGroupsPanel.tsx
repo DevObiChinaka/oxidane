@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { usePricingPlans } from '../../app/admin/hooks/useAdminAPI';
 import {
   PlusIcon,
   PencilIcon,
@@ -10,7 +11,8 @@ import {
   ExclamationTriangleIcon,
   CheckCircleIcon,
   XCircleIcon,
-  ClipboardDocumentIcon
+  ClipboardDocumentIcon,
+  CurrencyDollarIcon
 } from '@heroicons/react/24/outline';
 
 interface TelegramGroup {
@@ -38,6 +40,25 @@ interface TelegramGroupsStats {
   bot_status: 'connected' | 'disconnected' | 'error';
 }
 
+interface PricingPlan {
+  id: string;
+  plan_type: string;
+  name: string;
+  description: string;
+  price: number;
+  current_price?: number;
+  currency: string;
+  plan_category: 'signals' | 'mentorship' | 'vip';
+  billing_cycle: 'one_time' | 'weekly' | 'monthly' | 'yearly';
+  telegram_groups: string[];
+  is_active: boolean;
+  is_featured: boolean;
+  subscription_count?: number;
+  revenue_total?: number;
+  created_at: string;
+  updated_at: string;
+}
+
 interface TelegramGroupsPanelProps {
   onRefresh: () => void;
 }
@@ -55,6 +76,10 @@ export default function TelegramGroupsPanel({ onRefresh }: TelegramGroupsPanelPr
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingGroup, setEditingGroup] = useState<TelegramGroup | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState<TelegramGroup | null>(null);
+  const [showPricingPlans, setShowPricingPlans] = useState(true);
+
+  // Get pricing plans to show associated telegram groups
+  const { data: pricingPlans, loading: plansLoading, error: plansError } = usePricingPlans({});
 
   useEffect(() => {
     loadGroupsData();
@@ -69,11 +94,11 @@ export default function TelegramGroupsPanel({ onRefresh }: TelegramGroupsPanelPr
       const mockGroups: TelegramGroup[] = [
         {
           id: '1',
-          name: 'VIP Signals Premium',
+          name: 'Main Signals Group',
           chat_id: '-1001234567890',
-          invite_link: 'https://t.me/+AbCdEfGhIjKlMnOp',
-          description: 'Premium trading signals with 24/7 support',
-          member_count: 1247,
+          invite_link: 'https://t.me/+MainSignalsGroup123',
+          description: 'Main signals group for all subscribers (weekly, monthly, yearly)',
+          member_count: 4821,
           is_active: true,
           created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
           updated_at: new Date().toISOString(),
@@ -86,11 +111,28 @@ export default function TelegramGroupsPanel({ onRefresh }: TelegramGroupsPanelPr
         },
         {
           id: '2',
-          name: 'Weekly Signals',
+          name: 'VIP Main Group',
           chat_id: '-1001234567891',
-          invite_link: 'https://t.me/+QrStUvWxYzAbCdEf',
-          description: 'Weekly trading signals for basic subscribers',
-          member_count: 3421,
+          invite_link: 'https://t.me/+VIPMainGroup456',
+          description: 'VIP group for premium subscribers with exclusive signals',
+          member_count: 1247,
+          is_active: true,
+          created_at: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+          permissions: {
+            can_send_messages: true,
+            can_add_users: true,
+            can_remove_users: true,
+            is_admin: true
+          }
+        },
+        {
+          id: '3',
+          name: 'Mentorship Group',
+          chat_id: '-1001234567892',
+          invite_link: 'https://t.me/+MentorshipGroup789',
+          description: 'Group for mentorship program participants',
+          member_count: 156,
           is_active: true,
           created_at: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
           updated_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
@@ -368,6 +410,119 @@ export default function TelegramGroupsPanel({ onRefresh }: TelegramGroupsPanelPr
             <div className="ml-3">
               <p className="text-sm text-red-800">{error}</p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pricing Plans & Telegram Groups */}
+      {showPricingPlans && (
+        <div className="bg-white border rounded-lg overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <div>
+              <h4 className="text-lg font-medium text-gray-900">Pricing Plans & Telegram Groups</h4>
+              <p className="text-sm text-gray-600 mt-1">
+                View which telegram groups are associated with each pricing plan
+              </p>
+            </div>
+            <button
+              onClick={() => setShowPricingPlans(!showPricingPlans)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <XCircleIcon className="h-5 w-5" />
+            </button>
+          </div>
+          
+          <div className="p-6">
+            {plansLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                <span className="ml-2 text-gray-600">Loading pricing plans...</span>
+              </div>
+            ) : plansError ? (
+              <div className="bg-red-50 border border-red-200 rounded-md p-4">
+                <div className="flex">
+                  <ExclamationTriangleIcon className="h-5 w-5 text-red-400" />
+                  <div className="ml-3">
+                    <p className="text-sm text-red-800">Error loading pricing plans: {plansError}</p>
+                  </div>
+                </div>
+              </div>
+            ) : pricingPlans && pricingPlans.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {pricingPlans.map((plan: PricingPlan) => (
+                  <div key={plan.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h5 className="font-medium text-gray-900">{plan.name}</h5>
+                        <p className="text-sm text-gray-600 mt-1">{plan.description}</p>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <CurrencyDollarIcon className="h-4 w-4 text-green-500" />
+                        <span className="text-sm font-medium text-green-600">
+                          ${plan.current_price || plan.price}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2 mb-3">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        plan.plan_category === 'signals' ? 'bg-blue-100 text-blue-800' :
+                        plan.plan_category === 'mentorship' ? 'bg-purple-100 text-purple-800' :
+                        'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {plan.plan_category}
+                      </span>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        plan.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {plan.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                      {plan.is_featured && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                          Featured
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-500">Subscribers:</span>
+                        <span className="font-medium">{plan.subscription_count || 0}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-500">Revenue:</span>
+                        <span className="font-medium text-green-600">${plan.revenue_total || 0}</span>
+                      </div>
+                    </div>
+
+                    {plan.telegram_groups && plan.telegram_groups.length > 0 && (
+                      <div className="mt-4 pt-3 border-t border-gray-200">
+                        <p className="text-xs font-medium text-gray-700 mb-2">Telegram Groups:</p>
+                        <div className="space-y-1">
+                          {plan.telegram_groups.map((group: string, index: number) => (
+                            <div key={index} className="flex items-center justify-between text-sm">
+                              <span className="text-gray-600 truncate">{group}</span>
+                              <button
+                                onClick={() => copyToClipboard(group)}
+                                className="text-gray-400 hover:text-gray-600 ml-2"
+                              >
+                                <ClipboardDocumentIcon className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <CurrencyDollarIcon className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500">No pricing plans found</p>
+                <p className="text-sm text-gray-400">Create some pricing plans to see their telegram groups here</p>
+              </div>
+            )}
           </div>
         </div>
       )}

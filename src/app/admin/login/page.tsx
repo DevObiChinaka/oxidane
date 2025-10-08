@@ -22,7 +22,7 @@ import { API_BASE_URL } from '../config/api';
 console.log('🔍 [IMPORT DEBUG] API_BASE_URL imported as:', API_BASE_URL);
 console.log('🔍 [IMPORT DEBUG] process.env.NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL);
 
-export function AdminLoginStep1({ onLoginSuccess, onError }: LoginStep1Props) {
+function AdminLoginStep1({ onLoginSuccess, onError }: LoginStep1Props) {
   const [credential, setCredential] = useState(''); // email or username
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -243,7 +243,7 @@ export function AdminLoginStep1({ onLoginSuccess, onError }: LoginStep1Props) {
   );
 }
 
-export function AdminLoginStep2({ sessionToken, onOTPSuccess, onError, onBack }: LoginStep2Props) {
+function AdminLoginStep2({ sessionToken, onOTPSuccess, onError, onBack }: LoginStep2Props) {
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
 

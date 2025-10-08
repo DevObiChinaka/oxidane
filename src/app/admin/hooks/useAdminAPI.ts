@@ -348,6 +348,249 @@ export function useUserActions() {
   return { performAction, loading, error };
 }
 
+// Pricing Management Hooks
+export function usePricingPlans(params?: {
+  plan_category?: string;
+  billing_cycle?: string;
+  active_only?: boolean;
+}) {
+  return useAPI(
+    () => apiClient.getPricingPlans(params || {}),
+    [params?.plan_category, params?.billing_cycle, params?.active_only]
+  );
+}
+
+export function usePricingPlanCategories() {
+  return useAPI(() => apiClient.getPricingPlanCategories());
+}
+
+export function usePricingPlanActions() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const createPlan = async (planData: {
+    plan_type: string;
+    name: string;
+    description: string;
+    price: number;
+    currency: string;
+    plan_category: 'signals' | 'mentorship' | 'vip';
+    billing_cycle: 'one_time' | 'weekly' | 'monthly' | 'yearly';
+    telegram_groups: string[];
+    features_list?: string[];
+    is_active?: boolean;
+    is_featured?: boolean;
+  }) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const plan = await apiClient.createPricingPlan(planData);
+      return plan;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create pricing plan';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updatePlan = async (planId: string, updates: any) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const plan = await apiClient.updatePricingPlan(planId, updates);
+      return plan;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update pricing plan';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deletePlan = async (planId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      await apiClient.deletePricingPlan(planId);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete pricing plan';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleActive = async (planId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await apiClient.togglePricingPlanActive(planId);
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to toggle plan status';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleFeatured = async (planId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await apiClient.togglePricingPlanFeatured(planId);
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to toggle featured status';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return {
+    createPlan,
+    updatePlan,
+    deletePlan,
+    toggleActive,
+    toggleFeatured,
+    loading,
+    error
+  };
+}
+
+// Coupon Management Hooks
+export function useCouponCodes(params?: {
+  active_only?: boolean;
+  valid_only?: boolean;
+  search?: string;
+}) {
+  return useAPI(
+    () => apiClient.getCouponCodes(params || {}),
+    [params?.active_only, params?.valid_only, params?.search]
+  );
+}
+
+export function useCouponActions() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const createCoupon = async (couponData: {
+    code: string;
+    description: string;
+    discount_type: 'percentage' | 'fixed_amount';
+    discount_value: number;
+    minimum_amount?: number;
+    currency: string;
+    max_uses?: number;
+    applicable_plans: string[];
+    valid_from: string;
+    valid_until: string;
+    is_active?: boolean;
+  }) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const coupon = await apiClient.createCouponCode(couponData);
+      return coupon;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create coupon';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateCoupon = async (couponId: string, updates: any) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const coupon = await apiClient.updateCouponCode(couponId, updates);
+      return coupon;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update coupon';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteCoupon = async (couponId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      await apiClient.deleteCouponCode(couponId);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete coupon';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleActive = async (couponId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await apiClient.toggleCouponActive(couponId);
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to toggle coupon status';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const validateCoupon = async (code: string, planId: string, amount: number) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await apiClient.validateCoupon(code, planId, amount);
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to validate coupon';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return {
+    createCoupon,
+    updateCoupon,
+    deleteCoupon,
+    toggleActive,
+    validateCoupon,
+    loading,
+    error
+  };
+}
+
+
+
+// Public Pricing Hook (for frontend use, no auth required)
+export function usePublicPricing(params?: {
+  active_only?: boolean;
+  plan_category?: string;
+}) {
+  return useAPI(
+    () => apiClient.getPublicPricing(params || { active_only: true }),
+    [params?.active_only, params?.plan_category]
+  );
+}
+
 // Subscription management hooks
 export function useSubscriptions(params?: {
   page?: number;
@@ -912,4 +1155,64 @@ export function useTelegramAnalytics(params?: {
     },
     [params?.period, params?.days_back]
   );
+}
+
+// Revenue Analytics Hook
+export function useRevenueData(params?: {
+  start_date?: string;
+  end_date?: string;
+  period?: 'daily' | 'weekly' | 'monthly';
+}) {
+  return useAPI(
+    () => apiClient.getRevenueAnalytics(params || {}),
+    [params?.start_date, params?.end_date, params?.period]
+  );
+}
+
+export function useRevenueActions() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const exportRevenuePDF = async (params: {
+    start_date: string;
+    end_date: string;
+    format: 'pdf' | 'excel';
+  }) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await apiClient.exportRevenueReport(params);
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Export failed');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const exportRevenueExcel = async (params: {
+    start_date: string;
+    end_date: string;
+    format: 'pdf' | 'excel';
+  }) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await apiClient.exportRevenueReport(params);
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Export failed');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return {
+    exportRevenuePDF,
+    exportRevenueExcel,
+    loading,
+    error
+  };
 }

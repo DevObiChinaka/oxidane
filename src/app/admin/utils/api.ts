@@ -499,6 +499,247 @@ export class AdminAPIClient {
       body: JSON.stringify(sendData),
     });
   }
+
+  // Pricing Management Methods
+  async getPricingPlans(params: {
+    plan_category?: string;
+    billing_cycle?: string;
+    active_only?: boolean;
+  } = {}) {
+    const queryParams = new URLSearchParams();
+    
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        queryParams.append(key, String(value));
+      }
+    });
+
+    const endpoint = `/admin/pricing/plans/${queryParams.toString() ? `?${queryParams}` : ''}`;
+    const result = await this.request(endpoint);
+    
+    // Handle paginated response - DRF often returns {results: [...], count: n, next: url, previous: url}
+    if (result && typeof result === 'object' && 'results' in result) {
+      return result.results; // Return the actual array of plans
+    }
+    
+    // If it's already an array, return as is
+    return result;
+  }
+
+  async getPricingPlanCategories() {
+    return this.request('/admin/pricing/plans/categories/');
+  }
+
+  async createPricingPlan(planData: {
+    plan_type: string;
+    name: string;
+    description: string;
+    price: number;
+    currency: string;
+    plan_category: 'signals' | 'mentorship' | 'vip';
+    billing_cycle: 'one_time' | 'weekly' | 'monthly' | 'yearly';
+    telegram_groups: string[];
+    features_list?: string[];
+    is_active?: boolean;
+    is_featured?: boolean;
+  }) {
+    return this.request('/admin/pricing/plans/', {
+      method: 'POST',
+      body: JSON.stringify(planData),
+    });
+  }
+
+  async updatePricingPlan(planId: string, updates: any) {
+    return this.request(`/admin/pricing/plans/${planId}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    });
+  }
+
+  async deletePricingPlan(planId: string) {
+    return this.request(`/admin/pricing/plans/${planId}/`, {
+      method: 'DELETE',
+    });
+  }
+
+  async togglePricingPlanActive(planId: string) {
+    return this.request(`/admin/pricing/plans/${planId}/toggle_active/`, {
+      method: 'POST',
+    });
+  }
+
+  async togglePricingPlanFeatured(planId: string) {
+    return this.request(`/admin/pricing/plans/${planId}/toggle_featured/`, {
+      method: 'POST',
+    });
+  }
+
+  // Coupon Management Methods
+  async getCouponCodes(params: {
+    active_only?: boolean;
+    valid_only?: boolean;
+    search?: string;
+  } = {}) {
+    const queryParams = new URLSearchParams();
+    
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        queryParams.append(key, String(value));
+      }
+    });
+
+    const endpoint = `/admin/pricing/coupons/${queryParams.toString() ? `?${queryParams}` : ''}`;
+    const result = await this.request(endpoint);
+    
+    // Handle paginated response - DRF often returns {results: [...], count: n, next: url, previous: url}
+    if (result && typeof result === 'object' && 'results' in result) {
+      return result.results; // Return the actual array of coupons
+    }
+    
+    // If it's already an array, return as is
+    return result;
+  }
+
+  async createCouponCode(couponData: {
+    code: string;
+    description: string;
+    discount_type: 'percentage' | 'fixed_amount';
+    discount_value: number;
+    minimum_amount?: number;
+    currency: string;
+    max_uses?: number;
+    applicable_plans: string[];
+    valid_from: string;
+    valid_until: string;
+    is_active?: boolean;
+  }) {
+    return this.request('/admin/pricing/coupons/', {
+      method: 'POST',
+      body: JSON.stringify(couponData),
+    });
+  }
+
+  async updateCouponCode(couponId: string, updates: any) {
+    return this.request(`/admin/pricing/coupons/${couponId}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    });
+  }
+
+  async deleteCouponCode(couponId: string) {
+    return this.request(`/admin/pricing/coupons/${couponId}/`, {
+      method: 'DELETE',
+    });
+  }
+
+  async toggleCouponActive(couponId: string) {
+    return this.request(`/admin/pricing/coupons/${couponId}/toggle_active/`, {
+      method: 'POST',
+    });
+  }
+
+  async validateCoupon(code: string, planId: string, amount: number) {
+    return this.request('/admin/pricing/coupons/validate_coupon/', {
+      method: 'POST',
+      body: JSON.stringify({ code, plan_id: planId, amount }),
+    });
+  }
+
+
+
+  // Public Pricing (no auth required)
+  async getPublicPricing(params: {
+    active_only?: boolean;
+    plan_category?: string;
+  } = { active_only: true }) {
+    const queryParams = new URLSearchParams();
+    
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        queryParams.append(key, String(value));
+      }
+    });
+
+    // Note: This endpoint doesn't require authentication
+    const endpoint = `/api/pricing/plans/public/${queryParams.toString() ? `?${queryParams}` : ''}`;
+    
+    // For public endpoint, make direct fetch call without auth
+    const url = `http://127.0.0.1:8000/api${endpoint}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return response.json();
+  }
+
+  // Revenue Analytics APIs
+  async getRevenueAnalytics(params: {
+    start_date?: string;
+    end_date?: string;
+    period?: 'daily' | 'weekly' | 'monthly';
+  } = {}) {
+    const queryParams = new URLSearchParams();
+    
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        queryParams.append(key, String(value));
+      }
+    });
+
+    const endpoint = `/admin/revenue/analytics/${queryParams.toString() ? `?${queryParams}` : ''}`;
+    
+    // For now, return mock data until backend is implemented
+    return Promise.resolve({
+      totalRevenue: 45280.50,
+      monthlyGrowth: 12.5,
+      activeSubscriptions: 1247,
+      averageRevenuePerUser: 36.31,
+      monthlyRecurringRevenue: 38420.00,
+      couponDiscountImpact: -2340.25,
+      newStudentRevenue: 18750.00,
+      retentionRevenue: 26530.50,
+      revenueBreakdown: {
+        subscriptions: 38420.00,
+        courses: 4850.25,
+        mentorship: 1650.00,
+        certifications: 360.25,
+      },
+      trends: [],
+      charts: []
+    });
+    
+    // TODO: Replace with actual API call when backend is ready
+    // return this.request(endpoint);
+  }
+
+  async exportRevenueReport(params: {
+    start_date: string;
+    end_date: string;
+    format: 'pdf' | 'excel';
+  }) {
+    const endpoint = `/admin/revenue/export/`;
+    
+    // For now, return mock success until backend is implemented
+    return Promise.resolve({
+      success: true,
+      download_url: '#',
+      filename: `revenue_report_${params.start_date}_to_${params.end_date}.${params.format}`,
+      message: `${params.format.toUpperCase()} report generated successfully`
+    });
+    
+    // TODO: Replace with actual API call when backend is ready
+    // return this.request(endpoint, {
+    //   method: 'POST',
+    //   body: JSON.stringify(params)
+    // });
+  }
 }
 
 export const adminAPI = new AdminAPIClient();

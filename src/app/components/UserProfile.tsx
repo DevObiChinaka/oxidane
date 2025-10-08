@@ -15,9 +15,8 @@ export default function UserProfile() {
       
       <div className="space-y-2 text-sm text-green-700">
         <p><strong>Email:</strong> {user.email}</p>
-        <p><strong>Display Name:</strong> {user.displayName || 'Not set'}</p>
-        <p><strong>UID:</strong> {user.uid}</p>
-        <p><strong>Provider:</strong> {user.providerData[0]?.providerId || 'Unknown'}</p>
+        <p><strong>Display Name:</strong> {user.name || 'Not set'}</p>
+        <p><strong>Image:</strong> {user.image || 'Not set'}</p>
       </div>
 
       <button

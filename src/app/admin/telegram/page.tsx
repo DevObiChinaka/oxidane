@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAdminAuth } from '../contexts/AdminAuthContext';
+import { usePricingPlans } from '../hooks/useAdminAPI';
 import TelegramQueueDashboard from '@/components/admin/TelegramQueueDashboard';
 import TelegramManagementTable from '@/components/admin/TelegramManagementTable';
 import TelegramBulkActions from '@/components/admin/TelegramBulkActions';
@@ -60,6 +61,9 @@ export default function TelegramManagementPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  
+  // Get pricing plans to show available telegram groups
+  const { data: pricingPlans, loading: plansLoading } = usePricingPlans({ active_only: true });
   
   // Handle authentication
   useEffect(() => {
