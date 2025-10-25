@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 
 interface Lesson {
-  id: number;
+  id: string;  // UUID
   title: string;
   description: string;
   video_source: 'upload' | 'youtube' | 'vimeo';
@@ -17,7 +17,7 @@ interface Lesson {
 }
 
 interface CourseDetail {
-  id: number;
+  id: string;  // UUID
   title: string;
   slug: string;
   short_description: string;
@@ -60,7 +60,7 @@ export default function CourseDetailPage() {
       
       if (!token) {
         // Not authenticated, redirect to login
-        router.push('/auth/login');
+        router.push('/auth');
         return;
       }
 
@@ -76,7 +76,7 @@ export default function CourseDetailPage() {
         // Token invalid, clear storage and redirect
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
-        router.push('/auth/login');
+        router.push('/auth');
         return;
       }
 
@@ -86,7 +86,7 @@ export default function CourseDetailPage() {
       console.error('Auth check failed:', error);
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
-      router.push('/auth/login');
+      router.push('/auth');
     }
   };
 
@@ -110,12 +110,26 @@ export default function CourseDetailPage() {
 
       if (response.ok) {
         const data = await response.json();
-        setCourse(data);
-      } else if (response.status === 401) {
-        // Token expired, redirect to login
+        
+        // Transform the response to match our interface
+        const transformedData = {
+          ...data,
+          // Map progress data to top level
+          progress_percentage: data.progress?.completion_percentage || 0,
+          lessons_completed: data.progress?.lessons_completed || 0,
+          // Transform lessons to use is_completed instead of completed
+          lessons: data.lessons.map((lesson: any) => ({
+            ...lesson,
+            is_completed: lesson.completed || false,
+          })),
+        };
+        
+        setCourse(transformedData);
+      } else if (response.status === 401 || response.status === 403) {
+        // Token expired or forbidden, redirect to login
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
-        router.push('/auth/login');
+        router.push('/auth');
       } else if (response.status === 404) {
         setError('Course not found');
       } else {
@@ -132,7 +146,7 @@ export default function CourseDetailPage() {
   const handleEnroll = async () => {
     const token = localStorage.getItem('access_token');
     if (!token) {
-      router.push('/auth/login');
+      router.push('/auth');
       return;
     }
 
@@ -154,14 +168,18 @@ export default function CourseDetailPage() {
 
       if (response.ok) {
         const data = await response.json();
+        console.log('Enrollment response:', data);
         setSuccessMessage(data.message || 'Successfully enrolled in course!');
         setTimeout(() => setSuccessMessage(null), 1500);
         // Redirect to My Courses so user sees it added
         setTimeout(() => router.push('/my-courses'), 1600);
-      } else if (response.status === 401) {
-        router.push('/auth/login');
+      } else if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        router.push('/auth');
       } else {
         const data = await response.json();
+        console.error('Enrollment failed:', data);
         setError(data.error || 'Failed to enroll in course');
       }
     } catch (err) {
@@ -172,8 +190,11 @@ export default function CourseDetailPage() {
   };
 
   const handleStartLearning = () => {
-    if (course) {
-      router.push(`/courses/${course.slug}/watch`);
+    if (course && course.lessons.length > 0) {
+      // Find the first incomplete lesson, or default to the first lesson
+      const firstIncomplete = course.lessons.find(l => !l.is_completed);
+      const targetLesson = firstIncomplete || course.lessons[0];
+      router.push(`/courses/${course.slug}/watch?lesson=${targetLesson.id}`);
     }
   };
 

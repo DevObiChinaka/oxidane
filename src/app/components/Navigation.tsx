@@ -87,6 +87,12 @@ export default function Navigation() {
                 >
                   Dashboard
                 </Link>
+                <Link 
+                  href="/billing" 
+                  className="text-white/90 hover:text-white font-medium transition-colors"
+                >
+                  Billing
+                </Link>
                 <div className="w-10 h-10 rounded-full bg-gradient-to-r from-[#00A17C] to-[#00A88F] flex items-center justify-center">
                   <span className="text-white text-sm font-medium">
                     {session.user.name?.charAt(0) || session.user.email?.charAt(0)}
@@ -178,13 +184,22 @@ export default function Navigation() {
               {/* Mobile Auth */}
               <div className="pt-4 pb-3 border-t border-slate-700">
                 {session?.user ? (
-                  <Link 
-                    href="/dashboard" 
-                    className="block px-3 py-2 bg-gradient-to-r from-[#00A17C] to-[#00A88F] text-white rounded-lg font-medium text-center"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    Dashboard
-                  </Link>
+                  <div className="space-y-2">
+                    <Link 
+                      href="/dashboard" 
+                      className="block px-3 py-2 bg-gradient-to-r from-[#00A17C] to-[#00A88F] text-white rounded-lg font-medium text-center"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Dashboard
+                    </Link>
+                    <Link 
+                      href="/billing" 
+                      className="block px-3 py-2 text-gray-300 hover:text-white font-medium text-center rounded-md hover:bg-slate-700 border border-gray-600"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Billing & Subscriptions
+                    </Link>
+                  </div>
                 ) : (
                   <div className="space-y-2">
                     <Link 
