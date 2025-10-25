@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 
 interface NewAuthFormProps {
@@ -11,7 +11,8 @@ export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps)
   const [isLogin, setIsLogin] = useState(initialIsLogin);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -23,6 +24,140 @@ export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps)
   const [emailForVerification, setEmailForVerification] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  // OTP countdown timers
+  const [otpExpiresIn, setOtpExpiresIn] = useState(600); // 10 minutes in seconds
+  const [resendCooldown, setResendCooldown] = useState(0); // Cooldown for resend button
+  
+  // Email validation states
+  const [emailValidation, setEmailValidation] = useState<{
+    isValid: boolean;
+    isChecking: boolean;
+    accountExists: boolean;
+    message: string;
+  }>({
+    isValid: false,
+    isChecking: false,
+    accountExists: false,
+    message: '',
+  });
+
+  // Email validation function
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  // Check if email account exists (debounced)
+  const checkEmailAvailability = async (emailToCheck: string) => {
+    if (!validateEmail(emailToCheck)) {
+      setEmailValidation({
+        isValid: false,
+        isChecking: false,
+        accountExists: false,
+        message: '',
+      });
+      return;
+    }
+
+    setEmailValidation(prev => ({ ...prev, isChecking: true }));
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/auth/check-email/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailToCheck }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setEmailValidation({
+          isValid: true,
+          isChecking: false,
+          accountExists: data.exists || false,
+          message: data.exists ? 'Account already exists' : 'Email available',
+        });
+      } else {
+        setEmailValidation({
+          isValid: true,
+          isChecking: false,
+          accountExists: false,
+          message: '',
+        });
+      }
+    } catch (error) {
+      // If endpoint doesn't exist, just validate format
+      setEmailValidation({
+        isValid: true,
+        isChecking: false,
+        accountExists: false,
+        message: 'Valid email format',
+      });
+    }
+  };
+
+  // Debounce email check
+  useEffect(() => {
+    if (!isLogin && email) {
+      const timer = setTimeout(() => {
+        checkEmailAvailability(email);
+      }, 500); // Check after 500ms of no typing
+
+      return () => clearTimeout(timer);
+    } else if (isLogin && email) {
+      // For login, just validate format
+      setEmailValidation({
+        isValid: validateEmail(email),
+        isChecking: false,
+        accountExists: false,
+        message: validateEmail(email) ? 'Valid email format' : '',
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [email, isLogin]);
+
+  // OTP countdown timers
+  useEffect(() => {
+    if (!showOtpVerification) return;
+
+    // OTP expiration countdown
+    const otpTimer = setInterval(() => {
+      setOtpExpiresIn((prev) => {
+        if (prev <= 0) {
+          clearInterval(otpTimer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    // Resend cooldown countdown
+    let resendTimer: NodeJS.Timeout;
+    if (resendCooldown > 0) {
+      resendTimer = setInterval(() => {
+        setResendCooldown((prev) => {
+          if (prev <= 0) {
+            clearInterval(resendTimer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      clearInterval(otpTimer);
+      if (resendTimer) clearInterval(resendTimer);
+    };
+  }, [showOtpVerification, resendCooldown]);
+
+  // Format time as MM:SS
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   // Password validation requirements
   const getPasswordRequirements = (password: string) => {
@@ -72,11 +207,18 @@ export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps)
       return;
     }
 
+    // Prevent registration if account already exists
+    if (!isLogin && emailValidation.accountExists) {
+      setError('An account with this email already exists. Please sign in instead.');
+      setLoading(false);
+      return;
+    }
+
     try {
       const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
       const body = isLogin
         ? { email, password }
-        : { email, password, name };
+        : { email, password, first_name: firstName, last_name: lastName };
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -87,21 +229,52 @@ export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps)
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || 'Authentication failed');
+        // Enhanced error messages based on error codes
+        if (data.code === 'ACCOUNT_NOT_FOUND') {
+          setError('No account found with this email address. Please sign up first.');
+        } else if (data.code === 'INVALID_PASSWORD') {
+          setError('Incorrect password. Please try again.');
+        } else if (data.code === 'EMAIL_NOT_VERIFIED') {
+          setError('Please verify your email before signing in. Check your inbox for the verification code.');
+          // Auto-switch to OTP verification if available
+          if (data.email) {
+            setEmailForVerification(data.email);
+            setShowOtpVerification(true);
+          }
+        } else if (data.code === 'ACCOUNT_INACTIVE') {
+          setError('Your account is inactive. Please contact support.');
+        } else {
+          setError(data.error || 'Authentication failed');
+        }
         setLoading(false);
         return;
       }
 
       if (isLogin) {
-        setSuccess('Login successful! Redirecting...');
-        // Handle successful login (redirect, store token, etc.)
-        window.location.href = '/dashboard';
+        // New OTP flow for login
+        if (data.requires_otp && data.session_token) {
+          setEmailForVerification(email);
+          setShowOtpVerification(true);
+          setSuccess(data.message || 'Verification code sent to your email. Please enter it to complete sign-in.');
+          // Store session token for OTP verification (you may need to add state for this)
+          sessionStorage.setItem('login_session_token', data.session_token);
+          // Reset countdown timers
+          setOtpExpiresIn(600); // 10 minutes
+          setResendCooldown(0);
+        } else {
+          // Old flow fallback (shouldn't happen with new backend)
+          setSuccess('Login successful! Redirecting...');
+          window.location.href = '/dashboard';
+        }
       } else {
         // Registration: Show OTP verification screen
         if (data.otp_sent || data.requires_verification) {
           setEmailForVerification(email);
           setShowOtpVerification(true);
           setSuccess('Verification code sent! Please check your email and enter the code to complete your registration.');
+          // Reset countdown timers
+          setOtpExpiresIn(600); // 10 minutes
+          setResendCooldown(0);
         } else {
           setEmailVerificationSent(true);
           setSuccess('Registration successful! Please check your email to verify your account.');
@@ -132,20 +305,47 @@ export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps)
   const handleResendOtp = async () => {
     setLoading(true);
     setError('');
+    setSuccess('');
 
     try {
-      const response = await fetch('/api/auth/resend-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: emailForVerification }),
-      });
+      const sessionToken = sessionStorage.getItem('login_session_token');
+      
+      if (sessionToken) {
+        // Resend login OTP
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/auth/resend-login-otp/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_token: sessionToken }),
+        });
 
-      const data = await response.json();
+        const data = await response.json();
 
-      if (!response.ok) {
-        setError(data.error || 'Failed to resend verification code');
+        if (!response.ok) {
+          setError(data.error || 'Failed to resend verification code');
+        } else {
+          setSuccess('Verification code resent to your email');
+          // Reset timers after successful resend
+          setOtpExpiresIn(600); // Reset to 10 minutes
+          setResendCooldown(60); // 60 second cooldown
+        }
       } else {
-        setSuccess('Verification code resent to your email');
+        // Resend registration OTP
+        const response = await fetch('/api/auth/resend-otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: emailForVerification }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          setError(data.error || 'Failed to resend verification code');
+        } else {
+          setSuccess('Verification code resent to your email');
+          // Reset timers after successful resend
+          setOtpExpiresIn(600); // Reset to 10 minutes
+          setResendCooldown(60); // 60 second cooldown
+        }
       }
     } catch (error) {
       setError('An error occurred. Please try again.');
@@ -190,31 +390,81 @@ export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps)
     setSuccess('');
 
     try {
-      const response = await fetch('/api/auth/verify-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: emailForVerification, otp }),
-      });
+      // Check if this is login OTP or registration OTP
+      const sessionToken = sessionStorage.getItem('login_session_token');
+      
+      if (sessionToken) {
+        // Login OTP verification
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/auth/verify-login-otp/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            session_token: sessionToken,
+            otp 
+          }),
+        });
 
-      const data = await response.json();
+        const data = await response.json();
 
-      if (!response.ok) {
-        setError(data.error || 'OTP verification failed');
-        setLoading(false);
-        return;
+        if (!response.ok) {
+          if (data.code === 'OTP_EXPIRED') {
+            setError('Verification code expired. Please request a new one.');
+          } else if (data.code === 'INVALID_OTP') {
+            setError('Invalid verification code. Please check and try again.');
+          } else if (data.code === 'SESSION_EXPIRED') {
+            setError('Session expired. Please sign in again.');
+            setTimeout(() => {
+              setShowOtpVerification(false);
+              sessionStorage.removeItem('login_session_token');
+            }, 2000);
+          } else {
+            setError(data.error || 'OTP verification failed');
+          }
+          setLoading(false);
+          return;
+        }
+
+        // Login successful - store token and redirect
+        if (data.token) {
+          localStorage.setItem('access_token', data.token);
+          if (data.refresh) {
+            localStorage.setItem('refresh_token', data.refresh);
+          }
+          sessionStorage.removeItem('login_session_token');
+          setSuccess('🎉 Login successful! Redirecting to dashboard...');
+          setTimeout(() => {
+            window.location.href = '/dashboard';
+          }, 1500);
+        }
+      } else {
+        // Registration OTP verification
+        const response = await fetch('/api/auth/verify-otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: emailForVerification, otp }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          setError(data.error || 'OTP verification failed');
+          setLoading(false);
+          return;
+        }
+
+        setSuccess('🎉 Account created successfully! Your registration is complete. You can now sign in with your credentials.');
+        setTimeout(() => {
+          setShowOtpVerification(false);
+          setIsLogin(true); // Switch to login form
+          setEmail(emailForVerification);
+          setPassword(''); // Clear password for security
+          setFirstName(''); // Clear first name
+          setLastName(''); // Clear last name
+          setConfirmPassword(''); // Clear confirm password
+          setOtp(''); // Clear OTP
+          setError(''); // Clear any errors
+        }, 3000); // Give user time to read success message
       }
-
-      setSuccess('🎉 Account created successfully! Your registration is complete. You can now sign in with your credentials.');
-      setTimeout(() => {
-        setShowOtpVerification(false);
-        setIsLogin(true); // Switch to login form
-        setEmail(emailForVerification);
-        setPassword(''); // Clear password for security
-        setName(''); // Clear name
-        setConfirmPassword(''); // Clear confirm password
-        setOtp(''); // Clear OTP
-        setError(''); // Clear any errors
-      }, 3000); // Give user time to read success message
     } catch (error) {
       setError('An error occurred. Please try again.');
     }
@@ -337,9 +587,29 @@ export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps)
                 </div>
               )}
 
+              {/* OTP Expiration Countdown */}
+              <div className={`text-center p-3 rounded-xl border ${
+                otpExpiresIn <= 60 
+                  ? 'bg-red-500/10 border-red-500/30 text-red-300' 
+                  : otpExpiresIn <= 300 
+                    ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-300'
+                    : 'bg-blue-500/10 border-blue-500/30 text-blue-300'
+              }`}>
+                <div className="flex items-center justify-center text-sm">
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {otpExpiresIn > 0 ? (
+                    <>Code expires in <span className="font-mono font-semibold ml-1">{formatTime(otpExpiresIn)}</span></>
+                  ) : (
+                    <span className="font-semibold">Code expired - Please request a new code</span>
+                  )}
+                </div>
+              </div>
+
               <button
                 type="submit"
-                disabled={loading || otp.length !== 6}
+                disabled={loading || otp.length !== 6 || otpExpiresIn === 0}
                 className="w-full py-3 px-4 bg-gradient-to-r from-[#00B38F] to-[#000ABE] text-white font-medium rounded-xl hover:from-[#00A87D] hover:to-[#000C9E] focus:outline-none focus:ring-2 focus:ring-[#00B38F] disabled:opacity-50 transition-all duration-200 shadow-lg"
               >
                 {loading ? (
@@ -357,10 +627,12 @@ export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps)
                 <button
                   type="button"
                   onClick={handleResendOtp}
-                  disabled={loading}
+                  disabled={loading || resendCooldown > 0}
                   className="ml-2 text-[#00B38F] hover:text-[#00A87D] text-sm font-medium transition-colors disabled:opacity-50"
                 >
-                  Resend Code
+                  {resendCooldown > 0 
+                    ? `Resend Code (${resendCooldown}s)` 
+                    : 'Resend Code'}
                 </button>
               </div>
 
@@ -585,27 +857,55 @@ export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps)
           <div className="relative z-10">
           <form className="space-y-6" onSubmit={handleSubmit}>
             {!isLogin && (
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-white/90 mb-3">
-                  Full Name
-                </label>
-                <div className="mt-1">
-                  <div className="relative group">
-                    <input
-                      id="name"
-                      name="name"
-                      type="text"
-                      autoComplete="name"
-                      required
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="appearance-none block w-full px-5 py-4 bg-white/10 border border-white/20 rounded-2xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#00B38F]/50 focus:border-[#00B38F] backdrop-blur-sm transition-all duration-300 group-hover:bg-white/15"
-                      placeholder="Enter your full name"
-                    />
-                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-[#00B38F]/5 to-[#000ABE]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  {/* First Name Field */}
+                  <div>
+                    <label htmlFor="firstName" className="block text-sm font-medium text-white/90 mb-3">
+                      First Name
+                    </label>
+                    <div className="mt-1">
+                      <div className="relative group">
+                        <input
+                          id="firstName"
+                          name="firstName"
+                          type="text"
+                          autoComplete="given-name"
+                          required
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
+                          className="appearance-none block w-full px-5 py-4 bg-white/10 border border-white/20 rounded-2xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#00B38F]/50 focus:border-[#00B38F] backdrop-blur-sm transition-all duration-300 group-hover:bg-white/15"
+                          placeholder="First name"
+                        />
+                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-[#00B38F]/5 to-[#000ABE]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Last Name Field */}
+                  <div>
+                    <label htmlFor="lastName" className="block text-sm font-medium text-white/90 mb-3">
+                      Last Name
+                    </label>
+                    <div className="mt-1">
+                      <div className="relative group">
+                        <input
+                          id="lastName"
+                          name="lastName"
+                          type="text"
+                          autoComplete="family-name"
+                          required
+                          value={lastName}
+                          onChange={(e) => setLastName(e.target.value)}
+                          className="appearance-none block w-full px-5 py-4 bg-white/10 border border-white/20 rounded-2xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#00B38F]/50 focus:border-[#00B38F] backdrop-blur-sm transition-all duration-300 group-hover:bg-white/15"
+                          placeholder="Last name"
+                        />
+                        <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-[#00B38F]/5 to-[#000ABE]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </>
             )}
 
             <div>
@@ -622,11 +922,69 @@ export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps)
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="appearance-none block w-full px-5 py-4 bg-white/10 border border-white/20 rounded-2xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#00B38F]/50 focus:border-[#00B38F] backdrop-blur-sm transition-all duration-300 group-hover:bg-white/15"
+                    className={`appearance-none block w-full px-5 py-4 pr-12 bg-white/10 border ${
+                      !isLogin && email && emailValidation.accountExists 
+                        ? 'border-yellow-400/50' 
+                        : !isLogin && email && emailValidation.isValid 
+                        ? 'border-green-400/50' 
+                        : 'border-white/20'
+                    } rounded-2xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#00B38F]/50 focus:border-[#00B38F] backdrop-blur-sm transition-all duration-300 group-hover:bg-white/15`}
                     placeholder="Enter your email address"
                   />
+                  
+                  {/* Validation Icons */}
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-4">
+                    {!isLogin && emailValidation.isChecking && (
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    )}
+                    {!isLogin && email && !emailValidation.isChecking && emailValidation.isValid && !emailValidation.accountExists && (
+                      <svg className="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                    {!isLogin && email && !emailValidation.isChecking && emailValidation.accountExists && (
+                      <svg className="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                    {isLogin && email && validateEmail(email) && (
+                      <svg className="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                  </div>
+                  
                   <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-[#00B38F]/5 to-[#000ABE]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
                 </div>
+                
+                {/* Email validation message */}
+                {!isLogin && email && !emailValidation.isChecking && emailValidation.accountExists && (
+                  <div className="mt-2 flex items-center text-yellow-300 text-sm">
+                    <svg className="h-4 w-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    Account already exists. 
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsLogin(true);
+                        setError('');
+                        setSuccess('');
+                      }}
+                      className="ml-1 font-medium hover:text-yellow-200 underline"
+                    >
+                      Sign in instead?
+                    </button>
+                  </div>
+                )}
+                {!isLogin && email && !emailValidation.isChecking && emailValidation.isValid && !emailValidation.accountExists && (
+                  <p className="mt-2 text-green-300 text-sm flex items-center">
+                    <svg className="h-4 w-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    Email available
+                  </p>
+                )}
               </div>
             </div>
 
@@ -766,8 +1124,34 @@ export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps)
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                     </svg>
                   </div>
-                  <div className="ml-3">
+                  <div className="ml-3 flex-1">
                     <p className="text-sm font-medium text-red-200">{error}</p>
+                    {isLogin && error.includes('No account found') && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsLogin(false);
+                          setError('');
+                          setSuccess('');
+                        }}
+                        className="mt-2 text-sm text-[#00B38F] font-medium hover:text-[#00B39F] transition-colors"
+                      >
+                        Create an account →
+                      </button>
+                    )}
+                    {!isLogin && error.includes('already exists') && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsLogin(true);
+                          setError('');
+                          setSuccess('');
+                        }}
+                        className="mt-2 text-sm text-[#00B38F] font-medium hover:text-[#00B39F] transition-colors"
+                      >
+                        Sign in instead →
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -870,7 +1254,8 @@ export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps)
                     setError('');
                     setSuccess('');
                     setEmailVerificationSent(false);
-                    setName('');
+                    setFirstName('');
+                    setLastName('');
                     setPassword('');
                     setConfirmPassword('');
                   }}

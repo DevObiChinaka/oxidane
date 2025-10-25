@@ -13,8 +13,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Call Django backend to verify credentials and check verification status
-    const backendResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/auth/login/`, {
+    // Call Django backend - NEW OTP endpoint with better error handling
+    const backendResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/auth/login-with-otp/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
     const responseData = await backendResponse.json();
 
     if (!backendResponse.ok) {
+      // Return enhanced error messages with specific codes
       return NextResponse.json(
         responseData,
         { status: backendResponse.status }

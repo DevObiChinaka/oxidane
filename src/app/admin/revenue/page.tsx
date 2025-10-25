@@ -1,25 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-// import { useRevenueData } from '../../hooks/useAdminAPI'; // TODO: Implement when backend is ready
-
-interface RevenueMetrics {
-  totalRevenue: number;
-  monthlyGrowth: number;
-  activeSubscriptions: number;
-  averageRevenuePerUser: number;
-  monthlyRecurringRevenue: number;
-  couponDiscountImpact: number;
-  newStudentRevenue: number;
-  retentionRevenue: number;
-}
-
-interface RevenueBreakdown {
-  subscriptions: number;
-  courses: number;
-  mentorship: number;
-  certifications: number;
-}
+import { useState } from 'react';
+import { useRevenueData } from '../hooks/useRevenueData';
+import { AdminAPIClient } from '../utils/api';
 
 interface DateRange {
   startDate: string;
@@ -40,24 +23,68 @@ export default function RevenueReports() {
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
   const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
-  // Mock data - will be replaced with real API calls
-  const revenueMetrics: RevenueMetrics = {
-    totalRevenue: 45280.50,
-    monthlyGrowth: 12.5,
-    activeSubscriptions: 1247,
-    averageRevenuePerUser: 36.31,
-    monthlyRecurringRevenue: 38420.00,
-    couponDiscountImpact: -2340.25,
-    newStudentRevenue: 18750.00,
-    retentionRevenue: 26530.50,
+  const apiClient = new AdminAPIClient();
+
+  // Use the revenue data hook to fetch real data
+  const { data: revenueData, isLoading, error } = useRevenueData({
+    startDate: selectedDateRange.startDate,
+    endDate: selectedDateRange.endDate
+  });
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading revenue data...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+            <h3 className="text-red-800 font-semibold mb-2">Error Loading Revenue Data</h3>
+            <p className="text-red-600">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const revenueMetrics = {
+    totalRevenue: revenueData?.totalRevenue || 0,
+    monthlyGrowth: revenueData?.monthlyGrowth || 0,
+    activeSubscriptions: revenueData?.activeSubscriptions || 0,
+    averageRevenuePerUser: revenueData?.averageRevenuePerUser || 0,
+    monthlyRecurringRevenue: revenueData?.monthlyRecurringRevenue || 0,
+    couponDiscountImpact: revenueData?.couponDiscountImpact || 0,
+    newStudentRevenue: revenueData?.newStudentRevenue || 0,
+    retentionRevenue: revenueData?.retentionRevenue || 0,
   };
 
-  const revenueBreakdown: RevenueBreakdown = {
-    subscriptions: 38420.00,
-    courses: 4850.25,
-    mentorship: 1650.00,
-    certifications: 360.25,
+  const revenueBreakdown = revenueData?.revenueBreakdown || {
+    subscriptions: 0,
+    courses: 0,
+    mentorship: 0,
+    certifications: 0,
   };
 
   const formatCurrency = (amount: number) => {
@@ -84,15 +111,28 @@ export default function RevenueReports() {
 
   const exportToPDF = async () => {
     setIsExporting(true);
+    setExportError(null);
+    
     try {
-      // TODO: Implement PDF export functionality
-      console.log('Exporting to PDF...');
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      alert('PDF export completed!');
+      const blob = await apiClient.exportFile('/admin/revenue/export/', {
+        format: 'pdf',
+        start_date: selectedDateRange.startDate || undefined,
+        end_date: selectedDateRange.endDate || undefined
+      });
+      
+      // Trigger download
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const filename = `revenue_report_${selectedDateRange.startDate || 'all'}_${selectedDateRange.endDate || 'all'}.pdf`;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('PDF export failed:', error);
-      alert('PDF export failed. Please try again.');
+      setExportError('Failed to export PDF. Please try again.');
     } finally {
       setIsExporting(false);
     }
@@ -100,15 +140,28 @@ export default function RevenueReports() {
 
   const exportToExcel = async () => {
     setIsExporting(true);
+    setExportError(null);
+    
     try {
-      // TODO: Implement Excel export functionality
-      console.log('Exporting to Excel...');
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      alert('Excel export completed!');
+      const blob = await apiClient.exportFile('/admin/revenue/export/', {
+        format: 'excel',
+        start_date: selectedDateRange.startDate || undefined,
+        end_date: selectedDateRange.endDate || undefined
+      });
+      
+      // Trigger download
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const filename = `revenue_report_${selectedDateRange.startDate || 'all'}_${selectedDateRange.endDate || 'all'}.xlsx`;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Excel export failed:', error);
-      alert('Excel export failed. Please try again.');
+      setExportError('Failed to export Excel. Please try again.');
     } finally {
       setIsExporting(false);
     }
@@ -151,6 +204,18 @@ export default function RevenueReports() {
             </button>
           </div>
         </div>
+
+        {/* Export Error Message */}
+        {exportError && (
+          <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-md">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 text-red-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-sm text-red-700">{exportError}</p>
+            </div>
+          </div>
+        )}
 
         {/* Date Range Selector */}
         <div className="mt-6 flex flex-wrap items-center gap-4">

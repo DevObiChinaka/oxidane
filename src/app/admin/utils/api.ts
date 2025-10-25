@@ -2,6 +2,48 @@ import { API_BASE_URL } from '../config/api';
 
 // API client with error handling
 export class AdminAPIClient {
+  async get<T>(endpoint: string): Promise<T> {
+    return this.request(endpoint, {
+      method: 'GET',
+    });
+  }
+
+  async exportFile(endpoint: string, data: any): Promise<Blob> {
+    const correctBaseURL = 'http://127.0.0.1:8000/api';
+    const url = `${correctBaseURL}${endpoint}`;
+    
+    const defaultHeaders: Record<string, string> = {
+      'Content-Type': 'application/json'
+    };
+
+    // Add auth token
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('admin_token');
+      if (token) {
+        defaultHeaders['Authorization'] = `Bearer ${token}`;
+      }
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: defaultHeaders,
+      body: JSON.stringify(data)
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('admin_token');
+          localStorage.removeItem('admin_user');
+          window.location.href = '/admin/login';
+        }
+      }
+      throw new Error(`Export failed: ${response.statusText}`);
+    }
+
+    return response.blob();
+  }
+
   // Test connectivity to the backend with comprehensive debugging
   async testConnection(): Promise<boolean> {
     try {
@@ -739,6 +781,169 @@ export class AdminAPIClient {
     //   method: 'POST',
     //   body: JSON.stringify(params)
     // });
+  }
+
+  // ==================== Settings API Methods ====================
+  
+  // Get all settings or by category
+  async getSettings(category?: string) {
+    let endpoint = '/admin/settings/';
+    if (category) {
+      endpoint += `?category=${category}`;
+    }
+    return this.request(endpoint);
+  }
+
+  // Get settings grouped by category
+  async getSettingsByCategory() {
+    return this.request('/admin/settings/by-category/');
+  }
+
+  // Get single setting by key
+  async getSetting(key: string) {
+    return this.request(`/admin/settings/${key}/`);
+  }
+
+  // Update a setting
+  async updateSetting(key: string, data: { value: any; description?: string; change_reason?: string }) {
+    return this.request(`/admin/settings/${key}/update/`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  // Bulk update settings
+  async bulkUpdateSettings(settings: Array<{ key: string; value: any }>, changeReason?: string) {
+    return this.request('/admin/settings/actions/bulk-update/', {
+      method: 'POST',
+      body: JSON.stringify({
+        settings,
+        change_reason: changeReason
+      })
+    });
+  }
+
+  // Validate setting value
+  async validateSetting(key: string, value: any) {
+    return this.request('/admin/settings/actions/validate/', {
+      method: 'POST',
+      body: JSON.stringify({ key, value })
+    });
+  }
+
+  // Test email configuration
+  async testEmailConfiguration(recipientEmail: string) {
+    return this.request('/admin/settings/actions/test-email/', {
+      method: 'POST',
+      body: JSON.stringify({ recipient_email: recipientEmail })
+    });
+  }
+
+  // Test bot connection
+  async testBotConnection() {
+    return this.request('/admin/settings/actions/test-bot/', {
+      method: 'POST'
+    });
+  }
+
+  // Get setting change history
+  async getSettingHistory(key: string) {
+    return this.request(`/admin/settings/${key}/history/`);
+  }
+
+  // Get all change logs
+  async getChangeLogs(params?: { setting_key?: string; user_id?: string; days?: number }) {
+    let endpoint = '/admin/change-logs/';
+    if (params) {
+      const queryParams = new URLSearchParams();
+      if (params.setting_key) queryParams.append('setting_key', params.setting_key);
+      if (params.user_id) queryParams.append('user_id', params.user_id);
+      if (params.days) queryParams.append('days', params.days.toString());
+      if (queryParams.toString()) {
+        endpoint += `?${queryParams.toString()}`;
+      }
+    }
+    return this.request(endpoint);
+  }
+
+  // Telegram Groups
+  async getTelegramGroups(params?: { access_level?: string; is_active?: boolean }) {
+    let endpoint = '/admin/telegram-groups/';
+    if (params) {
+      const queryParams = new URLSearchParams();
+      if (params.access_level) queryParams.append('access_level', params.access_level);
+      if (params.is_active !== undefined) queryParams.append('is_active', params.is_active.toString());
+      if (queryParams.toString()) {
+        endpoint += `?${queryParams.toString()}`;
+      }
+    }
+    return this.request(endpoint);
+  }
+
+  async getTelegramGroup(groupId: number) {
+    return this.request(`/admin/telegram-groups/${groupId}/`);
+  }
+
+  async createTelegramGroup(data: any) {
+    return this.request('/admin/telegram-groups/create/', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async updateTelegramGroup(groupId: number, data: any) {
+    return this.request(`/admin/telegram-groups/${groupId}/update/`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async deleteTelegramGroup(groupId: number) {
+    return this.request(`/admin/telegram-groups/${groupId}/delete/`, {
+      method: 'DELETE'
+    });
+  }
+
+  async syncGroupMembers(groupId: number) {
+    return this.request(`/admin/telegram-groups/${groupId}/sync-members/`, {
+      method: 'POST'
+    });
+  }
+
+  async bulkUpdateTelegramGroups(groups: any[]) {
+    return this.request('/admin/telegram-groups/actions/bulk-update/', {
+      method: 'POST',
+      body: JSON.stringify({ groups })
+    });
+  }
+
+  // Backups
+  async getBackups() {
+    return this.request('/admin/backups/');
+  }
+
+  async createBackup(data: { name: string; description?: string }) {
+    return this.request('/admin/backups/create/', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async restoreBackup(backupId: number) {
+    return this.request(`/admin/backups/${backupId}/restore/`, {
+      method: 'POST'
+    });
+  }
+
+  async deleteBackup(backupId: number) {
+    return this.request(`/admin/backups/${backupId}/delete/`, {
+      method: 'DELETE'
+    });
+  }
+
+  // Settings Statistics
+  async getSettingsStats() {
+    return this.request('/admin/stats/');
   }
 }
 
