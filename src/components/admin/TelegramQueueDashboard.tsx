@@ -135,8 +135,7 @@ export default function TelegramQueueDashboard({
       // const response = await fetch(`/api/admin/telegram/queue/${action}`, {
       //   method: 'POST'
       // });
-      
-      console.log(`${action} queue processing`);
+
       await new Promise(resolve => setTimeout(resolve, 500));
       
       setQueueStatus(newStatus);

@@ -268,8 +268,7 @@ export default function VideoPlayerPage() {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('Progress update response:', data);
-        
+
         // Update the course state with the new progress data and mark lesson as complete
         const updatedLessons = course.lessons.map(l =>
           l.id === currentLesson.id ? { ...l, is_completed: true } : l

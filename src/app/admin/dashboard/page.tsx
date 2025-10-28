@@ -27,13 +27,12 @@ export default function AdminDashboard() {
   // Test backend connectivity on load
   useEffect(() => {
     const testBackend = async () => {
-      console.log('🔍 Testing backend connectivity...');
+
       const isConnected = await adminAPI.testConnection();
-      console.log('🔍 Backend connectivity result:', isConnected ? '✅ Connected' : '❌ Failed');
-      
+
       // Also check if admin token exists
       const token = localStorage.getItem('admin_token');
-      console.log('🔍 Admin token status:', token ? '✅ Present' : '❌ Missing');
+
     };
     testBackend();
   }, []);

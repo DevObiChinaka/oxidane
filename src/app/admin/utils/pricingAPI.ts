@@ -19,7 +19,7 @@ export const pricingAPI = {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
       }
     });
     
@@ -46,7 +46,7 @@ export const pricingAPI = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
       },
       body: JSON.stringify(planData)
     });
@@ -74,7 +74,7 @@ export const pricingAPI = {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
       },
       body: JSON.stringify(updates)
     });
@@ -90,7 +90,7 @@ export const pricingAPI = {
     const response = await fetch(`/api/pricing/plans/${planId}/`, {
       method: 'DELETE',
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
       }
     });
     
@@ -120,7 +120,7 @@ export const pricingAPI = {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
       }
     });
     
@@ -148,7 +148,7 @@ export const pricingAPI = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
       },
       body: JSON.stringify(couponData)
     });

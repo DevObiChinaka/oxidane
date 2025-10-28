@@ -131,14 +131,7 @@ export default function CourseFormModal({
   // Populate form when editing
   useEffect(() => {
     if (course) {
-      console.log('🔍 CourseFormModal: Populating form with course data:', {
-        course,
-        hasMetaTitle: !!course.meta_title,
-        hasMetaDescription: !!course.meta_description,
-        hasKeywords: !!course.keywords,
-        hasDescription: !!course.description
-      });
-      
+
       setFormData({
         title: course.title || '',
         slug: course.slug || '',
@@ -228,20 +221,16 @@ export default function CourseFormModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    console.log('📝 Form submitted with data:', formData);
-    console.log('📝 Course being edited:', course?.id);
-    
+
     if (!validateForm()) {
-      console.log('❌ Form validation failed');
+
       return;
     }
 
-    console.log('✅ Form validation passed, submitting...');
     setIsSubmitting(true);
     try {
       await onSubmit(formData);
-      console.log('✅ Form submission successful');
+
       onClose();
     } catch (error) {
       console.error('❌ Error submitting course:', error);

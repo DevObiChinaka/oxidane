@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRevenueData } from '../hooks/useRevenueData';
-import { AdminAPIClient } from '../utils/api';
+import { adminAPI } from '../utils/api';
 
 interface DateRange {
   startDate: string;
@@ -24,8 +24,6 @@ export default function RevenueReports() {
   const [customEndDate, setCustomEndDate] = useState('');
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
-
-  const apiClient = new AdminAPIClient();
 
   // Use the revenue data hook to fetch real data
   const { data: revenueData, isLoading, error } = useRevenueData({
@@ -114,7 +112,7 @@ export default function RevenueReports() {
     setExportError(null);
     
     try {
-      const blob = await apiClient.exportFile('/admin/revenue/export/', {
+      const blob = await adminAPI.exportFile('/admin/revenue/export/', {
         format: 'pdf',
         start_date: selectedDateRange.startDate || undefined,
         end_date: selectedDateRange.endDate || undefined
@@ -143,7 +141,7 @@ export default function RevenueReports() {
     setExportError(null);
     
     try {
-      const blob = await apiClient.exportFile('/admin/revenue/export/', {
+      const blob = await adminAPI.exportFile('/admin/revenue/export/', {
         format: 'excel',
         start_date: selectedDateRange.startDate || undefined,
         end_date: selectedDateRange.endDate || undefined

@@ -19,9 +19,12 @@ interface PricingPlan {
   price: number;
   current_price?: number;
   currency: string;
-  plan_category: 'signals' | 'mentorship' | 'vip';
-  billing_cycle: 'one_time' | 'weekly' | 'monthly' | 'yearly';
-  telegram_groups: string[];
+  plan_category: 'signals' | 'mentorship';
+  billing_cycle: 'one_time' | 'weekly' | 'monthly';
+  duration_days: number | null;
+  gives_course_access: boolean;
+  gives_signals_access: boolean;
+  telegram_group_key: string;
   features_list?: string[];
   is_active: boolean;
   is_featured: boolean;
@@ -45,7 +48,6 @@ interface CouponCode {
   created_at: string;
   usage_percentage?: number;
 }
-
 
 // Pricing Plan Card Component
 function PricingPlanCard({ 
@@ -73,19 +75,13 @@ function PricingPlanCard({
   const getPlanCategoryBadge = (category: string) => {
     const colors = {
       signals: 'bg-blue-100 text-blue-800 border border-blue-200',
-      mentorship: 'bg-purple-100 text-purple-800 border border-purple-200',
-      vip: 'bg-gradient-to-r from-yellow-100 to-orange-100 text-yellow-800 border border-yellow-300'
+      mentorship: 'bg-purple-100 text-purple-800 border border-purple-200'
     };
     
-    const displayText = category === 'vip' ? 'VIP' : category.charAt(0).toUpperCase() + category.slice(1);
+    const displayText = category.charAt(0).toUpperCase() + category.slice(1);
     
     return (
       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${colors[category as keyof typeof colors]}`}>
-        {category === 'vip' && (
-          <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-          </svg>
-        )}
         {displayText}
       </span>
     );
@@ -94,8 +90,8 @@ function PricingPlanCard({
   const getBillingCycleBadge = (cycle: string) => {
     const config = {
       one_time: { 
-        color: 'bg-gray-100 text-gray-800 border border-gray-200', 
-        text: 'ONE TIME'
+        color: 'bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 border border-purple-200', 
+        text: 'LIFETIME'
       },
       weekly: { 
         color: 'bg-green-100 text-green-800 border border-green-200', 
@@ -104,10 +100,6 @@ function PricingPlanCard({
       monthly: { 
         color: 'bg-blue-100 text-blue-800 border border-blue-200', 
         text: 'MONTHLY'
-      },
-      yearly: { 
-        color: 'bg-indigo-100 text-indigo-800 border border-indigo-200', 
-        text: 'YEARLY'
       }
     };
 
@@ -119,6 +111,27 @@ function PricingPlanCard({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
         {cycleConfig.text}
+      </span>
+    );
+  };
+
+  const getDurationBadge = (durationDays: number | null) => {
+    if (durationDays === null) {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 border border-purple-200">
+          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+          </svg>
+          Lifetime
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-800 border border-gray-200">
+        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        {durationDays} days
       </span>
     );
   };
@@ -140,14 +153,6 @@ function PricingPlanCard({
           <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
             <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C20.168 18.477 18.582 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-            </svg>
-          </div>
-        );
-      case 'vip':
-        return (
-          <div className="w-8 h-8 bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-lg flex items-center justify-center">
-            <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
             </svg>
           </div>
         );
@@ -203,15 +208,52 @@ function PricingPlanCard({
               / {plan.billing_cycle.replace('_', ' ')}
             </span>
           </div>
-          <div className="flex items-center space-x-2 mt-1">
+          <div className="flex items-center flex-wrap gap-2 mt-2">
             {getPlanCategoryBadge(plan.plan_category)}
             {getBillingCycleBadge(plan.billing_cycle)}
+            {getDurationBadge(plan.duration_days)}
           </div>
         </div>
       </div>
 
       {/* Card Content */}
       <div className="p-4">
+        {/* Access Permissions */}
+        <div className="mb-3">
+          <h5 className="text-xs font-medium text-gray-900 mb-2 flex items-center">
+            <svg className="w-3 h-3 text-blue-500 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            Access
+          </h5>
+          <div className="flex flex-wrap gap-1.5">
+            {plan.gives_course_access && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">
+                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C20.168 18.477 18.582 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+                Courses
+              </span>
+            )}
+            {plan.gives_signals_access && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+                Signals
+              </span>
+            )}
+            {plan.telegram_group_key && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-50 text-gray-700 border border-gray-200">
+                <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                </svg>
+                {plan.telegram_group_key}
+              </span>
+            )}
+          </div>
+        </div>
+
         {/* Features - Show max 2 */}
         {plan.features_list && plan.features_list.length > 0 && (
           <div className="mb-3">
@@ -236,28 +278,6 @@ function PricingPlanCard({
                 </li>
               )}
             </ul>
-          </div>
-        )}
-
-        {/* Groups - Show max 2 */}
-        {plan.telegram_groups && plan.telegram_groups.length > 0 && (
-          <div className="mb-3">
-            <h5 className="text-xs font-medium text-gray-900 mb-2 flex items-center">
-              <svg className="w-3 h-3 text-blue-500 mr-1" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-              </svg>
-              Groups
-            </h5>
-            <div className="flex flex-wrap gap-1">
-              {plan.telegram_groups.slice(0, 2).map((group, index) => (
-                <span key={index} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
-                  {group}
-                </span>
-              ))}
-              {plan.telegram_groups.length > 2 && (
-                <span className="text-xs text-gray-500">+{plan.telegram_groups.length - 2}</span>
-              )}
-            </div>
           </div>
         )}
 
@@ -345,6 +365,10 @@ export default function PricingManagement() {
   const planActions = usePricingPlanActions();
   const couponActions = useCouponActions();
 
+  // Ensure we have arrays to work with
+  const plansList = Array.isArray(pricingPlans) ? pricingPlans : [];
+  const couponsList = Array.isArray(couponCodes) ? couponCodes : [];
+
   // Refresh data when needed
   useEffect(() => {
     if (refreshTrigger > 0) {
@@ -418,7 +442,7 @@ export default function PricingManagement() {
   };
 
   const handleDeleteCoupon = async (couponId: string) => {
-    const coupon = couponCodes?.find((c: CouponCode) => c.id === couponId);
+    const coupon = couponsList.find((c: CouponCode) => c.id === couponId);
     if (coupon) {
       setCouponToDelete(coupon);
       setShowDeleteModal(true);
@@ -464,8 +488,6 @@ export default function PricingManagement() {
       throw error;
     }
   };
-
-
 
   const formatCurrency = (amount: number, currency: string = 'USD') => {
     return new Intl.NumberFormat('en-US', {
@@ -513,8 +535,8 @@ export default function PricingManagement() {
             <div className="mt-6">
               <nav className="flex space-x-8" aria-label="Tabs">
                 {[
-                  { key: 'plans', label: 'Pricing Plans', count: pricingPlans?.length || 0 },
-                  { key: 'coupons', label: 'Coupon Codes', count: couponCodes?.length || 0 }
+                  { key: 'plans', label: 'Pricing Plans', count: plansList.length },
+                  { key: 'coupons', label: 'Coupon Codes', count: couponsList.length }
                 ].map((tab) => (
                   <button
                     key={tab.key}
@@ -569,7 +591,7 @@ export default function PricingManagement() {
               ) : (
                 <>
                   {/* Featured Plans Section */}
-                  {pricingPlans && pricingPlans.some((plan: PricingPlan) => plan.is_featured) && (
+                  {plansList.some((plan: PricingPlan) => plan.is_featured) && (
                     <div className="mb-8">
                       <div className="flex items-center mb-4">
                         <div className="w-6 h-6 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-lg flex items-center justify-center mr-3">
@@ -580,7 +602,7 @@ export default function PricingManagement() {
                         <h3 className="text-xl font-bold text-gray-900">Featured Plans</h3>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {pricingPlans?.filter((plan: PricingPlan) => plan.is_featured).map((plan: PricingPlan) => (
+                        {plansList.filter((plan: PricingPlan) => plan.is_featured).map((plan: PricingPlan) => (
                           <PricingPlanCard 
                             key={plan.id} 
                             plan={plan}
@@ -599,8 +621,8 @@ export default function PricingManagement() {
                   )}
 
                   {/* Plans by Category */}
-                  {['mentorship', 'signals', 'vip'].map((category) => {
-                    const categoryPlans = pricingPlans?.filter(
+                  {['mentorship', 'signals'].map((category) => {
+                    const categoryPlans = plansList.filter(
                       (plan: PricingPlan) => plan.plan_category === category
                     );
                     
@@ -610,7 +632,7 @@ export default function PricingManagement() {
                       <div key={category} className="mb-8">
                         <div className="mb-4">
                           <h3 className="text-xl font-bold text-gray-900">
-                            {category === 'vip' ? 'VIP' : category.charAt(0).toUpperCase() + category.slice(1)} Plans
+                            {category.charAt(0).toUpperCase() + category.slice(1)} Plans
                           </h3>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -634,7 +656,7 @@ export default function PricingManagement() {
                   })}
 
                   {/* Empty State - No Plans */}
-                  {pricingPlans && pricingPlans.length === 0 && (
+                  {plansList.length === 0 && (
                     <div className="text-center py-12">
                       <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V9a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -677,7 +699,7 @@ export default function PricingManagement() {
                 <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
                   <p className="text-red-600">Error loading coupon codes: {couponsError}</p>
                 </div>
-              ) : (couponCodes || []).length === 0 ? (
+              ) : couponsList.length === 0 ? (
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
                   <div className="text-gray-500 mb-2 text-4xl">🎫</div>
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No coupon codes yet</h3>
@@ -691,7 +713,7 @@ export default function PricingManagement() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {(couponCodes || []).map((coupon: CouponCode) => (
+                  {couponsList.map((coupon: CouponCode) => (
                     <CouponCodeCard
                       key={coupon.id}
                       coupon={coupon}
@@ -733,7 +755,7 @@ export default function PricingManagement() {
         onSubmit={selectedCoupon ? handleUpdateCoupon : handleCreateCoupon}
         editingCoupon={selectedCoupon}
         isLoading={couponActions.loading}
-        availablePlans={(pricingPlans || []).map((plan: PricingPlan) => ({
+        availablePlans={plansList.map((plan: PricingPlan) => ({
           id: plan.id,
           name: plan.name
         }))}

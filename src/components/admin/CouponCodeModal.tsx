@@ -138,8 +138,6 @@ export default function CouponCodeModal({
                   </div>
                 </div>
 
-
-
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Description <span className="text-red-500">*</span>

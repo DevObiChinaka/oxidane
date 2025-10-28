@@ -82,7 +82,7 @@ export default function PaymentsManagement() {
       await verifyPayment(paymentId, verificationData);
       refetchPayments();
       setModalOpen(false);
-      console.log('Payment verified successfully');
+
     } catch (err) {
       console.error('Payment verification error:', err);
     }
@@ -94,7 +94,7 @@ export default function PaymentsManagement() {
       await processRefund(paymentId, refundData);
       refetchPayments();
       setModalOpen(false);
-      console.log('Refund processed successfully');
+
     } catch (err) {
       console.error('Refund processing error:', err);
     }

@@ -47,12 +47,7 @@ export function AdminAuthProvider({ children }: AdminAuthProviderProps) {
   const requiresAuth = pathname?.startsWith('/admin') && pathname !== '/admin/login';
 
   const checkAuthStatus = async (token: string) => {
-    console.log('🔐 Checking admin auth status with token:', token ? 'Present' : 'Missing');
-    console.log('🔐 API_BASE_URL:', API_BASE_URL);
-    
     const url = 'http://127.0.0.1:8000/api/admin-auth/check-session/';
-    console.log('🔐 Full URL (hardcoded correct):', url);
-    console.log('🔐 API_BASE_URL was:', API_BASE_URL);
     
     try {
       const response = await fetch(url, {
@@ -62,34 +57,22 @@ export function AdminAuthProvider({ children }: AdminAuthProviderProps) {
         },
       });
 
-      console.log('🔐 Auth check response:', {
-        status: response.status,
-        statusText: response.statusText,
-        ok: response.ok,
-        url: response.url
-      });
-
       const responseText = await response.text();
-      console.log('🔐 Response text (first 200 chars):', responseText.substring(0, 200));
 
       let data;
       try {
         data = JSON.parse(responseText);
-        console.log('🔐 Auth check data:', data);
       } catch (parseError) {
-        console.error('🔐 Failed to parse response as JSON:', parseError);
-        console.error('🔐 Raw response:', responseText);
+        console.error('Failed to parse auth response as JSON');
         return false;
       }
 
       if (data.authenticated) {
-        console.log('✅ Admin authentication successful');
         setIsAuthenticated(true);
         setUser(data.user);
         return true;
       } else {
         // Session expired or invalid
-        console.log('❌ Admin authentication failed:', data.error);
         localStorage.removeItem('admin_token');
         localStorage.removeItem('admin_user');
         setIsAuthenticated(false);
@@ -97,11 +80,7 @@ export function AdminAuthProvider({ children }: AdminAuthProviderProps) {
         return false;
       }
     } catch (error) {
-      console.error('❌ Auth check failed:', {
-        error: error instanceof Error ? error.message : error,
-        name: error instanceof Error ? error.name : typeof error,
-        stack: error instanceof Error ? error.stack : undefined
-      });
+      console.error('Auth check failed:', error instanceof Error ? error.message : error);
       localStorage.removeItem('admin_token');
       localStorage.removeItem('admin_user');
       setIsAuthenticated(false);
@@ -111,13 +90,12 @@ export function AdminAuthProvider({ children }: AdminAuthProviderProps) {
   };
 
   const login = (token: string, userData: AdminUser) => {
-    console.log('🔐 Admin login called with:', { token: token ? 'Present' : 'Missing', userData });
     localStorage.setItem('admin_token', token);
     localStorage.setItem('admin_user', JSON.stringify(userData));
+    
     setIsAuthenticated(true);
     setUser(userData);
     setAuthInitialized(true);
-    console.log('✅ Admin login completed, authenticated:', true);
   };
 
   const logout = async () => {
@@ -149,38 +127,22 @@ export function AdminAuthProvider({ children }: AdminAuthProviderProps) {
       const token = localStorage.getItem('admin_token');
       const storedUser = localStorage.getItem('admin_user');
 
-      console.log('🔐 InitAuth - requiresAuth:', requiresAuth, 'pathname:', pathname);
-
       if (token && storedUser) {
         try {
           const userData = JSON.parse(storedUser);
-          console.log('🔐 Found stored admin session:', { token: token ? 'Present' : 'Missing', userData });
           
-          // TEMPORARY FIX: Skip server validation to prevent redirect loop
-          // Trust the stored session for now until we fix the HTML response issue
+          // Trust the stored session - skip server validation to prevent redirect loop
           setIsAuthenticated(true);
           setUser(userData);
-          console.log('✅ Admin session restored from localStorage (skipping server check)');
-          
-          // Try server validation in background, but don't act on it
-          checkAuthStatus(token).then(isValid => {
-            console.log('🔍 Background auth check result:', isValid);
-            if (!isValid) {
-              console.warn('⚠️ Server says session invalid, but keeping user logged in to prevent loop');
-            }
-          }).catch(err => {
-            console.warn('⚠️ Background auth check failed:', err);
-          });
           
         } catch (e) {
-          console.error('❌ Failed to parse stored user data:', e);
+          console.error('Failed to parse stored user data:', e);
           localStorage.removeItem('admin_token');
           localStorage.removeItem('admin_user');
           setIsAuthenticated(false);
           setUser(null);
         }
       } else {
-        console.log('🔐 No stored session found');
         setIsAuthenticated(false);
         setUser(null);
       }
@@ -197,35 +159,28 @@ export function AdminAuthProvider({ children }: AdminAuthProviderProps) {
   // Redirect logic with loop prevention - only after auth is initialized
   useEffect(() => {
     if (!loading && authInitialized && pathname) {
-      console.log('🔄 Redirect logic - loading:', loading, 'authInitialized:', authInitialized, 'isAuthenticated:', isAuthenticated, 'pathname:', pathname);
-      
       // Prevent redirect loops by checking if we're already redirecting
       const isRedirecting = sessionStorage.getItem('admin_redirecting');
       
       if (isRedirecting) {
-        console.log('🔄 Already redirecting, skipping...');
         return;
       }
       
       if (pathname === '/admin' || pathname === '/admin/') {
         if (isAuthenticated) {
-          console.log('🔄 Redirecting to dashboard from admin root');
           sessionStorage.setItem('admin_redirecting', 'true');
           router.push('/admin/dashboard');
           setTimeout(() => sessionStorage.removeItem('admin_redirecting'), 1000);
         } else {
-          console.log('🔄 Redirecting to login from admin root');
           sessionStorage.setItem('admin_redirecting', 'true');
           router.push('/admin/login');
           setTimeout(() => sessionStorage.removeItem('admin_redirecting'), 1000);
         }
       } else if (pathname === '/admin/login' && isAuthenticated) {
-        console.log('🔄 Already logged in, redirecting to dashboard');
         sessionStorage.setItem('admin_redirecting', 'true');
         router.push('/admin/dashboard');
         setTimeout(() => sessionStorage.removeItem('admin_redirecting'), 1000);
       } else if (requiresAuth && !isAuthenticated && pathname !== '/admin/login') {
-        console.log('🔄 Auth required but not authenticated, redirecting to login');
         sessionStorage.setItem('admin_redirecting', 'true');
         router.push('/admin/login');
         setTimeout(() => sessionStorage.removeItem('admin_redirecting'), 1000);

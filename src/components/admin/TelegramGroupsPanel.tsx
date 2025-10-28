@@ -201,8 +201,7 @@ export default function TelegramGroupsPanel({ onRefresh }: TelegramGroupsPanelPr
       //   headers: { 'Content-Type': 'application/json' },
       //   body: JSON.stringify(groupData)
       // });
-      
-      console.log('Adding group:', groupData);
+
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       setShowAddModal(false);
@@ -238,8 +237,7 @@ export default function TelegramGroupsPanel({ onRefresh }: TelegramGroupsPanelPr
       //   headers: { 'Content-Type': 'application/json' },
       //   body: JSON.stringify(updates)
       // });
-      
-      console.log('Updating group:', groupId, updates);
+
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       setEditingGroup(null);
@@ -268,8 +266,7 @@ export default function TelegramGroupsPanel({ onRefresh }: TelegramGroupsPanelPr
       // const response = await fetch(`/api/admin/telegram/groups/${groupId}`, {
       //   method: 'DELETE'
       // });
-      
-      console.log('Deleting group:', groupId);
+
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       setShowDeleteModal(null);
@@ -301,8 +298,7 @@ export default function TelegramGroupsPanel({ onRefresh }: TelegramGroupsPanelPr
       //   headers: { 'Content-Type': 'application/json' },
       //   body: JSON.stringify({ is_active: isActive })
       // });
-      
-      console.log('Toggling group status:', groupId, isActive);
+
       await new Promise(resolve => setTimeout(resolve, 500));
       
       // Update the groups array locally for immediate feedback

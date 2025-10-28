@@ -18,7 +18,7 @@ export class AdminAPIClient {
 
     // Add auth token
     if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('admin_token');
+      const token = localStorage.getItem('access_token');
       if (token) {
         defaultHeaders['Authorization'] = `Bearer ${token}`;
       }
@@ -33,8 +33,9 @@ export class AdminAPIClient {
     if (!response.ok) {
       if (response.status === 401) {
         if (typeof window !== 'undefined') {
-          localStorage.removeItem('admin_token');
-          localStorage.removeItem('admin_user');
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          localStorage.removeItem('user');
           window.location.href = '/admin/login';
         }
       }
@@ -47,11 +48,8 @@ export class AdminAPIClient {
   // Test connectivity to the backend with comprehensive debugging
   async testConnection(): Promise<boolean> {
     try {
-      console.log('🔍 === NETWORK DEBUGGING START ===');
-      console.log('🔍 API_BASE_URL:', API_BASE_URL);
-      console.log('🔍 Window location:', window.location.href);
-      console.log('🔍 User agent:', navigator.userAgent);
-      
+      const correctBaseURL = 'http://127.0.0.1:8000/api';
+
       // Test multiple endpoints to isolate the issue
       const testEndpoints = [
         '/health/',
@@ -60,9 +58,8 @@ export class AdminAPIClient {
       ];
       
       for (const endpoint of testEndpoints) {
-        const fullUrl = `${API_BASE_URL}${endpoint}`;
-        console.log(`🔍 Testing: ${fullUrl}`);
-        
+        const fullUrl = `${correctBaseURL}${endpoint}`;
+
         try {
           const response = await fetch(fullUrl, {
             method: 'GET',
@@ -73,23 +70,20 @@ export class AdminAPIClient {
           
           const contentType = response.headers.get('content-type') || 'unknown';
           const responseText = await response.text();
-          
-          console.log(`🔍 ${endpoint} - Status:`, response.status);
-          console.log(`🔍 ${endpoint} - Content-Type:`, contentType);
+
           console.log(`🔍 ${endpoint} - Response preview:`, responseText.substring(0, 150));
           console.log(`🔍 ${endpoint} - Is HTML:`, responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html'));
           
           // Check if this looks like a Django error page
           if (responseText.includes('Django') && responseText.includes('<!DOCTYPE')) {
-            console.log('🔍 ❌ Getting Django HTML error page instead of API response!');
+
           }
           
         } catch (error) {
           console.error(`🔍 ${endpoint} failed:`, error);
         }
       }
-      
-      console.log('🔍 === NETWORK DEBUGGING END ===');
+
       return true; // Always return true for now, just for debugging
     } catch (error) {
       console.error('🔍 Connection test failed:', error);
@@ -101,8 +95,7 @@ export class AdminAPIClient {
     // Use correct base URL
     const correctBaseURL = 'http://127.0.0.1:8000/api';
     const url = `${correctBaseURL}${endpoint}`;
-    console.log('🌐 API request - using URL:', url);
-    
+
     // Debug logging
     console.log('🌐 API Request:', {
       url,
@@ -120,7 +113,7 @@ export class AdminAPIClient {
 
     // Add auth token if available
     if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('admin_token');
+      const token = localStorage.getItem('access_token');
       if (token) {
         defaultHeaders['Authorization'] = `Bearer ${token}`;
       }
@@ -141,8 +134,9 @@ export class AdminAPIClient {
         if (response.status === 401) {
           // Token expired or invalid - redirect to login
           if (typeof window !== 'undefined') {
-            localStorage.removeItem('admin_token');
-            localStorage.removeItem('admin_user');
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('user');
             window.location.href = '/admin/login';
           }
         }
@@ -176,7 +170,7 @@ export class AdminAPIClient {
             }
           }
         } catch (e) {
-          console.log('Could not parse error response as JSON:', e);
+
         }
         
         throw new Error(errorMessage);
@@ -239,10 +233,9 @@ export class AdminAPIClient {
   }
 
   async createCourse(courseData: any) {
-    console.log('🌐 API: Creating course with data:', courseData);
+
     console.log('🌐 API: JSON stringify result:', JSON.stringify(courseData));
-    console.log('🌐 API: Endpoint: /admin/courses/');
-    
+
     return this.request('/admin/courses/', {
       method: 'POST',
       body: JSON.stringify(courseData),
@@ -254,13 +247,7 @@ export class AdminAPIClient {
   }
 
   async updateCourse(courseId: string, courseData: any) {
-    console.log('🌐 API: Updating course', {
-      courseId,
-      courseIdType: typeof courseId,
-      courseIdLength: courseId ? courseId.length : 'null',
-      endpoint: `/admin/courses/${courseId}/`
-    });
-    
+
     console.log('🌐 API: Course data being sent:', {
       courseData,
       courseDataKeys: Object.keys(courseData),
@@ -278,7 +265,7 @@ export class AdminAPIClient {
       method: 'PUT',
       body: JSON.stringify(courseData),
     });
-    console.log('🌐 API: Update course response:', result);
+
     return result;
   }
 
@@ -578,9 +565,12 @@ export class AdminAPIClient {
     description: string;
     price: number;
     currency: string;
-    plan_category: 'signals' | 'mentorship' | 'vip';
-    billing_cycle: 'one_time' | 'weekly' | 'monthly' | 'yearly';
-    telegram_groups: string[];
+    plan_category: 'signals' | 'mentorship';
+    billing_cycle: 'one_time' | 'weekly' | 'monthly';
+    duration_days?: number | null;
+    gives_course_access: boolean;
+    gives_signals_access: boolean;
+    telegram_group_key: string;
     features_list?: string[];
     is_active?: boolean;
     is_featured?: boolean;
@@ -686,8 +676,6 @@ export class AdminAPIClient {
       body: JSON.stringify({ code, plan_id: planId, amount }),
     });
   }
-
-
 
   // Public Pricing (no auth required)
   async getPublicPricing(params: {

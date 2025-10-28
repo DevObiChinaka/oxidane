@@ -213,9 +213,7 @@ export function UserAuthProvider({ children }: UserAuthProviderProps) {
     setLoading(true);
 
     try {
-      console.log('🔐 [UserAuthContext] Attempting login with:', { email: credentials.email });
-      console.log('🌐 [UserAuthContext] API URL:', `${API_URL}/api/auth/login-with-otp/`);
-      
+
       const response = await fetch(`${API_URL}/api/auth/login-with-otp/`, {
         method: 'POST',
         headers: {
@@ -224,30 +222,26 @@ export function UserAuthProvider({ children }: UserAuthProviderProps) {
         body: JSON.stringify(credentials),
       });
 
-      console.log('📡 [UserAuthContext] Response status:', response.status, response.statusText);
-      
       const data = await response.json();
-      console.log('📦 [UserAuthContext] Response data:', data);
 
       if (!response.ok) {
-        console.log('❌ [UserAuthContext] Request failed, error code:', data.code);
-        
+
         // Handle specific error codes
         if (data.code === 'ACCOUNT_NOT_FOUND') {
           const errorMsg = 'No account found with this email address. Please sign up first.';
-          console.log('❌ [UserAuthContext] Throwing error:', errorMsg);
+
           throw new Error(errorMsg);
         } else if (data.code === 'INVALID_PASSWORD') {
           const errorMsg = 'Incorrect password. Please try again.';
-          console.log('❌ [UserAuthContext] Throwing error:', errorMsg);
+
           throw new Error(errorMsg);
         } else if (data.code === 'EMAIL_NOT_VERIFIED') {
           const errorMsg = 'Please verify your email before signing in. Check your inbox for the verification code.';
-          console.log('❌ [UserAuthContext] Throwing error:', errorMsg);
+
           throw new Error(errorMsg);
         } else if (data.code === 'ACCOUNT_INACTIVE') {
           const errorMsg = 'Your account is inactive. Please contact support.';
-          console.log('❌ [UserAuthContext] Throwing error:', errorMsg);
+
           throw new Error(errorMsg);
         }
         throw new Error(data.error || 'Login failed');
@@ -255,7 +249,7 @@ export function UserAuthProvider({ children }: UserAuthProviderProps) {
 
       // OTP should be required
       if (data.requires_otp && data.session_token) {
-        console.log('✅ [UserAuthContext] OTP required, session token received');
+
         setLoading(false);
         return {
           requiresOTP: true,

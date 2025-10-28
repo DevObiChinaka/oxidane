@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { AdminAPIClient } from '../utils/api';
+import { apiClient } from '@/utils/apiClient';
 import { 
   DashboardMetrics, 
   Course, 
@@ -19,8 +19,6 @@ import {
   PaymentAnalytics,
   PaymentFilters
 } from '../../../types/payment';
-
-const apiClient = new AdminAPIClient();
 
 // Generic hook for API calls with loading and error states
 export function useAPI<T>(
@@ -53,21 +51,27 @@ export function useAPI<T>(
 
 // Dashboard metrics hook
 export function useDashboardMetrics() {
-  return useAPI<DashboardMetrics>(() => apiClient.getDashboardMetrics());
+  return useAPI<DashboardMetrics>(() => apiClient.get<DashboardMetrics>('/admin/dashboard/metrics/'));
 }
 
 // Course management hooks
 export function useCourses(page: number = 1, filters?: { search?: string; status?: string; type?: string }) {
   const { search, status, type } = filters || {};
   return useAPI<CourseListResponse>(
-    () => apiClient.getCourses({ page, search, status, type }),
+    () => {
+      const params = new URLSearchParams({ page: page.toString() });
+      if (search) params.append('search', search);
+      if (status) params.append('status', status);
+      if (type) params.append('type', type);
+      return apiClient.get<CourseListResponse>(`/admin/courses/?${params.toString()}`);
+    },
     [page, search, status, type]
   );
 }
 
 export function useCourse(courseId: string) {
   return useAPI<Course>(
-    () => apiClient.getCourseDetail(courseId),
+    () => apiClient.get<Course>(`/admin/courses/${courseId}/`),
     [courseId]
   );
 }
@@ -81,7 +85,7 @@ export function useCourseLessons(courseId: string) {
     try {
       setLoading(true);
       setError(null);
-      const response = await apiClient.getCourseLessons(courseId);
+      const response = await apiClient.get<{ lessons: Lesson[] }>(`/admin/courses/${courseId}/lessons/`);
       setLessons(response.lessons);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch lessons');
@@ -103,7 +107,7 @@ export function useCourseLessons(courseId: string) {
 // Course analytics hook
 export function useCourseAnalytics(courseId: string) {
   return useAPI<CourseAnalytics>(
-    () => apiClient.getCourseAnalytics(courseId),
+    () => apiClient.get<CourseAnalytics>(`/admin/courses/${courseId}/analytics/`),
     [courseId]
   );
 }
@@ -111,14 +115,14 @@ export function useCourseAnalytics(courseId: string) {
 // Course progress hooks - TODO: Add API endpoints for these
 // export function useCourseProgress(page: number = 1, courseId?: string) {
 //   return useAPI<{ results: CourseProgress[]; pagination: any }>(
-//     () => apiClient.getCourseProgress(page, courseId),
+//     () => apiClient.get(`/admin/courses/progress/?page=${page}${courseId ? `&course_id=${courseId}` : ''}`),
 //     [page, courseId]
 //   );
 // }
 
 // export function useLessonProgress(page: number = 1, lessonId?: string) {
 //   return useAPI<{ results: LessonProgress[]; pagination: any }>(
-//     () => apiClient.getLessonProgress(page, lessonId),
+//     () => apiClient.get(`/admin/lessons/progress/?page=${page}${lessonId ? `&lesson_id=${lessonId}` : ''}`),
 //     [page, lessonId]
 //   );
 // }
@@ -132,19 +136,9 @@ export function useCourseActions() {
     try {
       setLoading(true);
       setError(null);
-      console.log('🔍 useCourseActions: Creating course with data:', courseData);
-      console.log('🔍 useCourseActions: Data keys:', Object.keys(courseData));
-      console.log('🔍 useCourseActions: Required fields check:');
-      console.log('  - title:', courseData.title);
-      console.log('  - description:', courseData.description);
-      console.log('  - short_description:', courseData.short_description);
-      console.log('  - slug:', courseData.slug);
-      
-      const course = await apiClient.createCourse(courseData);
-      console.log('✅ useCourseActions: Course created successfully:', course);
+      const course = await apiClient.post<Course>('/admin/courses/', courseData);
       return course;
     } catch (err) {
-      console.error('❌ useCourseActions: Course creation failed:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to create course';
       setError(errorMessage);
       throw new Error(errorMessage);
@@ -157,21 +151,12 @@ export function useCourseActions() {
     try {
       setLoading(true);
       setError(null);
-      console.log('🔄 useCourseActions: Starting course update...', { courseId, courseData });
-      const course = await apiClient.updateCourse(courseId, courseData);
-      console.log('✅ useCourseActions: Course update successful', course);
+      const course = await apiClient.put<Course>(`/admin/courses/${courseId}/`, courseData);
       return course;
     } catch (err) {
-      console.error('❌ useCourseActions: Course update failed:', err);
-      console.error('❌ Error details:', {
-        message: err instanceof Error ? err.message : 'Unknown error',
-        stack: err instanceof Error ? err.stack : undefined,
-        courseId,
-        courseData
-      });
       const errorMessage = err instanceof Error ? err.message : 'Failed to update course';
       setError(errorMessage);
-      throw err; // Re-throw the original error instead of creating a new one
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -181,7 +166,7 @@ export function useCourseActions() {
     try {
       setLoading(true);
       setError(null);
-      await apiClient.deleteCourse(courseId);
+      await apiClient.delete(`/admin/courses/${courseId}/`);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete course';
       setError(errorMessage);
@@ -208,7 +193,7 @@ export function useLessonActions() {
     try {
       setLoading(true);
       setError(null);
-      const lesson = await apiClient.createLesson(courseId, lessonData);
+      const lesson = await apiClient.post<Lesson>(`/admin/courses/${courseId}/lessons/`, lessonData);
       return lesson;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create lesson';
@@ -219,11 +204,11 @@ export function useLessonActions() {
     }
   };
 
-  const updateLesson = async (lessonId: string, lessonData: Partial<Lesson>) => {
+  const updateLesson = async (courseId: string, lessonId: string, lessonData: Partial<Lesson>) => {
     try {
       setLoading(true);
       setError(null);
-      const lesson = await apiClient.updateLesson(lessonId, lessonData);
+      const lesson = await apiClient.put<Lesson>(`/admin/lessons/${lessonId}/`, lessonData);
       return lesson;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update lesson';
@@ -234,11 +219,11 @@ export function useLessonActions() {
     }
   };
 
-  const deleteLesson = async (lessonId: string) => {
+  const deleteLesson = async (courseId: string, lessonId: string) => {
     try {
       setLoading(true);
       setError(null);
-      await apiClient.deleteLesson(lessonId);
+      await apiClient.delete(`/admin/lessons/${lessonId}/`);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete lesson';
       setError(errorMessage);
@@ -249,7 +234,7 @@ export function useLessonActions() {
   };
 
   return {
-    createLesson, // Note: requires courseId as first parameter
+    createLesson,
     updateLesson,
     deleteLesson,
     loading,
@@ -267,7 +252,10 @@ export function useSearch() {
     try {
       setLoading(true);
       setError(null);
-      const searchResults = await apiClient.getCourses({ search: query, type, status });
+      const params = new URLSearchParams({ search: query });
+      if (type) params.append('type', type);
+      if (status) params.append('status', status);
+      const searchResults = await apiClient.get<CourseListResponse>(`/admin/courses/?${params.toString()}`);
       setResults(searchResults.courses || []);
       return searchResults.courses || [];
     } catch (err) {
@@ -296,7 +284,7 @@ export function useSearch() {
 //   useEffect(() => {
 //     const checkAuth = async () => {
 //       try {
-//         const status = await apiClient.checkAuthStatus();
+//         const status = await apiClient.get('/auth/check');
 //         setIsAuthenticated(status);
 //       } catch (err) {
 //         setIsAuthenticated(false);
@@ -317,13 +305,23 @@ export function useUsers(params?: {
   date_to?: string;
 }) {
   return useAPI(
-    () => apiClient.getUsers(params || {}),
+    () => {
+      const queryParams = new URLSearchParams();
+      if (params?.page) queryParams.append('page', params.page.toString());
+      if (params?.per_page) queryParams.append('per_page', params.per_page.toString());
+      if (params?.search) queryParams.append('search', params.search);
+      if (params?.status) queryParams.append('status', params.status);
+      if (params?.subscription) queryParams.append('subscription', params.subscription);
+      if (params?.date_from) queryParams.append('date_from', params.date_from);
+      if (params?.date_to) queryParams.append('date_to', params.date_to);
+      return apiClient.get(`/admin/users/?${queryParams.toString()}`);
+    },
     [params?.page, params?.per_page, params?.search, params?.status, params?.subscription, params?.date_from, params?.date_to]
   );
 }
 
 export function useUsersAnalytics() {
-  return useAPI(() => apiClient.getUsersAnalytics());
+  return useAPI(() => apiClient.get('/admin/users-analytics/'));
 }
 
 export function useUserActions() {
@@ -334,7 +332,7 @@ export function useUserActions() {
     try {
       setLoading(true);
       setError(null);
-      const result = await apiClient.userAction(userId, action);
+      const result = await apiClient.post(`/admin/users/${userId}/${action}/`, {});
       return result;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Action failed';
@@ -355,13 +353,19 @@ export function usePricingPlans(params?: {
   active_only?: boolean;
 }) {
   return useAPI(
-    () => apiClient.getPricingPlans(params || {}),
+    () => {
+      const queryParams = new URLSearchParams();
+      if (params?.plan_category) queryParams.append('plan_category', params.plan_category);
+      if (params?.billing_cycle) queryParams.append('billing_cycle', params.billing_cycle);
+      if (params?.active_only) queryParams.append('active_only', params.active_only.toString());
+      return apiClient.get(`/admin/pricing/plans/?${queryParams.toString()}`);
+    },
     [params?.plan_category, params?.billing_cycle, params?.active_only]
   );
 }
 
 export function usePricingPlanCategories() {
-  return useAPI(() => apiClient.getPricingPlanCategories());
+  return useAPI(() => apiClient.get('/admin/pricing/plans/categories/'));
 }
 
 export function usePricingPlanActions() {
@@ -384,7 +388,7 @@ export function usePricingPlanActions() {
     try {
       setLoading(true);
       setError(null);
-      const plan = await apiClient.createPricingPlan(planData);
+      const plan = await apiClient.post('/admin/pricing/plans/', planData);
       return plan;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create pricing plan';
@@ -399,7 +403,7 @@ export function usePricingPlanActions() {
     try {
       setLoading(true);
       setError(null);
-      const plan = await apiClient.updatePricingPlan(planId, updates);
+      const plan = await apiClient.put(`/admin/pricing/plans/${planId}/`, updates);
       return plan;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update pricing plan';
@@ -414,7 +418,7 @@ export function usePricingPlanActions() {
     try {
       setLoading(true);
       setError(null);
-      await apiClient.deletePricingPlan(planId);
+      await apiClient.delete(`/admin/pricing/plans/${planId}/`);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete pricing plan';
       setError(errorMessage);
@@ -428,7 +432,7 @@ export function usePricingPlanActions() {
     try {
       setLoading(true);
       setError(null);
-      const result = await apiClient.togglePricingPlanActive(planId);
+      const result = await apiClient.post(`/admin/pricing/plans/${planId}/toggle_active/`, {});
       return result;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to toggle plan status';
@@ -443,7 +447,7 @@ export function usePricingPlanActions() {
     try {
       setLoading(true);
       setError(null);
-      const result = await apiClient.togglePricingPlanFeatured(planId);
+      const result = await apiClient.post(`/admin/pricing/plans/${planId}/toggle_featured/`, {});
       return result;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to toggle featured status';
@@ -472,7 +476,13 @@ export function useCouponCodes(params?: {
   search?: string;
 }) {
   return useAPI(
-    () => apiClient.getCouponCodes(params || {}),
+    () => {
+      const queryParams = new URLSearchParams();
+      if (params?.active_only) queryParams.append('active_only', params.active_only.toString());
+      if (params?.valid_only) queryParams.append('valid_only', params.valid_only.toString());
+      if (params?.search) queryParams.append('search', params.search);
+      return apiClient.get(`/admin/pricing/coupons/?${queryParams.toString()}`);
+    },
     [params?.active_only, params?.valid_only, params?.search]
   );
 }
@@ -497,7 +507,7 @@ export function useCouponActions() {
     try {
       setLoading(true);
       setError(null);
-      const coupon = await apiClient.createCouponCode(couponData);
+      const coupon = await apiClient.post('/admin/pricing/coupons/', couponData);
       return coupon;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create coupon';
@@ -512,7 +522,7 @@ export function useCouponActions() {
     try {
       setLoading(true);
       setError(null);
-      const coupon = await apiClient.updateCouponCode(couponId, updates);
+      const coupon = await apiClient.put(`/admin/pricing/coupons/${couponId}/`, updates);
       return coupon;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update coupon';
@@ -527,7 +537,7 @@ export function useCouponActions() {
     try {
       setLoading(true);
       setError(null);
-      await apiClient.deleteCouponCode(couponId);
+      await apiClient.delete(`/admin/pricing/coupons/${couponId}/`);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete coupon';
       setError(errorMessage);
@@ -541,7 +551,7 @@ export function useCouponActions() {
     try {
       setLoading(true);
       setError(null);
-      const result = await apiClient.toggleCouponActive(couponId);
+      const result = await apiClient.post(`/admin/pricing/coupons/${couponId}/toggle_active/`, {});
       return result;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to toggle coupon status';
@@ -556,7 +566,7 @@ export function useCouponActions() {
     try {
       setLoading(true);
       setError(null);
-      const result = await apiClient.validateCoupon(code, planId, amount);
+      const result = await apiClient.post('/admin/pricing/coupons/validate/', { code, plan_id: planId, amount });
       return result;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to validate coupon';
@@ -578,15 +588,18 @@ export function useCouponActions() {
   };
 }
 
-
-
 // Public Pricing Hook (for frontend use, no auth required)
 export function usePublicPricing(params?: {
   active_only?: boolean;
   plan_category?: string;
 }) {
   return useAPI(
-    () => apiClient.getPublicPricing(params || { active_only: true }),
+    () => {
+      const queryParams = new URLSearchParams();
+      if (params?.active_only !== undefined) queryParams.append('active_only', params.active_only.toString());
+      if (params?.plan_category) queryParams.append('plan_category', params.plan_category);
+      return apiClient.get(`/public/pricing/?${queryParams.toString()}`);
+    },
     [params?.active_only, params?.plan_category]
   );
 }
@@ -601,10 +614,23 @@ export function useSubscriptions(params?: {
   search?: string;
   date_from?: string;
   date_to?: string;
+  user_email?: string;
 }) {
   return useAPI<{results: Subscription[], count: number, next?: string, previous?: string}>(
-    () => apiClient.getSubscriptions(params || {}),
-    [params?.page, params?.limit, params?.payment_status, params?.plan_type, params?.telegram_status, params?.search, params?.date_from, params?.date_to]
+    () => {
+      const queryParams = new URLSearchParams();
+      if (params?.page) queryParams.append('page', params.page.toString());
+      if (params?.limit) queryParams.append('limit', params.limit.toString());
+      if (params?.payment_status) queryParams.append('payment_status', params.payment_status);
+      if (params?.plan_type) queryParams.append('plan_type', params.plan_type);
+      if (params?.telegram_status) queryParams.append('telegram_status', params.telegram_status);
+      if (params?.search) queryParams.append('search', params.search);
+      if (params?.date_from) queryParams.append('date_from', params.date_from);
+      if (params?.date_to) queryParams.append('date_to', params.date_to);
+      if (params?.user_email) queryParams.append('user_email', params.user_email);
+      return apiClient.get(`/admin/subscriptions/?${queryParams.toString()}`);
+    },
+    [params?.page, params?.limit, params?.payment_status, params?.plan_type, params?.telegram_status, params?.search, params?.date_from, params?.date_to, params?.user_email]
   );
 }
 
@@ -613,7 +639,12 @@ export function useSubscriptionAnalytics(params?: {
   days_back?: number;
 }) {
   return useAPI<SubscriptionAnalytics>(
-    () => apiClient.getSubscriptionAnalytics(params || {}),
+    () => {
+      const queryParams = new URLSearchParams();
+      if (params?.period) queryParams.append('period', params.period);
+      if (params?.days_back) queryParams.append('days_back', params.days_back.toString());
+      return apiClient.get(`/admin/analytics/?${queryParams.toString()}`);
+    },
     [params?.period, params?.days_back]
   );
 }
@@ -626,7 +657,9 @@ export function useSubscriptionActions() {
     try {
       setLoading(true);
       setError(null);
-      const result = await apiClient.updateSubscription(subscriptionId, updates, reason);
+      const body = { ...updates };
+      if (reason) body.reason = reason;
+      const result = await apiClient.put(`/admin/subscriptions/${subscriptionId}/`, body);
       return result;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Update failed';
@@ -641,7 +674,7 @@ export function useSubscriptionActions() {
     try {
       setLoading(true);
       setError(null);
-      const result = await apiClient.verifyPayment(subscriptionId, data);
+      const result = await apiClient.post(`/admin/subscriptions/${subscriptionId}/verify-payment/`, data || {});
       return result;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Verification failed';
@@ -669,10 +702,8 @@ export function useUserDetail(userId: string | null) {
     try {
       setLoading(true);
       setError(null);
-      const response = await apiClient.getUserDetail(userId);
-      console.log('🔍 useUserDetail - Full response:', response);
-      console.log('🔍 useUserDetail - User data:', response.user);
-      
+      const response: any = await apiClient.get(`/admin/users/${userId}/`);
+
       // Extract user data from the nested response structure
       const userData = {
         ...response.user,
@@ -680,8 +711,7 @@ export function useUserDetail(userId: string | null) {
         oauth_providers: response.oauth_providers || [],
         metrics: response.metrics || {}
       };
-      
-      console.log('🔍 useUserDetail - Processed user data:', userData);
+
       setUserDetailData(userData);
     } catch (err) {
       console.error('❌ useUserDetail - Error:', err);
@@ -933,7 +963,7 @@ export function useTelegramQueue(filters?: {
       setError(null);
       
       // Mock implementation - replace with actual API call
-      console.log('Performing bulk action:', action, 'on items:', itemIds);
+
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       return {
@@ -956,7 +986,7 @@ export function useTelegramQueue(filters?: {
       setError(null);
       
       // Mock implementation - replace with actual API call
-      console.log('Retrying item:', itemId);
+
       await new Promise(resolve => setTimeout(resolve, 500));
       
     } catch (err) {
@@ -974,7 +1004,7 @@ export function useTelegramQueue(filters?: {
       setError(null);
       
       // Mock implementation - replace with actual API call
-      console.log('Cancelling item:', itemId);
+
       await new Promise(resolve => setTimeout(resolve, 500));
       
     } catch (err) {
@@ -1005,7 +1035,7 @@ export function useTelegramGroups() {
       setError(null);
       
       // Mock implementation - replace with actual API call
-      console.log('Creating group:', groupData);
+
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       return {
@@ -1039,7 +1069,7 @@ export function useTelegramGroups() {
       setError(null);
       
       // Mock implementation - replace with actual API call
-      console.log('Updating group:', groupId, updates);
+
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       return {
@@ -1062,7 +1092,7 @@ export function useTelegramGroups() {
       setError(null);
       
       // Mock implementation - replace with actual API call
-      console.log('Deleting group:', groupId);
+
       await new Promise(resolve => setTimeout(resolve, 1000));
       
     } catch (err) {
@@ -1080,7 +1110,7 @@ export function useTelegramGroups() {
       setError(null);
       
       // Mock implementation - replace with actual API call
-      console.log('Toggling group status:', groupId, isActive);
+
       await new Promise(resolve => setTimeout(resolve, 500));
       
       return {
@@ -1164,7 +1194,13 @@ export function useRevenueData(params?: {
   period?: 'daily' | 'weekly' | 'monthly';
 }) {
   return useAPI(
-    () => apiClient.getRevenueAnalytics(params || {}),
+    () => {
+      const queryParams = new URLSearchParams();
+      if (params?.start_date) queryParams.append('start_date', params.start_date);
+      if (params?.end_date) queryParams.append('end_date', params.end_date);
+      if (params?.period) queryParams.append('period', params.period);
+      return apiClient.get(`/admin/revenue-analytics/?${queryParams.toString()}`);
+    },
     [params?.start_date, params?.end_date, params?.period]
   );
 }
@@ -1181,8 +1217,24 @@ export function useRevenueActions() {
     try {
       setLoading(true);
       setError(null);
-      const result = await apiClient.exportRevenueReport(params);
-      return result;
+      
+      // Use downloadFile method or direct fetch for blob response
+      const token = localStorage.getItem('access_token');
+      const queryParams = new URLSearchParams({
+        start_date: params.start_date,
+        end_date: params.end_date,
+        format: params.format
+      });
+      
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/admin/revenue/export/?${queryParams.toString()}`, {
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+      });
+      
+      if (!response.ok) throw new Error('Export failed');
+      
+      return await response.blob();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Export failed');
       throw err;
@@ -1199,8 +1251,23 @@ export function useRevenueActions() {
     try {
       setLoading(true);
       setError(null);
-      const result = await apiClient.exportRevenueReport(params);
-      return result;
+      
+      const token = localStorage.getItem('access_token');
+      const queryParams = new URLSearchParams({
+        start_date: params.start_date,
+        end_date: params.end_date,
+        format: params.format
+      });
+      
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/admin/revenue/export/?${queryParams.toString()}`, {
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+      });
+      
+      if (!response.ok) throw new Error('Export failed');
+      
+      return await response.blob();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Export failed');
       throw err;
@@ -1212,6 +1279,155 @@ export function useRevenueActions() {
   return {
     exportRevenuePDF,
     exportRevenueExcel,
+    loading,
+    error
+  };
+}
+
+// Mentorship Hooks
+export function useMentorshipSubscriptions() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchSubscriptions = async (params?: {
+    search?: string;
+    status?: string;
+    plan?: string;
+    telegram_status?: string;
+  }) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const queryParams = new URLSearchParams();
+      if (params?.search) queryParams.append('search', params.search);
+      if (params?.status) queryParams.append('status', params.status);
+      if (params?.plan) queryParams.append('plan', params.plan);
+      if (params?.telegram_status) queryParams.append('telegram_status', params.telegram_status);
+
+      const response = await apiClient.get(
+        `/admin/mentorship/subscriptions/?${queryParams.toString()}`
+      );
+      return response;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch subscriptions');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const extendSubscription = async (subscriptionId: string, data: {
+    extend_days: number;
+    reason: string;
+  }) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await apiClient.post(
+        `/admin/mentorship/extend/${subscriptionId}/`,
+        data
+      );
+      return response;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to extend subscription');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return {
+    fetchSubscriptions,
+    extendSubscription,
+    loading,
+    error
+  };
+}
+
+export function useMentorshipSessions() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchSessions = async (params?: {
+    search?: string;
+    status?: string;
+    type?: string;
+    date_from?: string;
+    date_to?: string;
+  }) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const queryParams = new URLSearchParams();
+      if (params?.search) queryParams.append('search', params.search);
+      if (params?.status) queryParams.append('status', params.status);
+      if (params?.type) queryParams.append('type', params.type);
+      if (params?.date_from) queryParams.append('date_from', params.date_from);
+      if (params?.date_to) queryParams.append('date_to', params.date_to);
+
+      const response = await apiClient.get(
+        `/admin/mentorship/sessions/?${queryParams.toString()}`
+      );
+      return response;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch sessions');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const manageSession = async (action: string, sessionId: string, data?: any) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await apiClient.post('/admin/mentorship/sessions/', {
+        action,
+        session_id: sessionId,
+        ...data
+      });
+      return response;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to manage session');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return {
+    fetchSessions,
+    manageSession,
+    loading,
+    error
+  };
+}
+
+export function useMentorshipAnalytics() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchAnalytics = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await apiClient.get('/admin/mentorship/analytics/');
+      return response;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch analytics');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return {
+    fetchAnalytics,
     loading,
     error
   };

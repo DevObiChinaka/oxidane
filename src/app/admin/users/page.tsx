@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useUsers, useUsersAnalytics, useUserActions, useUserDetail } from '../hooks/useAdminAPI';
-import { useAdminAuth } from '../contexts/AdminAuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Types
 interface User {
@@ -224,16 +224,7 @@ function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
   // Debug logging
   React.useEffect(() => {
     if (user) {
-      console.log('🔍 User Detail Modal Data:', {
-        user,
-        fullName: user.full_name,
-        displayName: user.display_name,
-        firstName: user.first_name,
-        lastName: user.last_name,
-        email: user.email,
-        username: user.username,
-        createdAt: user.created_at
-      });
+
     }
   }, [user]);
 
@@ -580,7 +571,7 @@ function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
 
 // Main component
 export default function UsersPage() {
-  const { isAuthenticated, loading: authLoading } = useAdminAuth();
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   
   // Filter states
@@ -612,8 +603,7 @@ export default function UsersPage() {
       // Refresh data
       refetchUsers();
       refetchAnalytics();
-      
-      console.log('Action completed successfully');
+
     } catch (error) {
       console.error('Action failed:', error);
     }
@@ -641,10 +631,17 @@ export default function UsersPage() {
   }
 
   // Extract data from the hooks
-  const users = usersData?.users || [];
-  const pagination = usersData?.pagination || null;
+  const users = (usersData && typeof usersData === 'object' && 'users' in usersData) ? (usersData as any).users : [];
+  const pagination = (usersData && typeof usersData === 'object' && 'pagination' in usersData) ? (usersData as any).pagination : null;
   const loading = usersLoading;
   const error = usersError;
+
+  // Safe analytics access with type guards
+  const analyticsData = analytics as any;
+  const hasAnalytics = analyticsData && typeof analyticsData === 'object';
+  const summary = hasAnalytics && 'summary' in analyticsData ? analyticsData.summary : null;
+  const growth = hasAnalytics && 'growth' in analyticsData ? analyticsData.growth : null;
+  const subscriptions = hasAnalytics && 'subscriptions' in analyticsData ? analyticsData.subscriptions : null;
 
   return (
     <div className="p-6 space-y-6">
@@ -657,7 +654,7 @@ export default function UsersPage() {
       </div>
 
       {/* Analytics Cards */}
-      {analytics && (
+      {hasAnalytics && summary && growth && subscriptions && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
             <div className="flex items-center">
@@ -666,8 +663,8 @@ export default function UsersPage() {
               </div>
               <div className="ml-4">
                 <h3 className="text-sm font-medium text-gray-500">Total Users</h3>
-                <p className="text-2xl font-semibold text-gray-900">{analytics.summary.total_users.toLocaleString()}</p>
-                <p className="text-sm text-green-600">{analytics.growth.new_users_7d} new this week</p>
+                <p className="text-2xl font-semibold text-gray-900">{summary.total_users?.toLocaleString() || '0'}</p>
+                <p className="text-sm text-green-600">{growth.new_users_7d || 0} new this week</p>
               </div>
             </div>
           </div>
@@ -679,8 +676,8 @@ export default function UsersPage() {
               </div>
               <div className="ml-4">
                 <h3 className="text-sm font-medium text-gray-500">Verified Users</h3>
-                <p className="text-2xl font-semibold text-gray-900">{analytics.summary.verified_users.toLocaleString()}</p>
-                <p className="text-sm text-gray-600">{analytics.summary.verification_rate.toFixed(1)}% verification rate</p>
+                <p className="text-2xl font-semibold text-gray-900">{summary.verified_users?.toLocaleString() || '0'}</p>
+                <p className="text-sm text-gray-600">{summary.verification_rate?.toFixed(1) || '0'}% verification rate</p>
               </div>
             </div>
           </div>
@@ -692,8 +689,8 @@ export default function UsersPage() {
               </div>
               <div className="ml-4">
                 <h3 className="text-sm font-medium text-gray-500">Active Subscriptions</h3>
-                <p className="text-2xl font-semibold text-gray-900">{analytics.subscriptions.active_signal_subscriptions}</p>
-                <p className="text-sm text-gray-600">{analytics.subscriptions.subscription_rate.toFixed(1)}% conversion</p>
+                <p className="text-2xl font-semibold text-gray-900">{subscriptions.active_signal_subscriptions || 0}</p>
+                <p className="text-sm text-gray-600">{subscriptions.subscription_rate?.toFixed(1) || '0'}% conversion</p>
               </div>
             </div>
           </div>
@@ -705,7 +702,7 @@ export default function UsersPage() {
               </div>
               <div className="ml-4">
                 <h3 className="text-sm font-medium text-gray-500">Recent Activity</h3>
-                <p className="text-2xl font-semibold text-gray-900">{analytics.growth.recent_logins_7d}</p>
+                <p className="text-2xl font-semibold text-gray-900">{growth.recent_logins_7d || 0}</p>
                 <p className="text-sm text-gray-600">logins this week</p>
               </div>
             </div>

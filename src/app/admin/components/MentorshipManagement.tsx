@@ -2,7 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAdminAuth } from '../contexts/AdminAuthContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { 
+  useMentorshipSubscriptions, 
+  useMentorshipSessions, 
+  useMentorshipAnalytics 
+} from '../hooks/useAdminAPI';
 
 interface MentorshipSubscription {
   id: string;
@@ -44,7 +49,13 @@ interface OneOnOneSession {
 
 export default function MentorshipManagement() {
   const router = useRouter();
-  const { isAuthenticated, user, loading: authLoading, logout } = useAdminAuth();
+  const { isAuthenticated, user, loading: authLoading, logout } = useAuth();
+  
+  // Use the new hooks
+  const subscriptionHook = useMentorshipSubscriptions();
+  const sessionHook = useMentorshipSessions();
+  const analyticsHook = useMentorshipAnalytics();
+  
   const [subscriptions, setSubscriptions] = useState<MentorshipSubscription[]>([]);
   const [sessions, setSessions] = useState<OneOnOneSession[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,212 +67,55 @@ export default function MentorshipManagement() {
   const [telegramFilter, setTelegramFilter] = useState('all');
   const [analytics, setAnalytics] = useState<any>(null);
 
-  // Helper function to handle authentication errors
-  const handleAuthError = (response: Response) => {
-    if (response.status === 401) {
-      console.log('🔒 Authentication failed, logging out...');
-      logout(); // Use the logout method from AdminAuthContext
-      return true; // Indicates auth error was handled
-    }
-    return false; // Not an auth error
-  };
-
   useEffect(() => {
-    // Only fetch data if user is authenticated
-    if (isAuthenticated && !authLoading) {
+    // Only fetch data if user is authenticated and is admin
+    if (isAuthenticated && !authLoading && user?.is_staff) {
       fetchData();
     }
-  }, [isAuthenticated, authLoading]);
+  }, [isAuthenticated, authLoading, user, activeTab]);
 
   // Handle authentication redirects
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      console.log('🔒 Not authenticated, redirecting to login...');
+    if (!authLoading && (!isAuthenticated || !user?.is_staff)) {
       router.push('/admin/login');
     }
-  }, [authLoading, isAuthenticated, router]);
+  }, [authLoading, isAuthenticated, user, router]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      // Use Django backend URL (port 8000) instead of Next.js frontend (port 3000)
-      const baseUrl = 'http://localhost:8000';
-      
       if (activeTab === 'subscriptions') {
-        const response = await fetch(`${baseUrl}/api/admin/mentorship/subscriptions/`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
-            'Content-Type': 'application/json'
-          }
-        });
+        const response = await subscriptionHook.fetchSubscriptions({
+          search: searchTerm || undefined,
+          status: statusFilter !== 'all' ? statusFilter : undefined,
+          telegram_status: telegramFilter !== 'all' ? telegramFilter : undefined,
+        }) as any;
         
-        if (!response.ok) {
-          console.error('Response status:', response.status);
-          console.error('Response URL:', response.url);
-          
-          // Handle authentication errors
-          if (response.status === 401) {
-            localStorage.removeItem('admin_token');
-            localStorage.removeItem('admin_user');
-            window.location.href = '/admin/login';
-            return;
-          }
-          
-          throw new Error(`HTTP error! status: ${response.status} - URL: ${response.url}`);
-        }
-        
-        const data = await response.json();
-        console.log('Subscriptions API response:', data);
-        if (data.success) {
-          setSubscriptions(data.subscriptions || []);
-        } else {
-          throw new Error(data.error || 'Failed to fetch subscriptions');
+        if (response.success) {
+          setSubscriptions(response.subscriptions || []);
         }
       } else if (activeTab === 'sessions') {
-        const response = await fetch(`${baseUrl}/api/admin/mentorship/sessions/`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
-            'Content-Type': 'application/json'
-          }
-        });
+        const response = await sessionHook.fetchSessions({
+          search: searchTerm || undefined,
+          status: statusFilter !== 'all' ? statusFilter : undefined,
+          type: sessionTypeFilter !== 'all' ? sessionTypeFilter : undefined,
+        }) as any;
         
-        if (!response.ok) {
-          if (handleAuthError(response)) return;
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        if (data.success) {
-          setSessions(data.sessions || []);
-        } else {
-          throw new Error(data.error || 'Failed to fetch sessions');
+        if (response.success) {
+          setSessions(response.sessions || []);
         }
       } else if (activeTab === 'analytics') {
-        const response = await fetch(`${baseUrl}/api/admin/mentorship/analytics/`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
-            'Content-Type': 'application/json'
-          }
-        });
+        const response = await analyticsHook.fetchAnalytics() as any;
         
-        if (!response.ok) {
-          if (handleAuthError(response)) return;
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        if (data.success) {
-          setAnalytics(data.analytics);
-        } else {
-          throw new Error(data.error || 'Failed to fetch analytics');
+        if (response.success) {
+          setAnalytics(response.analytics);
         }
       }
-    } catch (error) {
+      } catch (error) {
       console.error('Failed to fetch data:', error);
       setError(error instanceof Error ? error.message : 'An unexpected error occurred');
-      
-      // For development: Add mock data when API is not available
-      if (activeTab === 'subscriptions') {
-        console.log('Loading mock subscription data for development...');
-        setSubscriptions([
-          {
-            id: '1',
-            user_email: 'john@example.com',
-            user_name: 'John Doe',
-            plan_name: 'Premium Mentorship + 1-on-1',
-            plan_type: 'mentorship_premium',
-            amount_paid: 799.00,
-            currency: 'USD',
-            payment_status: 'verified',
-            subscription_status: 'active',
-            subscription_start: new Date().toISOString(),
-            subscription_end: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(), // 90 days from now
-            days_remaining: 85,
-            telegram_username: '@johndoe',
-            telegram_status: 'added',
-            sessions_used: 1,
-            sessions_remaining: 2,
-            is_active: true,
-            created_at: new Date().toISOString(),
-          },
-          {
-            id: '2',
-            user_email: 'jane@example.com',
-            user_name: 'Jane Smith',
-            plan_name: 'Basic Mentorship',
-            plan_type: 'mentorship_basic',
-            amount_paid: 299.00,
-            currency: 'USD',
-            payment_status: 'verified',
-            subscription_status: 'active',
-            subscription_start: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(), // 45 days ago
-            subscription_end: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString(), // 45 days from now
-            days_remaining: 45,
-            telegram_username: '@janesmith',
-            telegram_status: 'pending_add',
-            sessions_used: 0,
-            sessions_remaining: 0,
-            is_active: true,
-            created_at: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
-          }
-        ]);
-      } else if (activeTab === 'sessions') {
-        console.log('Loading mock session data for development...');
-        setSessions([
-          {
-            id: '1',
-            user_email: 'john@example.com',
-            user_name: 'John Doe',
-            session_type: 'virtual',
-            scheduled_datetime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // Tomorrow
-            duration_minutes: 60,
-            status: 'scheduled',
-            meeting_link: 'https://zoom.us/j/123456789',
-            physical_location: '',
-            phone_number: '',
-            admin_notified: false,
-            session_notes: '',
-            created_at: new Date().toISOString(),
-            completed_at: undefined,
-          },
-          {
-            id: '2',
-            user_email: 'alice@example.com',
-            user_name: 'Alice Johnson',
-            session_type: 'physical',
-            scheduled_datetime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), // In 3 days
-            duration_minutes: 90,
-            status: 'scheduled',
-            meeting_link: '',
-            physical_location: 'Office Building, 123 Main St, Room 301',
-            phone_number: '',
-            admin_notified: false,
-            session_notes: '',
-            created_at: new Date().toISOString(),
-            completed_at: undefined,
-          }
-        ]);
-      } else if (activeTab === 'analytics') {
-        console.log('Loading mock analytics data for development...');
-        setAnalytics({
-          active_subscriptions: 15,
-          monthly_revenue: 8500.00,
-          total_sessions: 45,
-          completed_sessions: 38,
-          upcoming_sessions: 7,
-          physical_sessions_pending_notification: 2,
-          plan_distribution: [
-            { name: 'Premium Mentorship + 1-on-1', count: 8 },
-            { name: 'Basic Mentorship', count: 7 }
-          ],
-          telegram_stats: [
-            { telegram_status: 'added', count: 12 },
-            { telegram_status: 'pending_add', count: 3 }
-          ]
-        });
-      }
     } finally {
       setLoading(false);
     }
@@ -315,30 +169,16 @@ export default function MentorshipManagement() {
     
     if (days && reason && !isNaN(parseInt(days))) {
       try {
-        const baseUrl = 'http://localhost:8000';
-        const response = await fetch(`${baseUrl}/api/admin/mentorship/extend/${subscriptionId}/`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
-          },
-          body: JSON.stringify({
-            extend_days: parseInt(days),
-            reason: reason
-          })
-        });
+        const response = await subscriptionHook.extendSubscription(subscriptionId, {
+          extend_days: parseInt(days),
+          reason: reason
+        }) as any;
         
-        if (!response.ok) {
-          if (handleAuthError(response)) return;
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        if (data.success) {
+        if (response.success) {
           alert('Subscription extended successfully!');
           fetchData();
         } else {
-          alert('Failed to extend subscription: ' + data.error);
+          alert('Failed to extend subscription: ' + (response.error || 'Unknown error'));
         }
       } catch (error) {
         console.error('Error extending subscription:', error);

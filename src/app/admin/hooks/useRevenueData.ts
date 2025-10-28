@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { AdminAPIClient } from '../utils/api';
+import { apiClient } from '@/utils/apiClient';
 
 interface DateRange {
   startDate: string;
@@ -43,7 +43,6 @@ export const useRevenueData = (dateRange: DateRange) => {
   const [data, setData] = useState<RevenueData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const apiClient = new AdminAPIClient();
 
   useEffect(() => {
     const fetchRevenueData = async () => {

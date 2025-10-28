@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAdminAuth } from '../contexts/AdminAuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import LessonFormModal from '../components/LessonFormModal';
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
 import { adminAPI } from '../utils/api';
@@ -9,7 +9,7 @@ import { useCourses } from '../hooks/useAdminAPI';
 import { Lesson, Course } from '../types/admin';
 
 export default function LessonsPage() {
-  const { user } = useAdminAuth();
+  const { user } = useAuth();
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,14 +40,11 @@ export default function LessonsPage() {
     try {
       setLoading(true);
       setError(null);
-      
-      console.log('🔍 Fetching lessons data...');
-      
+
       // Fetch lessons
       try {
         const lessonsResponse = await adminAPI.getAllLessons();
-        console.log('🎥 Lessons response:', lessonsResponse);
-        
+
         // Ensure lessons is always an array
         let lessonsArray = [];
         if (Array.isArray(lessonsResponse)) {
@@ -57,10 +54,10 @@ export default function LessonsPage() {
         } else if (lessonsResponse && lessonsResponse.data && Array.isArray(lessonsResponse.data)) {
           lessonsArray = lessonsResponse.data;
         }
-        console.log('🎥 Processed lessons array:', lessonsArray);
+
         setLessons(lessonsArray);
       } catch (lessonsError) {
-        console.warn('⚠️ Failed to fetch lessons:', lessonsError);
+
         setLessons([]);
         setError('Failed to load lessons. Please check your connection and try again.');
       }
@@ -85,28 +82,25 @@ export default function LessonsPage() {
   };
 
   const handleDeleteLesson = (lesson: Lesson) => {
-    console.log('🗑️ Delete button clicked for lesson:', lesson.title);
-    console.log('🗑️ Setting lessonToDelete and showDeleteModal to true');
+
     setLessonToDelete(lesson);
     setShowDeleteModal(true);
-    console.log('🗑️ Modal state should now be open');
+
   };
 
   const confirmDeleteLesson = async () => {
     if (!lessonToDelete) return;
 
     try {
-      console.log('🗑️ Deleting lesson:', lessonToDelete.id);
+
       await adminAPI.deleteLesson(lessonToDelete.id);
-      console.log('✅ Lesson deleted successfully');
-      
+
       // Immediately update the local state to remove the deleted lesson
       setLessons(prevLessons => prevLessons.filter(lesson => lesson.id !== lessonToDelete.id));
       
       // Also refresh from server to ensure consistency
       await fetchData();
-      
-      console.log('🔄 Lessons list updated');
+
     } catch (error) {
       console.error('❌ Failed to delete lesson:', error);
       throw error; // Let the modal handle the error
@@ -116,7 +110,7 @@ export default function LessonsPage() {
   };
 
   const handleLessonSaved = async () => {
-    console.log('✅ Lesson saved, refreshing data...');
+
     setShowLessonModal(false);
     setSelectedLesson(null);
     await fetchData(); // Refresh the list

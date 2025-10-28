@@ -206,8 +206,7 @@ export default function TelegramManagementTable({
       // const response = await fetch(`/api/admin/telegram/queue/${itemId}/retry`, {
       //   method: 'POST'
       // });
-      
-      console.log('Retrying item:', itemId);
+
       await new Promise(resolve => setTimeout(resolve, 500));
       
       // Show success feedback
@@ -229,8 +228,7 @@ export default function TelegramManagementTable({
       // const response = await fetch(`/api/admin/telegram/queue/${itemId}/cancel`, {
       //   method: 'POST'
       // });
-      
-      console.log('Cancelling item:', itemId);
+
       await new Promise(resolve => setTimeout(resolve, 500));
       
       // Show success feedback

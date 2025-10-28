@@ -54,8 +54,6 @@ export default function EnhancedAuthForm({ initialIsLogin = true }: EnhancedAuth
     setError('');
     setSuccess('');
     clearError();
-    
-    console.log('🚀 [EnhancedAuthForm] Form submitted, isLogin:', isLogin);
 
     if (!isLogin) {
       // Registration validation
@@ -77,11 +75,10 @@ export default function EnhancedAuthForm({ initialIsLogin = true }: EnhancedAuth
 
     try {
       if (isLogin) {
-        console.log('🔑 [EnhancedAuthForm] Calling loginWithCredentials...');
+
         // Login flow - sends OTP
         const result = await loginWithCredentials({ email, password });
-        console.log('✅ [EnhancedAuthForm] Login result:', result);
-        
+
         if (result.requiresOTP && result.sessionToken) {
           setSessionToken(result.sessionToken);
           setStep('otp');

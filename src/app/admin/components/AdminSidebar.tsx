@@ -3,11 +3,12 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { useAdminAuth } from '../contexts/AdminAuthContext';
+import Image from 'next/image';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function AdminSidebar() {
   const pathname = usePathname();
-  const { user, logout } = useAdminAuth();
+  const { user, logout } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   const handleLogout = () => {
@@ -72,11 +73,17 @@ export default function AdminSidebar() {
       {/* Branding Header */}
       <div className="px-4 py-6 border-b border-gray-200">
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-gradient-to-r from-[#00B38F] to-[#000ABE] rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-sm">O</span>
+          <div className="w-12 h-12 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
+            <Image 
+              src="/logo_main.png" 
+              alt="OxiWorld Logo" 
+              width={48} 
+              height={48}
+              className="object-contain"
+            />
           </div>
           <div>
-            <h1 className="text-lg font-semibold text-gray-900">OxiWorld Admin</h1>
+            <h1 className="text-lg font-semibold text-[#000856]">OxiWorld Admin</h1>
             <p className="text-xs text-gray-500">Forex Academy Management</p>
           </div>
         </div>

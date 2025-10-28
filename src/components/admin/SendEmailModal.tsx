@@ -58,24 +58,23 @@ export default function SendEmailModal({ template, isOpen, onClose, onSend }: Se
 
   const loadUsers = async () => {
     try {
-      console.log('Loading users...');
+
       const response = await adminAPI.getUsers({
         page: 1,
         per_page: 1000, // Get all users for now
         search: ''
       });
-      console.log('Users API response:', response);
-      
+
       if (response.success !== false && response.users) {
         // Handle direct response format
         setUsers(response.users || []);
-        console.log('Users loaded:', response.users.length);
+
       } else if (response.success && response.data) {
         // Handle wrapped response format
         setUsers(response.data.users || []);
-        console.log('Users loaded from data:', response.data.users?.length);
+
       } else {
-        console.log('No users found in response, using mock data');
+
         // Use mock data as fallback
         const mockUsers: User[] = [
           { id: '1', email: 'admin@oxiworld.com', first_name: 'Admin', last_name: 'User', subscription_status: 'active' },
@@ -93,7 +92,7 @@ export default function SendEmailModal({ template, isOpen, onClose, onSend }: Se
         { id: '3', email: 'inactive@oxiworld.com', first_name: 'Inactive', last_name: 'User', subscription_status: 'inactive' }
       ];
       setUsers(mockUsers);
-      console.log('Using fallback mock users:', mockUsers.length);
+
     }
   };
 
@@ -133,7 +132,7 @@ export default function SendEmailModal({ template, isOpen, onClose, onSend }: Se
         break;
     }
     setRecipientCount(count);
-    console.log(`Recipient count for ${sendData.recipientType}:`, count);
+
   };
 
   const handleSend = () => {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { AdminAPIClient } from '../utils/api';
+import { apiClient } from '@/utils/apiClient';
 
 export default function AnalyticsTest() {
   const [testResult, setTestResult] = useState<string>('');
@@ -13,8 +13,7 @@ export default function AnalyticsTest() {
 
     try {
       const startTime = Date.now();
-      const adminClient = new AdminAPIClient();
-      const response = await adminClient.getDashboardAnalytics();
+      const response: any = await apiClient.get('/admin/dashboard/analytics/');
       const endTime = Date.now();
       
       const responseTime = endTime - startTime;

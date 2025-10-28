@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { AdminAuthProvider } from './contexts/AdminAuthContext';
+import { AuthProvider } from '@/contexts/AuthContext';
 import AdminLayoutWrapper from './components/AdminLayoutWrapper';
 
 export const metadata: Metadata = {
@@ -13,10 +13,10 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   return (
-    <AdminAuthProvider>
+    <AuthProvider>
       <AdminLayoutWrapper>
         {children}
       </AdminLayoutWrapper>
-    </AdminAuthProvider>
+    </AuthProvider>
   );
 }

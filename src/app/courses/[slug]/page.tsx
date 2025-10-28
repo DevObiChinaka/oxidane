@@ -168,7 +168,7 @@ export default function CourseDetailPage() {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('Enrollment response:', data);
+
         setSuccessMessage(data.message || 'Successfully enrolled in course!');
         setTimeout(() => setSuccessMessage(null), 1500);
         // Redirect to My Courses so user sees it added

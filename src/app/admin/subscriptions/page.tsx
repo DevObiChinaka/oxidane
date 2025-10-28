@@ -59,7 +59,7 @@ export default function SubscriptionsManagement() {
       await updateSubscription(updatedSubscription.id, updatedSubscription);
       refetchSubscriptions();
       setModalOpen(false);
-      console.log('Subscription updated successfully');
+
     } catch (err) {
       console.error('Update subscription error:', err);
     }
@@ -70,7 +70,7 @@ export default function SubscriptionsManagement() {
     try {
       await verifyPayment(subscriptionId);
       refetchSubscriptions();
-      console.log('Payment verified successfully');
+
     } catch (err) {
       console.error('Payment verification error:', err);
     }

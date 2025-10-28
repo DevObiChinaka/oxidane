@@ -1,5 +1,6 @@
 // Enhanced types for dynamic pricing system
 import { Subscription } from './subscription';
+
 export interface PricingPlan {
   id: string;
   plan_type: string;
@@ -8,14 +9,25 @@ export interface PricingPlan {
   price: number;
   current_price?: number;
   currency: string;
-  plan_category: 'signals' | 'mentorship' | 'vip';
-  billing_cycle: 'one_time' | 'weekly' | 'monthly' | 'yearly';
-  telegram_groups: string[];
+  plan_category: 'signals' | 'mentorship';
+  billing_cycle: 'one_time' | 'weekly' | 'monthly';
+  
+  // New fields for simplified structure
+  duration_days: number | null; // null for lifetime (mentorship)
+  gives_course_access: boolean;
+  gives_signals_access: boolean;
+  telegram_group_key: string; // 'mentorship', 'signals', or 'vip'
+  
   is_active: boolean;
   is_featured: boolean;
   features_list?: string[];
+  call_to_action?: string;
+  sort_order?: number;
+  
+  // Analytics
   subscription_count?: number;
   revenue_total?: number;
+  
   created_at: string;
   updated_at: string;
 }
@@ -52,7 +64,6 @@ export interface PublicPricingResponse {
   categories: {
     signals: PricingPlan[];
     mentorship: PricingPlan[];
-    vip: PricingPlan[];
   };
 }
 
@@ -71,7 +82,6 @@ export interface PricingAnalytics {
   revenue_by_category: {
     signals: number;
     mentorship: number;
-    vip: number;
   };
 }
 
@@ -82,13 +92,38 @@ export interface EnhancedSubscription extends Subscription {
   original_amount?: number; // Before coupon discount
 }
 
-// New plan type options based on dynamic data
+// Simplified plan type options (4 types total)
 export const DYNAMIC_PLAN_TYPE_OPTIONS = [
-  { value: 'signals_weekly', label: 'Weekly Signals', duration: '7 days' },
-  { value: 'signals_monthly', label: 'Monthly Signals', duration: '30 days' },
-  { value: 'signals_yearly', label: 'Yearly Signals', duration: '365 days' },
-  { value: 'mentorship_one_time', label: 'Basic Mentorship', duration: 'Lifetime' },
-  { value: 'vip_weekly', label: 'Weekly VIP', duration: '7 days' },
-  { value: 'vip_monthly', label: 'Monthly VIP', duration: '30 days' },
-  { value: 'vip_yearly', label: 'Yearly VIP', duration: '365 days' },
+  { 
+    value: 'mentorship', 
+    label: 'Mentorship Program', 
+    duration: 'Lifetime',
+    category: 'mentorship',
+    billing: 'one_time',
+    description: 'One-time payment for lifetime course access'
+  },
+  { 
+    value: 'signals_weekly', 
+    label: 'Weekly Signals', 
+    duration: '7 days',
+    category: 'signals',
+    billing: 'weekly',
+    description: 'Weekly trading signals subscription'
+  },
+  { 
+    value: 'signals_monthly', 
+    label: 'Monthly Signals', 
+    duration: '30 days',
+    category: 'signals',
+    billing: 'monthly',
+    description: 'Monthly trading signals subscription'
+  },
+  { 
+    value: 'vip_monthly', 
+    label: 'VIP Signals', 
+    duration: '30 days',
+    category: 'signals',
+    billing: 'monthly',
+    description: 'Premium VIP signals with trade bias and analysis'
+  },
 ] as const;

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAdminAuth } from '../contexts/AdminAuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { usePricingPlans } from '../hooks/useAdminAPI';
 import TelegramQueueDashboard from '@/components/admin/TelegramQueueDashboard';
 import TelegramManagementTable from '@/components/admin/TelegramManagementTable';
@@ -47,7 +47,7 @@ interface TelegramQueueItem {
 
 export default function TelegramManagementPage() {
   const router = useRouter();
-  const { isAuthenticated, user, loading: authLoading, logout } = useAdminAuth();
+  const { isAuthenticated, user, loading: authLoading, logout } = useAuth();
   
   const [activeTab, setActiveTab] = useState<'queue' | 'management' | 'groups' | 'settings'>('queue');
   const [stats, setStats] = useState<TelegramStats>({
@@ -199,9 +199,7 @@ export default function TelegramManagementPage() {
       //   headers: { 'Content-Type': 'application/json' },
       //   body: JSON.stringify(requestBody)
       // });
-      
-      console.log(`Performing ${action} on ${itemIds.length} items:`, itemIds);
-      
+
       // Simulate API call with different durations based on action
       const delay = action === 'cancel' ? 500 : 1000;
       await new Promise(resolve => setTimeout(resolve, delay));

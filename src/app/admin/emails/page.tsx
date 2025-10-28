@@ -698,11 +698,10 @@ export default function EmailTemplatesPage() {
               return;
             }
 
-            console.log('Sending bulk email with data:', sendData);
             const response = await adminAPI.sendBulkEmail(templateToSend.id, sendData);
             
             if (response.success) {
-              console.log('Bulk email sent successfully:', response);
+
               // Show success notification with details
               setNotification({
                 show: true,

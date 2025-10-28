@@ -12,7 +12,7 @@ export default function PricingPage() {
   const handlePlanSelect = (plan: PricingPlan) => {
     setSelectedPlan(plan);
     // Here you would typically redirect to checkout or open a modal
-    console.log('Selected plan:', plan);
+
   };
 
   return (

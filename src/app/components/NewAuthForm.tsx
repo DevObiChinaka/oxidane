@@ -361,10 +361,11 @@ export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps)
     setSuccess('');
 
     try {
-      const response = await fetch('/api/auth/forgot-password', {
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api';
+      const response = await fetch(`${API_BASE_URL}/auth/password-reset/request/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
       });
 
       const data = await response.json();
@@ -375,7 +376,7 @@ export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps)
         return;
       }
 
-      setSuccess('Password reset link sent to your email');
+      setSuccess('If an account exists with this email, you will receive password reset instructions shortly.');
     } catch (error) {
       setError('An error occurred. Please try again.');
     }

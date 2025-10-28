@@ -10,7 +10,7 @@ import DeleteCourseModal from '../components/DeleteCourseModal';
 // Utility function to safely format dates
 function formatDate(dateString: string | undefined | null): string {
   if (!dateString || dateString === '' || dateString === 'null' || dateString === 'undefined') {
-    console.warn('Empty or invalid date string:', dateString);
+
     return 'No date';
   }
   
@@ -18,7 +18,7 @@ function formatDate(dateString: string | undefined | null): string {
     const date = new Date(dateString);
     // Check if the date is valid
     if (isNaN(date.getTime())) {
-      console.warn('Invalid date created from string:', dateString);
+
       return 'Invalid Date';
     }
     
@@ -29,7 +29,7 @@ function formatDate(dateString: string | undefined | null): string {
       day: 'numeric'
     });
   } catch (error) {
-    console.warn('Error formatting date:', dateString, error);
+
     return 'Invalid Date';
   }
 }
@@ -246,19 +246,12 @@ export default function CoursesPage() {
   const { createCourse, updateCourse, deleteCourse, loading: actionLoading } = useCourseActions();
 
   const handleEditCourse = async (course: Course) => {
-    console.log('📝 Editing course:', {
-      id: course.id,
-      title: course.title,
-      idType: typeof course.id,
-      fullCourse: course
-    });
-    
+
     try {
       // Fetch complete course data with all fields (including SEO fields)
-      console.log('🔄 Fetching complete course data for editing...');
+
       const completeOneData = await adminAPI.getCourseDetail(course.id);
-      console.log('✅ Complete course data received:', completeOneData);
-      
+
       setSelectedCourse(completeOneData);
       setShowEditModal(true);
     } catch (error) {
@@ -286,22 +279,22 @@ export default function CoursesPage() {
     try {
       if (selectedCourse) {
         // Edit mode
-        console.log('🔄 Updating course:', selectedCourse.id, 'with data:', courseData);
+
         const result = await updateCourse(selectedCourse.id, courseData);
-        console.log('✅ Course updated successfully:', result);
+
         setShowEditModal(false);
       } else {
         // Create mode
-        console.log('➕ Creating new course with data:', courseData);
+
         const result = await createCourse(courseData);
-        console.log('✅ Course created successfully:', result);
+
         setShowCreateModal(false);
       }
       
       // Refresh the courses list
-      console.log('🔄 Refreshing courses list...');
+
       await refetch();
-      console.log('✅ Courses list refreshed');
+
     } catch (error) {
       console.error('❌ Error saving course:', error);
       // Error is already handled in the hook and displayed in the modal
