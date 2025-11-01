@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
   useMentorshipSubscriptions, 
-  useMentorshipSessions, 
   useMentorshipAnalytics 
 } from '../hooks/useAdminAPI';
 
@@ -24,27 +23,8 @@ interface MentorshipSubscription {
   days_remaining: number;
   telegram_username: string;
   telegram_status: string;
-  sessions_used: number;
-  sessions_remaining: number;
   is_active: boolean;
   created_at: string;
-}
-
-interface OneOnOneSession {
-  id: string;
-  user_email: string;
-  user_name: string;
-  session_type: string;
-  scheduled_datetime: string;
-  duration_minutes: number;
-  status: string;
-  meeting_link?: string;
-  physical_location?: string;
-  phone_number?: string;
-  admin_notified: boolean;
-  session_notes?: string;
-  created_at: string;
-  completed_at?: string;
 }
 
 export default function MentorshipManagement() {
@@ -53,17 +33,14 @@ export default function MentorshipManagement() {
   
   // Use the new hooks
   const subscriptionHook = useMentorshipSubscriptions();
-  const sessionHook = useMentorshipSessions();
   const analyticsHook = useMentorshipAnalytics();
   
   const [subscriptions, setSubscriptions] = useState<MentorshipSubscription[]>([]);
-  const [sessions, setSessions] = useState<OneOnOneSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'subscriptions' | 'sessions' | 'analytics'>('subscriptions');
+  const [activeTab, setActiveTab] = useState<'subscriptions' | 'analytics'>('subscriptions');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [sessionTypeFilter, setSessionTypeFilter] = useState('all');
   const [telegramFilter, setTelegramFilter] = useState('all');
   const [analytics, setAnalytics] = useState<any>(null);
 
@@ -95,16 +72,6 @@ export default function MentorshipManagement() {
         
         if (response.success) {
           setSubscriptions(response.subscriptions || []);
-        }
-      } else if (activeTab === 'sessions') {
-        const response = await sessionHook.fetchSessions({
-          search: searchTerm || undefined,
-          status: statusFilter !== 'all' ? statusFilter : undefined,
-          type: sessionTypeFilter !== 'all' ? sessionTypeFilter : undefined,
-        }) as any;
-        
-        if (response.success) {
-          setSessions(response.sessions || []);
         }
       } else if (activeTab === 'analytics') {
         const response = await analyticsHook.fetchAnalytics() as any;
@@ -200,16 +167,6 @@ export default function MentorshipManagement() {
     return matchesSearch && matchesStatus && matchesTelegram;
   });
 
-  const filteredSessions = sessions.filter(session => {
-    const matchesSearch = session.user_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         session.user_name.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || session.status === statusFilter;
-    const matchesType = sessionTypeFilter === 'all' || session.session_type === sessionTypeFilter;
-    
-    return matchesSearch && matchesStatus && matchesType;
-  });
-
   // Let AdminAuthContext handle authentication and redirects
   // Just show loading while auth is being checked
   if (authLoading || !isAuthenticated) {
@@ -266,8 +223,8 @@ export default function MentorshipManagement() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">Mentorship Management</h1>
-            <p className="mt-1 text-sm text-gray-600">Manage mentorship subscriptions, sessions, and analytics</p>
+            <h1 className="text-2xl font-bold text-gray-800">Mentorship Program Management</h1>
+            <p className="mt-1 text-sm text-gray-600">Manage lifetime mentorship subscriptions and analytics</p>
           </div>
         </div>
 
@@ -276,7 +233,6 @@ export default function MentorshipManagement() {
         <nav className="-mb-px flex space-x-8">
           {[
             { key: 'subscriptions', label: '👥 Subscriptions', count: subscriptions.length },
-            { key: 'sessions', label: '📅 1-on-1 Sessions', count: sessions.length },
             { key: 'analytics', label: '📊 Analytics' }
           ].map(tab => (
             <button
@@ -352,8 +308,7 @@ export default function MentorshipManagement() {
                     <th className="text-left py-3 px-4 font-medium text-gray-700">Payment</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-700">Status</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-700">Telegram</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-700">Sessions</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-700">Expires</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-700">Access</th>
                     <th className="text-right py-3 px-4 font-medium text-gray-700">Actions</th>
                   </tr>
                 </thead>
@@ -392,16 +347,11 @@ export default function MentorshipManagement() {
                         </div>
                       </td>
                       <td className="px-4 py-4">
-                        <div className="text-sm text-gray-900">
-                          {subscription.sessions_used} / {subscription.sessions_used + subscription.sessions_remaining} used
+                        <div className="text-sm font-medium text-green-600">
+                          Lifetime Access
                         </div>
                         <div className="text-xs text-gray-500">
-                          {subscription.sessions_remaining} remaining
-                        </div>
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="text-sm text-gray-900">
-                          {subscription.subscription_end ? new Date(subscription.subscription_end).toLocaleDateString() : 'N/A'}
+                          All Premium Courses
                         </div>
                       </td>
                       <td className="px-4 py-4">
@@ -409,7 +359,7 @@ export default function MentorshipManagement() {
                           onClick={() => handleExtendSubscription(subscription.id)}
                           className="text-blue-600 hover:text-blue-900 text-sm font-medium"
                         >
-                          Extend
+                          Manage
                         </button>
                       </td>
                     </tr>
@@ -421,132 +371,14 @@ export default function MentorshipManagement() {
         </div>
       )}
 
-      {/* Sessions Tab */}
-      {activeTab === 'sessions' && (
-        <div className="space-y-4">
-          {/* Session Controls */}
-          <div className="bg-white rounded-lg shadow-sm border p-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="md:col-span-1">
-                <label className="block text-sm font-medium text-gray-900 mb-2">Search Sessions</label>
-                <input
-                  type="text"
-                  placeholder="Search by user email or name..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent text-gray-900"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">Session Status</label>
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent text-gray-900 bg-white"
-                >
-                  <option value="all" className="text-gray-900">All Sessions</option>
-                  <option value="scheduled" className="text-gray-900">Scheduled</option>
-                  <option value="completed" className="text-gray-900">Completed</option>
-                  <option value="cancelled" className="text-gray-900">Cancelled</option>
-                  <option value="no_show" className="text-gray-900">No Show</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">Session Type</label>
-                <select
-                  value={sessionTypeFilter}
-                  onChange={(e) => setSessionTypeFilter(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent text-gray-900 bg-white"
-                >
-                  <option value="all" className="text-gray-900">All Types</option>
-                  <option value="virtual" className="text-gray-900">Virtual</option>
-                  <option value="physical" className="text-gray-900">Physical</option>
-                  <option value="phone" className="text-gray-900">Phone</option>
-                </select>
-              </div>
-            </div>
-          </div>
-          
-          <div className="border rounded-lg overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr>
-                    <th className="text-left py-3 px-4 font-medium text-gray-700">User</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-700">Type</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-700">Scheduled</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-700">Status</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-700">Details</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-700">Admin Alert</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredSessions.map((session) => (
-                    <tr key={session.id} className={`hover:bg-gray-50 ${session.session_type === 'physical' && !session.admin_notified ? 'bg-yellow-50' : ''}`}>
-                      <td className="px-4 py-4">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">{session.user_name}</div>
-                          <div className="text-sm text-gray-500">{session.user_email}</div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-4">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          session.session_type === 'physical' ? 'bg-purple-100 text-purple-800' :
-                          session.session_type === 'virtual' ? 'bg-blue-100 text-blue-800' :
-                          'bg-green-100 text-green-800'
-                        }`}>
-                          {session.session_type.toUpperCase()}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="text-sm text-gray-900">
-                          {new Date(session.scheduled_datetime).toLocaleDateString()}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {new Date(session.scheduled_datetime).toLocaleTimeString()}
-                        </div>
-                      </td>
-                      <td className="px-4 py-4">
-                        {getStatusBadge(session.status, 'session')}
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="text-sm text-gray-900">
-                          {session.duration_minutes} minutes
-                        </div>
-                        {session.meeting_link && (
-                          <div className="text-xs text-blue-600 truncate max-w-32">
-                            {session.meeting_link}
-                          </div>
-                        )}
-                        {session.physical_location && (
-                          <div className="text-xs text-gray-600 truncate max-w-32">
-                            📍 {session.physical_location}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-4">
-                        {session.session_type === 'physical' && (
-                          <div className={`text-xs ${session.admin_notified ? 'text-green-600' : 'text-red-600 font-medium'}`}>
-                            {session.admin_notified ? '✅ Notified' : '🚨 NEEDS ATTENTION'}
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Analytics Tab */}
       {activeTab === 'analytics' && analytics && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white rounded-lg shadow-sm border p-4">
-              <div className="text-2xl font-bold text-green-600">{analytics.active_subscriptions}</div>
-              <div className="text-sm text-gray-600">Active Subscriptions</div>
+              <div className="text-2xl font-bold text-green-600">{analytics.total_purchases}</div>
+              <div className="text-sm text-gray-600">Total Purchases</div>
             </div>
             
             <div className="bg-white rounded-lg shadow-sm border p-4">
@@ -555,34 +387,26 @@ export default function MentorshipManagement() {
             </div>
             
             <div className="bg-white rounded-lg shadow-sm border p-4">
-              <div className="text-2xl font-bold text-purple-600">{analytics.upcoming_sessions}</div>
-              <div className="text-sm text-gray-600">Upcoming Sessions</div>
+              <div className="text-2xl font-bold text-purple-600">${analytics.total_revenue?.toLocaleString()}</div>
+              <div className="text-sm text-gray-600">Total Revenue</div>
             </div>
             
             <div className="bg-white rounded-lg shadow-sm border p-4">
-              <div className="text-2xl font-bold text-orange-600">{analytics.physical_sessions_pending_notification}</div>
-              <div className="text-sm text-gray-600">Physical Sessions Pending</div>
+              <div className="text-2xl font-bold text-orange-600">{analytics.recent_purchases_30d}</div>
+              <div className="text-sm text-gray-600">Recent Purchases (30d)</div>
             </div>
           </div>
 
-          {/* More detailed analytics can be added here */}
+          {/* Telegram Status Distribution */}
           <div className="bg-white rounded-lg shadow-sm border p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Session Statistics</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Telegram Status</h3>
             <div className="grid grid-cols-3 gap-4">
-              <div>
-                <div className="text-lg font-medium text-gray-900">{analytics.total_sessions}</div>
-                <div className="text-sm text-gray-600">Total Sessions</div>
-              </div>
-              <div>
-                <div className="text-lg font-medium text-green-600">{analytics.completed_sessions}</div>
-                <div className="text-sm text-gray-600">Completed</div>
-              </div>
-              <div>
-                <div className="text-lg font-medium text-yellow-600">
-                  {((analytics.completed_sessions / analytics.total_sessions) * 100).toFixed(1)}%
+              {analytics.telegram_stats?.map((stat: any, index: number) => (
+                <div key={index}>
+                  <div className="text-lg font-medium text-gray-900">{stat.count}</div>
+                  <div className="text-sm text-gray-600 capitalize">{stat.telegram_status || 'Not Connected'}</div>
                 </div>
-                <div className="text-sm text-gray-600">Completion Rate</div>
-              </div>
+              ))}
             </div>
           </div>
         </div>

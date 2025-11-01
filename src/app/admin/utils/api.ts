@@ -16,7 +16,7 @@ export class AdminAPIClient {
       'Content-Type': 'application/json'
     };
 
-    // Add auth token
+    // Add JWT auth token
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('access_token');
       if (token) {

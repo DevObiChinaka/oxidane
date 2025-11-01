@@ -21,10 +21,11 @@ export default function SubscriptionsManagement() {
   // View mode
   const [viewMode, setViewMode] = useState<'table' | 'analytics'>('table');
   
-  // Use hooks for data fetching
+  // Use hooks for data fetching - Filter for signals subscriptions only (exclude mentorship)
   const { data: subscriptionsData, loading: subscriptionsLoading, error: subscriptionsError, refetch: refetchSubscriptions } = useSubscriptions({
     page: currentPage,
     limit: 20,
+    plan_type: 'signals', // Only show signals subscriptions (weekly, monthly, VIP)
     ...filters
   });
   
@@ -83,10 +84,10 @@ export default function SubscriptionsManagement() {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold text-gray-800">
-              Subscription Management
+              Signals Subscription Management
             </h1>
             <p className="mt-1 text-sm text-gray-600">
-              Manage user subscriptions, payments, and Telegram access
+              Manage signals subscriptions (Weekly, Monthly, VIP), payments, and Telegram access
             </p>
           </div>
             
