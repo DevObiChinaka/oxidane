@@ -2849,3 +2849,370 @@ class PaymentConfiguration(models.Model):
         """
         return self.supported_currencies[0] if self.supported_currencies else "USD"
 
+
+class EmailConfiguration(models.Model):
+    """
+    Singleton model for storing email/SMTP configuration.
+    Manages SMTP server settings, credentials, and connection status.
+    
+    Phase 0.5, Task 0.5.9
+    """
+    # Singleton ID
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
+    
+    # SMTP Server Settings
+    smtp_host = models.CharField(
+        max_length=255,
+        blank=True,
+        default='',
+        help_text='SMTP server hostname (e.g., smtp.gmail.com)'
+    )
+    smtp_port = models.PositiveIntegerField(
+        default=587,
+        help_text='SMTP server port (25, 587 for TLS, 465 for SSL)'
+    )
+    use_tls = models.BooleanField(
+        default=True,
+        help_text='Use TLS encryption (port 587)'
+    )
+    use_ssl = models.BooleanField(
+        default=False,
+        help_text='Use SSL encryption (port 465)'
+    )
+    
+    # Authentication
+    smtp_username = models.EmailField(
+        max_length=255,
+        blank=True,
+        default='',
+        help_text='SMTP username (usually an email address)'
+    )
+    smtp_password = models.CharField(
+        max_length=500,
+        blank=True,
+        default='',
+        help_text='SMTP password (will be encrypted in Phase 2)'
+    )
+    
+    # Sender Information
+    from_email = models.EmailField(
+        max_length=255,
+        blank=True,
+        default='',
+        help_text='Default "From" email address'
+    )
+    from_name = models.CharField(
+        max_length=200,
+        default='OxiWorld',
+        help_text='Default "From" name'
+    )
+    
+    # Status
+    is_enabled = models.BooleanField(
+        default=False,
+        help_text='Enable email sending'
+    )
+    is_connected = models.BooleanField(
+        default=False,
+        help_text='Last connection test was successful'
+    )
+    connection_error = models.TextField(
+        max_length=500,
+        blank=True,
+        null=True,
+        help_text='Last connection error message'
+    )
+    last_test_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        help_text='Last connection test timestamp'
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Email Configuration'
+        verbose_name_plural = 'Email Configuration'
+    
+    def __str__(self):
+        return "Email Configuration"
+    
+    def clean(self):
+        """Validate model fields."""
+        super().clean()
+        
+        # Validate SMTP port range
+        if self.smtp_port < 1 or self.smtp_port > 65535:
+            raise ValidationError({
+                'smtp_port': 'SMTP port must be between 1 and 65535'
+            })
+        
+        # Cannot enable both TLS and SSL
+        if self.use_tls and self.use_ssl:
+            raise ValidationError('Cannot enable both TLS and SSL. Choose one.')
+        
+        # Must have at least TLS or SSL
+        if not self.use_tls and not self.use_ssl:
+            raise ValidationError('Either TLS or SSL must be enabled for security.')
+        
+        # Validate from_name length
+        if len(self.from_name) > 200:
+            raise ValidationError({
+                'from_name': 'From name must be 200 characters or less'
+            })
+        
+        # Enforce singleton pattern
+        existing_count = EmailConfiguration.objects.exclude(pk=self.pk).count()
+        if existing_count > 0:
+            raise ValidationError('Only one EmailConfiguration instance is allowed.')
+    
+    def save(self, *args, **kwargs):
+        """Override save to run validation and normalize data."""
+        # Normalize from_email to lowercase
+        if self.from_email:
+            self.from_email = self.from_email.lower()
+        
+        # Truncate connection_error if too long
+        if self.connection_error and len(self.connection_error) > 500:
+            self.connection_error = self.connection_error[:500]
+        
+        self.full_clean()
+        super().save(*args, **kwargs)
+    
+    @classmethod
+    def get_instance(cls):
+        """
+        Get or create the singleton instance.
+        
+        Returns:
+            EmailConfiguration: The singleton instance
+        """
+        instance = cls.objects.first()
+        if not instance:
+            instance = cls()
+            instance.save()
+        return instance
+    
+    # ============================================================================
+    # CONNECTION TESTING METHODS
+    # ============================================================================
+    
+    def test_connection(self):
+        """
+        Test SMTP connection with current settings.
+        
+        Returns:
+            dict: {'success': bool, 'message': str}
+        """
+        from django.utils import timezone
+        import smtplib
+        import ssl
+        
+        # Update last test timestamp
+        self.last_test_at = timezone.now()
+        
+        # Validate required fields
+        if not self.smtp_host:
+            return {
+                'success': False,
+                'message': 'SMTP host is required'
+            }
+        
+        if not self.smtp_username or not self.smtp_password:
+            return {
+                'success': False,
+                'message': 'SMTP credentials (username and password) are required'
+            }
+        
+        try:
+            if self.use_ssl:
+                # SSL connection (port 465)
+                context = ssl.create_default_context()
+                with smtplib.SMTP_SSL(self.smtp_host, self.smtp_port, context=context, timeout=10) as server:
+                    server.login(self.smtp_username, self.smtp_password)
+            else:
+                # TLS connection (port 587)
+                with smtplib.SMTP(self.smtp_host, self.smtp_port, timeout=10) as server:
+                    server.starttls()
+                    server.login(self.smtp_username, self.smtp_password)
+            
+            # Connection successful
+            self.mark_as_connected()
+            self.save()
+            
+            return {
+                'success': True,
+                'message': f'Successfully connected to {self.smtp_host}:{self.smtp_port}'
+            }
+            
+        except smtplib.SMTPAuthenticationError as e:
+            error_msg = f'Authentication failed: {str(e)}'
+            self.mark_as_disconnected(error_msg)
+            self.save()
+            return {
+                'success': False,
+                'message': error_msg
+            }
+            
+        except smtplib.SMTPConnectError as e:
+            error_msg = f'Failed to connect: {str(e)}'
+            self.mark_as_disconnected(error_msg)
+            self.save()
+            return {
+                'success': False,
+                'message': error_msg
+            }
+            
+        except smtplib.SMTPException as e:
+            error_msg = f'SMTP error: {str(e)}'
+            self.mark_as_disconnected(error_msg)
+            self.save()
+            return {
+                'success': False,
+                'message': error_msg
+            }
+            
+        except Exception as e:
+            error_msg = f'Connection error: {str(e)}'
+            self.mark_as_disconnected(error_msg)
+            self.save()
+            return {
+                'success': False,
+                'message': error_msg
+            }
+    
+    def mark_as_connected(self):
+        """Mark configuration as successfully connected."""
+        self.is_connected = True
+        self.connection_error = None
+    
+    def mark_as_disconnected(self, error_message):
+        """
+        Mark configuration as disconnected with error.
+        
+        Args:
+            error_message (str): Error message to store
+        """
+        self.is_connected = False
+        self.connection_error = error_message[:500] if error_message else None
+    
+    # ============================================================================
+    # SECURITY METHODS
+    # ============================================================================
+    
+    def get_masked_password(self):
+        """
+        Get masked password for display purposes.
+        
+        Returns:
+            str: Masked password (e.g., "***23" for "password123")
+        """
+        if not self.smtp_password:
+            return "(not set)"
+        
+        if len(self.smtp_password) <= 3:
+            return "***"
+        
+        # Show last 2 characters
+        return "***" + self.smtp_password[-2:]
+    
+    def is_configured(self):
+        """
+        Check if email is properly configured.
+        
+        Returns:
+            bool: True if all required fields are set
+        """
+        return bool(
+            self.smtp_host and
+            self.smtp_port and
+            self.smtp_username and
+            self.smtp_password and
+            self.from_email
+        )
+    
+    # ============================================================================
+    # SETTINGS MANAGEMENT METHODS
+    # ============================================================================
+    
+    def get_settings(self):
+        """
+        Get all settings as a dictionary.
+        
+        Returns:
+            dict: All configuration settings
+        """
+        return {
+            'smtp_host': self.smtp_host,
+            'smtp_port': self.smtp_port,
+            'smtp_username': self.smtp_username,
+            'smtp_password': self.smtp_password,
+            'from_email': self.from_email,
+            'from_name': self.from_name,
+            'use_tls': self.use_tls,
+            'use_ssl': self.use_ssl,
+            'is_enabled': self.is_enabled,
+            'is_connected': self.is_connected,
+            'connection_error': self.connection_error,
+        }
+    
+    def get_smtp_settings_for_django(self):
+        """
+        Get SMTP settings in Django settings format.
+        
+        Returns:
+            dict: Settings formatted for Django EMAIL_* settings
+        """
+        return {
+            'EMAIL_BACKEND': 'django.core.mail.backends.smtp.EmailBackend',
+            'EMAIL_HOST': self.smtp_host,
+            'EMAIL_PORT': self.smtp_port,
+            'EMAIL_HOST_USER': self.smtp_username,
+            'EMAIL_HOST_PASSWORD': self.smtp_password,
+            'EMAIL_USE_TLS': self.use_tls,
+            'EMAIL_USE_SSL': self.use_ssl,
+            'DEFAULT_FROM_EMAIL': self.from_email or f'{self.from_name} <{self.smtp_username}>',
+        }
+    
+    def update_settings(self, settings_dict):
+        """
+        Update multiple settings at once with validation.
+        
+        Args:
+            settings_dict (dict): Dictionary of settings to update
+            
+        Raises:
+            ValidationError: If validation fails
+        """
+        # Save original values for rollback
+        original_values = {}
+        
+        # Readonly fields that cannot be updated
+        readonly_fields = ['id', 'created_at', 'updated_at', 'last_test_at']
+        
+        try:
+            # Update allowed fields
+            for key, value in settings_dict.items():
+                if key in readonly_fields:
+                    continue
+                    
+                if hasattr(self, key):
+                    original_values[key] = getattr(self, key)
+                    setattr(self, key, value)
+            
+            # Validate before saving
+            self.full_clean()
+            self.save()
+            
+        except ValidationError as e:
+            # Rollback changes
+            for key, value in original_values.items():
+                setattr(self, key, value)
+            raise e
+

@@ -16,7 +16,7 @@ import csv
 from .models import (
     PricingPlan, SignalSubscription,
     TelegramGroupManagement, Coupon, ReferralCode, Referral, ReferralCredit,
-    PaymentConfiguration, TelegramConfiguration, TelegramGroup
+    PaymentConfiguration, EmailConfiguration, TelegramConfiguration, TelegramGroup
 )
 
 @admin.register(PricingPlan)
@@ -610,6 +610,147 @@ class ReferralCreditAdmin(admin.ModelAdmin):
         
         return response
     export_to_csv.short_description = "Export to CSV"
+
+
+@admin.register(EmailConfiguration)
+class EmailConfigurationAdmin(admin.ModelAdmin):
+    """
+    Admin interface for email/SMTP configuration (singleton).
+    Manages SMTP server settings, credentials, and connection testing.
+    Phase 0.5, Task 0.5.9
+    """
+    list_display = [
+        'smtp_host_display', 'status_display', 'connection_display',
+        'from_email_display'
+    ]
+    readonly_fields = [
+        'id', 'created_at', 'updated_at', 'masked_password_display',
+        'connection_status_display', 'last_test_at'
+    ]
+    fieldsets = (
+        ('SMTP Server Settings', {
+            'fields': (
+                'id', 'smtp_host', 'smtp_port', 'use_tls', 'use_ssl'
+            ),
+            'description': 'Configure SMTP server connection'
+        }),
+        ('Authentication', {
+            'fields': (
+                'smtp_username', 'smtp_password', 'masked_password_display'
+            ),
+            'description': 'SMTP login credentials'
+        }),
+        ('Sender Information', {
+            'fields': (
+                'from_email', 'from_name'
+            ),
+            'description': 'Default sender details for outgoing emails'
+        }),
+        ('Status', {
+            'fields': (
+                'is_enabled', 'connection_status_display', 'last_test_at'
+            )
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def smtp_host_display(self, obj):
+        """Display SMTP host with port"""
+        if obj.smtp_host:
+            protocol = 'SSL' if obj.use_ssl else 'TLS'
+            return format_html(
+                '<strong>{}</strong>:{} ({})',
+                obj.smtp_host,
+                obj.smtp_port,
+                protocol
+            )
+        return format_html('<em style="color: #6c757d;">(not configured)</em>')
+    smtp_host_display.short_description = 'SMTP Server'
+    
+    def status_display(self, obj):
+        """Display enabled/disabled status"""
+        if obj.is_enabled:
+            return format_html('<span style="color: #28a745;">● Enabled</span>')
+        return format_html('<span style="color: #dc3545;">○ Disabled</span>')
+    status_display.short_description = 'Status'
+    
+    def connection_display(self, obj):
+        """Display connection status"""
+        if not obj.is_enabled:
+            return format_html('<span style="color: #6c757d;">⚫ Disabled</span>')
+        elif not obj.is_configured():
+            return format_html('<span style="color: #ffc107;">⚠ Not Configured</span>')
+        elif obj.is_connected:
+            return format_html('<span style="color: #28a745;">● Connected</span>')
+        else:
+            return format_html('<span style="color: #dc3545;">○ Disconnected</span>')
+    connection_display.short_description = 'Connection'
+    
+    def from_email_display(self, obj):
+        """Display from email"""
+        if obj.from_email:
+            return format_html(
+                '<strong>{}</strong> &lt;{}&gt;',
+                obj.from_name,
+                obj.from_email
+            )
+        return format_html('<em style="color: #dc3545;">(not set)</em>')
+    from_email_display.short_description = 'From Address'
+    
+    def masked_password_display(self, obj):
+        """Display masked password for security"""
+        masked = obj.get_masked_password()
+        if masked == '(not set)':
+            return format_html('<em style="color: #dc3545;">{}</em>', masked)
+        return format_html('<code style="color: #dc3545;">{}</code>', masked)
+    masked_password_display.short_description = 'Password (Masked)'
+    
+    def connection_status_display(self, obj):
+        """Display detailed connection status"""
+        if not obj.is_enabled:
+            return format_html('<div style="color: #6c757d;">⚫ Email system is disabled</div>')
+        
+        if not obj.is_configured():
+            return format_html(
+                '<div style="color: #ffc107;"><strong>⚠ Not Configured</strong></div>'
+                '<div style="font-size: 11px; color: #856404;">Please configure SMTP settings</div>'
+            )
+        
+        if obj.is_connected:
+            return format_html(
+                '<div style="color: #28a745;"><strong>✓ Connected</strong></div>'
+                '<div style="font-size: 11px; color: #6c757d;">SMTP connection successful</div>'
+            )
+        else:
+            error_msg = obj.connection_error or 'Not tested yet'
+            return format_html(
+                '<div style="color: #dc3545;"><strong>✗ Disconnected</strong></div>'
+                '<div style="font-size: 11px; color: #dc3545;">{}</div>',
+                error_msg[:100]
+            )
+    connection_status_display.short_description = 'Connection Status'
+    
+    def has_add_permission(self, request):
+        """Prevent adding more than one configuration (singleton)"""
+        from .models import EmailConfiguration
+        if EmailConfiguration.objects.exists():
+            return False
+        return super().has_add_permission(request)
+    
+    def has_delete_permission(self, request, obj=None):
+        """Allow delete to reset configuration if needed (superuser only)"""
+        return request.user.is_superuser
+    
+    def save_model(self, request, obj, form, change):
+        """Override to handle credential changes"""
+        if 'smtp_password' in form.changed_data and obj.smtp_password:
+            # Password changed, mark as disconnected for re-verification
+            obj.is_connected = False
+            obj.connection_error = 'Password changed - please test connection'
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(PaymentConfiguration)
