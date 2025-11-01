@@ -1041,3 +1041,168 @@ class Feature(models.Model):
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
+
+
+class SubscriptionPlan(models.Model):
+    """
+    Dynamic subscription plan with configurable features and pricing.
+    Supports multiple billing periods and currencies via auto-conversion.
+    """
+    BILLING_PERIOD_CHOICES = [
+        ('weekly', 'Weekly'),
+        ('monthly', 'Monthly'),
+        ('quarterly', 'Quarterly (3 months)'),
+        ('yearly', 'Yearly'),
+        ('lifetime', 'Lifetime'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=200, unique=True, db_index=True, blank=True)
+    description = models.TextField(blank=True)
+    
+    # Feature relationships
+    features = models.ManyToManyField(
+        Feature,
+        related_name='plans',
+        blank=True,
+        help_text='Features included in this plan'
+    )
+    
+    # Pricing (stored in USD, auto-converted to other currencies)
+    base_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text='Base price in USD'
+    )
+    billing_period = models.CharField(
+        max_length=20,
+        choices=BILLING_PERIOD_CHOICES,
+        default='monthly'
+    )
+    
+    # Trial period
+    trial_days = models.IntegerField(
+        default=0,
+        help_text='Number of days for free trial (0 = no trial)'
+    )
+    
+    # Plan metadata
+    is_active = models.BooleanField(
+        default=True,
+        help_text='Whether this plan is available for purchase'
+    )
+    is_featured = models.BooleanField(
+        default=False,
+        help_text='Highlight this plan on pricing page'
+    )
+    sort_order = models.IntegerField(
+        default=0,
+        help_text='Display order on pricing page (lower = first)'
+    )
+    
+    # Limits and quotas (stored as JSON for flexibility)
+    limits = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='Plan limits (e.g., {"max_signals": 100, "max_courses": 5})'
+    )
+    
+    # Stripe integration (for future use)
+    stripe_price_id = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text='Stripe Price ID for this plan'
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['sort_order', 'base_price']
+        indexes = [
+            models.Index(fields=['is_active', 'sort_order']),
+            models.Index(fields=['slug']),
+            models.Index(fields=['billing_period', 'is_active']),
+        ]
+        verbose_name = 'Subscription Plan'
+        verbose_name_plural = 'Subscription Plans'
+    
+    def __str__(self):
+        period_display = self.get_billing_period_display()
+        return f"{self.name} ({period_display})"
+    
+    def clean(self):
+        """Validate plan data"""
+        # Ensure base_price is positive
+        if self.base_price and self.base_price < 0:
+            raise ValidationError({
+                'base_price': 'Base price must be positive.'
+            })
+        
+        # Ensure trial_days is non-negative
+        if self.trial_days and self.trial_days < 0:
+            raise ValidationError({
+                'trial_days': 'Trial days cannot be negative.'
+            })
+        
+        # Auto-generate slug from name if not provided
+        if not self.slug and self.name:
+            from django.utils.text import slugify
+            base_slug = slugify(self.name)
+            # Add billing period to make it unique
+            self.slug = f"{base_slug}-{self.billing_period}"
+    
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+    
+    def get_price_display(self):
+        """Get formatted price with period"""
+        if self.billing_period == 'lifetime':
+            return f"${self.base_price}"
+        elif self.billing_period == 'weekly':
+            return f"${self.base_price}/wk"
+        elif self.billing_period == 'monthly':
+            return f"${self.base_price}/mo"
+        elif self.billing_period == 'quarterly':
+            return f"${self.base_price}/3mo"
+        elif self.billing_period == 'yearly':
+            return f"${self.base_price}/yr"
+        return f"${self.base_price}"
+    
+    def get_monthly_equivalent(self):
+        """Calculate monthly equivalent price for comparison"""
+        if self.billing_period == 'weekly':
+            # Assume 4.33 weeks per month (52 weeks / 12 months)
+            return self.base_price * Decimal('4.33')
+        elif self.billing_period == 'monthly':
+            return self.base_price
+        elif self.billing_period == 'quarterly':
+            return self.base_price / 3
+        elif self.billing_period == 'yearly':
+            return self.base_price / 12
+        elif self.billing_period == 'lifetime':
+            # Assume 2 years for lifetime comparison
+            return self.base_price / 24
+        return self.base_price
+    
+    def has_trial(self):
+        """Check if plan has trial period"""
+        return self.trial_days > 0
+    
+    def get_feature_count(self):
+        """Get count of features in this plan"""
+        return self.features.count()
+    
+    def get_features_by_category(self):
+        """Get features grouped by category"""
+        features_dict = {}
+        for feature in self.features.filter(is_active=True).order_by('category', 'sort_order'):
+            category = feature.get_category_display()
+            if category not in features_dict:
+                features_dict[category] = []
+            features_dict[category].append(feature)
+        return features_dict
