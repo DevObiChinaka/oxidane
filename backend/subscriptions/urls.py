@@ -1,7 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import admin_views
-from .pricing_views import PricingPlanViewSet, CouponCodeViewSet
+from .pricing_views import PricingPlanViewSet, CouponViewSet
 from . import billing_views
 from .user_subscription_views import UserSubscriptionViewSet
 from . import mentorship_admin_views
@@ -11,7 +11,7 @@ app_name = 'subscriptions'
 # API Router for pricing management
 router = DefaultRouter()
 router.register(r'pricing/plans', PricingPlanViewSet, basename='pricing-plans')
-router.register(r'pricing/coupons', CouponCodeViewSet, basename='coupon-codes')
+router.register(r'pricing/coupons', CouponViewSet, basename='coupon-codes')
 
 # User subscription management router
 user_router = DefaultRouter()

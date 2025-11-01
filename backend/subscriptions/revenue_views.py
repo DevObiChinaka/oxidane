@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from django.db.models import Sum, Count, Avg
 from django.utils import timezone
 from datetime import datetime, timedelta
-from subscriptions.models import SignalSubscription as Subscription, PricingPlan, CouponCode
+from subscriptions.models import SignalSubscription as Subscription, PricingPlan, Coupon
 from users.admin_auth import admin_required
 from django.http import HttpResponse
 import json
@@ -190,7 +190,7 @@ class RevenueAnalyticsViewSet(viewsets.ViewSet):
             
             # Get coupon usage analytics
             coupon_analytics = []
-            for coupon in CouponCode.objects.filter(
+            for coupon in Coupon.objects.filter(
                 created_at__date__range=[start_date, end_date]
             ):
                 coupon_analytics.append({

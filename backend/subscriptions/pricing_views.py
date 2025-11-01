@@ -6,9 +6,9 @@ from django.utils import timezone
 from datetime import timedelta
 from decimal import Decimal
 
-from .models import PricingPlan, CouponCode, CouponUsage, SignalSubscription
+from .models import PricingPlan, Coupon, SignalSubscription
 from .pricing_serializers import (
-    PricingPlanSerializer, CouponCodeSerializer, CouponUsageSerializer,
+    PricingPlanSerializer, CouponSerializer,
     PricingAnalyticsSerializer, CouponValidationSerializer
 )
 from users.permissions import IsAdmin
@@ -115,18 +115,18 @@ class PricingPlanViewSet(viewsets.ModelViewSet):
         })
 
 
-class CouponCodeViewSet(viewsets.ModelViewSet):
+class CouponViewSet(viewsets.ModelViewSet):
     """ViewSet for managing coupon codes"""
-    serializer_class = CouponCodeSerializer
+    serializer_class = CouponSerializer
     permission_classes = [permissions.IsAuthenticated, IsAdmin]
 
     def get_queryset(self):
         """Filter coupon codes based on query params"""
-        queryset = CouponCode.objects.all().order_by('-created_at')
+        queryset = Coupon.objects.all().order_by('-created_at')
         
         # Admin-only access - check if user is authenticated and admin
         if not (self.request.user and self.request.user.is_authenticated and self.request.user.is_staff):
-            return CouponCode.objects.none()
+            return Coupon.objects.none()
         
         # Filter by active status
         active_only = self.request.query_params.get('active_only')
@@ -164,7 +164,7 @@ class CouponCodeViewSet(viewsets.ModelViewSet):
         
         try:
             # Get the coupon
-            coupon = CouponCode.objects.get(code=code, is_active=True)
+            coupon = Coupon.objects.get(code=code, is_active=True)
             
             # Check validity period
             now = timezone.now()
@@ -225,7 +225,7 @@ class CouponCodeViewSet(viewsets.ModelViewSet):
                 }
             })
             
-        except CouponCode.DoesNotExist:
+        except Coupon.DoesNotExist:
             return Response({
                 'valid': False,
                 'error': 'Invalid coupon code'
@@ -252,31 +252,26 @@ class CouponCodeViewSet(viewsets.ModelViewSet):
         start_date = timezone.now() - timedelta(days=days_back)
         
         # Basic stats
-        total_coupons = CouponCode.objects.count()
-        active_coupons = CouponCode.objects.filter(is_active=True).count()
+        total_coupons = Coupon.objects.count()
+        active_coupons = Coupon.objects.filter(is_active=True).count()
         
-        # Usage stats
-        usage_stats = CouponUsage.objects.filter(used_at__gte=start_date).aggregate(
-            total_usage=Count('id'),
-            total_discount=Sum('discount_amount')
-        )
+        # Get coupons created/used in date range
+        recent_coupons = Coupon.objects.filter(created_at__gte=start_date)
+        total_usage = sum(c.current_uses for c in recent_coupons)
         
-        # Top performing coupons
-        top_coupons = CouponCode.objects.annotate(
-            usage_count=Count('couponusage'),
-            total_discount=Sum('couponusage__discount_amount')
-        ).order_by('-usage_count')[:10]
+        # Top performing coupons (by usage)
+        top_coupons = Coupon.objects.filter(current_uses__gt=0).order_by('-current_uses')[:10]
         
         return Response({
             'total_coupons': total_coupons,
             'active_coupons': active_coupons,
-            'total_usage': usage_stats['total_usage'] or 0,
-            'total_discount': float(usage_stats['total_discount'] or 0),
+            'total_usage': total_usage,
             'top_coupons': [{
                 'code': coupon.code,
-                'description': coupon.description,
-                'usage_count': coupon.usage_count,
-                'total_discount': float(coupon.total_discount or 0)
+                'description': coupon.description or '',
+                'usage_count': coupon.current_uses,
+                'discount_type': coupon.discount_type,
+                'discount_value': float(coupon.discount_value)
             } for coupon in top_coupons]
         })
 

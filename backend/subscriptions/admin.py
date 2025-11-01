@@ -14,17 +14,9 @@ import json
 import csv
 
 from .models import (
-    PricingPlan, CouponCode, CouponUsage, SignalSubscription,
-    TelegramGroupManagement
+    PricingPlan, SignalSubscription,
+    TelegramGroupManagement, Coupon, ReferralCode, Referral, ReferralCredit
 )
-
-# Custom admin site configuration
-class PricingPlanInline(admin.TabularInline):
-    """Inline editor for pricing plans when editing coupons"""
-    model = CouponCode.applicable_plans.through
-    extra = 0
-    verbose_name = "Applicable Plan"
-    verbose_name_plural = "Applicable Plans"
 
 @admin.register(PricingPlan)
 class PricingPlanAdmin(admin.ModelAdmin):
@@ -152,156 +144,6 @@ class PricingPlanAdmin(admin.ModelAdmin):
         return response
     export_plans.short_description = "Export selected plans to CSV"
 
-@admin.register(CouponCode)
-class CouponCodeAdmin(admin.ModelAdmin):
-    """Enhanced admin interface for coupon code management"""
-    list_display = [
-        'code', 'name', 'discount_display', 'status_display', 
-        'usage_stats', 'valid_period', 'created_by'
-    ]
-    list_filter = [
-        'discount_type', 'is_active', 'first_time_users_only',
-        'created_at', 'valid_from', 'valid_until'
-    ]
-    search_fields = ['code', 'name', 'description']
-    ordering = ['-created_at']
-    
-    fieldsets = (
-        ('Basic Information', {
-            'fields': ('code', 'name', 'description')
-        }),
-        ('Discount Settings', {
-            'fields': ('discount_type', 'discount_value', 'minimum_amount', 'maximum_discount'),
-            'classes': ('wide',)
-        }),
-        ('Usage Limits', {
-            'fields': ('usage_limit', 'usage_limit_per_user'),
-        }),
-        ('Validity Period', {
-            'fields': ('valid_from', 'valid_until'),
-        }),
-        ('Plan Restrictions', {
-            'fields': ('applicable_plans', 'applicable_categories'),
-            'classes': ('collapse',)
-        }),
-        ('Settings', {
-            'fields': ('is_active', 'first_time_users_only'),
-        }),
-    )
-    
-    readonly_fields = ['usage_count', 'created_at', 'updated_at']
-    filter_horizontal = ['applicable_plans']
-    
-    actions = ['activate_coupons', 'deactivate_coupons', 'export_coupon_usage']
-    
-    def save_model(self, request, obj, form, change):
-        """Set created_by when creating new coupon"""
-        if not change:  # Creating new coupon
-            obj.created_by = request.user
-        super().save_model(request, obj, form, change)
-    
-    def discount_display(self, obj):
-        """Display discount in human readable format"""
-        return obj.get_discount_display()
-    discount_display.short_description = "Discount"
-    
-    def status_display(self, obj):
-        """Display coupon status with color coding"""
-        status = obj.status
-        colors = {
-            'active': '#28a745',
-            'inactive': '#6c757d', 
-            'expired': '#dc3545',
-            'used_up': '#ffc107'
-        }
-        return format_html(
-            '<span style="color: {}; font-weight: bold;">{}</span>',
-            colors.get(status, '#000'),
-            status.title()
-        )
-    status_display.short_description = "Status"
-    
-    def usage_stats(self, obj):
-        """Display usage statistics"""
-        used = obj.usage_count
-        limit = obj.usage_limit or "∞"
-        
-        if obj.usage_limit and obj.usage_count >= obj.usage_limit:
-            color = "#dc3545"  # Red for used up
-        elif obj.usage_count > 0:
-            color = "#ffc107"  # Yellow for partially used
-        else:
-            color = "#28a745"  # Green for unused
-            
-        return format_html(
-            '<span style="color: {}; font-weight: bold;">{}/{}</span>',
-            color, used, limit
-        )
-    usage_stats.short_description = "Usage"
-    
-    def valid_period(self, obj):
-        """Display validity period"""
-        now = timezone.now()
-        start = obj.valid_from
-        end = obj.valid_until
-        
-        if now < start:
-            return format_html('<span style="color: #007bff;">Starts {}</span>', start.strftime('%m/%d/%Y'))
-        elif now > end:
-            return format_html('<span style="color: #dc3545;">Expired {}</span>', end.strftime('%m/%d/%Y'))
-        else:
-            return format_html('<span style="color: #28a745;">Valid until {}</span>', end.strftime('%m/%d/%Y'))
-    valid_period.short_description = "Validity"
-    
-    # Custom actions
-    def activate_coupons(self, request, queryset):
-        """Bulk activate coupons"""
-        count = queryset.update(is_active=True)
-        self.message_user(request, f'{count} coupons activated.')
-    activate_coupons.short_description = "Activate selected coupons"
-    
-    def deactivate_coupons(self, request, queryset):
-        """Bulk deactivate coupons"""
-        count = queryset.update(is_active=False)
-        self.message_user(request, f'{count} coupons deactivated.')
-    deactivate_coupons.short_description = "Deactivate selected coupons"
-
-@admin.register(CouponUsage)
-class CouponUsageAdmin(admin.ModelAdmin):
-    """Admin interface for coupon usage tracking"""
-    list_display = ['coupon_code', 'user_email', 'discount_amount_display', 'savings_display', 'used_at']
-    list_filter = ['used_at', 'coupon__discount_type']
-    search_fields = ['coupon__code', 'user__email', 'subscription__paystack_reference']
-    ordering = ['-used_at']
-    
-    readonly_fields = ['coupon', 'user', 'subscription', 'original_amount', 'discount_amount', 'final_amount', 'used_at']
-    
-    def has_add_permission(self, request):
-        """Prevent manual creation of usage records"""
-        return False
-    
-    def coupon_code(self, obj):
-        return obj.coupon.code
-    coupon_code.short_description = "Coupon Code"
-    coupon_code.admin_order_field = 'coupon__code'
-    
-    def user_email(self, obj):
-        return obj.user.email
-    user_email.short_description = "User"
-    user_email.admin_order_field = 'user__email'
-    
-    def discount_amount_display(self, obj):
-        return f"${obj.discount_amount}"
-    discount_amount_display.short_description = "Discount Applied"
-    discount_amount_display.admin_order_field = 'discount_amount'
-    
-    def savings_display(self, obj):
-        """Show savings percentage"""
-        if obj.original_amount > 0:
-            percentage = (obj.discount_amount / obj.original_amount) * 100
-            return f"{percentage:.1f}%"
-        return "0%"
-    savings_display.short_description = "Savings %"
 
 # Enhanced SignalSubscription admin with pricing integration
 class SignalSubscriptionAdmin(admin.ModelAdmin):
@@ -383,6 +225,391 @@ class SignalSubscriptionAdmin(admin.ModelAdmin):
 
 # Register the enhanced admin
 admin.site.register(SignalSubscription, SignalSubscriptionAdmin)
+
+
+@admin.register(ReferralCode)
+class ReferralCodeAdmin(admin.ModelAdmin):
+    """Admin interface for referral code management"""
+    list_display = [
+        'code', 'referrer_link', 'referrer_discount_display', 
+        'referee_discount_display', 'usage_display', 
+        'validity_status', 'is_active'
+    ]
+    list_filter = ['is_active', 'referrer_discount_type', 'referee_discount_type', 'created_at']
+    search_fields = ['code', 'referrer__username', 'referrer__email', 'description']
+    readonly_fields = ['id', 'current_uses', 'created_at', 'updated_at']
+    ordering = ['-created_at']
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('code', 'referrer', 'description', 'is_active')
+        }),
+        ('Referrer Discount (Reward for referring)', {
+            'fields': ('referrer_discount_type', 'referrer_discount_value'),
+            'description': 'Discount given to the referrer when someone uses their code'
+        }),
+        ('Referee Discount (For person using code)', {
+            'fields': ('referee_discount_type', 'referee_discount_value'),
+            'description': 'Discount given to the person using the referral code'
+        }),
+        ('Usage Limits', {
+            'fields': ('max_uses', 'current_uses'),
+            'description': 'Leave max_uses empty for unlimited uses'
+        }),
+        ('Validity Period', {
+            'fields': ('valid_from', 'valid_until'),
+            'description': 'Leave valid_until empty for no expiration'
+        }),
+        ('Metadata', {
+            'fields': ('id', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def referrer_link(self, obj):
+        """Display referrer as a link"""
+        if obj.referrer:
+            url = reverse('admin:auth_user_change', args=[obj.referrer.pk])
+            return format_html('<a href="{}">{}</a>', url, obj.referrer.username)
+        return '-'
+    referrer_link.short_description = 'Referrer'
+    
+    def referrer_discount_display(self, obj):
+        """Display referrer discount"""
+        return obj.get_referrer_discount_display()
+    referrer_discount_display.short_description = 'Referrer Gets'
+    
+    def referee_discount_display(self, obj):
+        """Display referee discount"""
+        return obj.get_referee_discount_display()
+    referee_discount_display.short_description = 'Referee Gets'
+    
+    def usage_display(self, obj):
+        """Display usage statistics"""
+        if obj.max_uses:
+            percentage = (obj.current_uses / obj.max_uses * 100) if obj.max_uses > 0 else 0
+            color = '#28a745' if percentage < 75 else ('#ffc107' if percentage < 90 else '#dc3545')
+            return format_html(
+                '<span style="color: {};">{} / {}</span> ({}%)',
+                color, obj.current_uses, obj.max_uses, int(percentage)
+            )
+        return f'{obj.current_uses} (unlimited)'
+    usage_display.short_description = 'Usage'
+    usage_display.admin_order_field = 'current_uses'
+    
+    def validity_status(self, obj):
+        """Display validity status"""
+        if not obj.is_active:
+            return format_html('<span style="color: #dc3545;">● Inactive</span>')
+        
+        if not obj.is_valid():
+            now = timezone.now()
+            if obj.valid_from and now < obj.valid_from:
+                return format_html('<span style="color: #ffc107;">● Not Started</span>')
+            else:
+                return format_html('<span style="color: #dc3545;">● Expired</span>')
+        
+        if not obj.is_usage_available():
+            return format_html('<span style="color: #dc3545;">● Exhausted</span>')
+        
+        return format_html('<span style="color: #28a745;">● Valid</span>')
+    validity_status.short_description = 'Status'
+    
+    def get_queryset(self, request):
+        """Optimize queryset with select_related"""
+        qs = super().get_queryset(request)
+        return qs.select_related('referrer')
+    
+    actions = ['activate_codes', 'deactivate_codes', 'reset_usage']
+    
+    def activate_codes(self, request, queryset):
+        """Bulk activate referral codes"""
+        updated = queryset.update(is_active=True)
+        self.message_user(request, f'Successfully activated {updated} referral code(s).')
+    activate_codes.short_description = "Activate selected referral codes"
+    
+    def deactivate_codes(self, request, queryset):
+        """Bulk deactivate referral codes"""
+        updated = queryset.update(is_active=False)
+        self.message_user(request, f'Successfully deactivated {updated} referral code(s).')
+    deactivate_codes.short_description = "Deactivate selected referral codes"
+    
+    def reset_usage(self, request, queryset):
+        """Reset usage counter for selected codes"""
+        updated = queryset.update(current_uses=0)
+        self.message_user(request, f'Successfully reset usage for {updated} referral code(s).')
+    reset_usage.short_description = "Reset usage counter to 0"
+
+
+@admin.register(Referral)
+class ReferralAdmin(admin.ModelAdmin):
+    """Admin interface for referral conversion tracking"""
+    list_display = [
+        'id', 'referrer_display', 'referee_display', 'referral_code_display',
+        'status_display', 'discount_display', 'conversion_date_display'
+    ]
+    list_filter = [
+        'status', 'conversion_date', 'currency',
+    ]
+    search_fields = [
+        'referrer__username', 'referrer__email',
+        'referee__username', 'referee__email',
+        'referral_code__code', 'notes'
+    ]
+    readonly_fields = [
+        'id', 'conversion_date', 'savings_display'
+    ]
+    fieldsets = (
+        ('Referral Information', {
+            'fields': (
+                'id', 'referral_code', 'referrer', 'referee', 'subscription'
+            )
+        }),
+        ('Discount Details', {
+            'fields': (
+                'original_amount', 
+                'referee_discount_percent',
+                'referee_discount_amount',
+                'final_amount',
+                'currency',
+                'savings_display'
+            )
+        }),
+        ('Status & Dates', {
+            'fields': (
+                'status', 'conversion_date', 'cancelled_date', 'notes'
+            )
+        }),
+    )
+    date_hierarchy = 'conversion_date'
+    ordering = ['-conversion_date']
+    
+    def referrer_display(self, obj):
+        """Display referrer with link"""
+        return format_html(
+            '<a href="{}">{}</a>',
+            reverse('admin:accounts_customuser_change', args=[obj.referrer.id]),
+            obj.referrer.username
+        )
+    referrer_display.short_description = 'Referrer'
+    
+    def referee_display(self, obj):
+        """Display referee with link"""
+        return format_html(
+            '<a href="{}">{}</a>',
+            reverse('admin:accounts_customuser_change', args=[obj.referee.id]),
+            obj.referee.username
+        )
+    referee_display.short_description = 'Referee'
+    
+    def referral_code_display(self, obj):
+        """Display referral code with link"""
+        return format_html(
+            '<a href="{}">{}</a>',
+            reverse('admin:subscriptions_referralcode_change', args=[obj.referral_code.id]),
+            obj.referral_code.code
+        )
+    referral_code_display.short_description = 'Code'
+    
+    def status_display(self, obj):
+        """Display status with color"""
+        color = obj.get_status_display_color()
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{}</span>',
+            color,
+            obj.get_status_display()
+        )
+    status_display.short_description = 'Status'
+    
+    def discount_display(self, obj):
+        """Display discount applied"""
+        return format_html(
+            '<span title="Original: {} {}">{} {} ({}%)</span>',
+            obj.original_amount, obj.currency,
+            obj.referee_discount_amount, obj.currency,
+            obj.referee_discount_percent
+        )
+    discount_display.short_description = 'Discount Applied'
+    
+    def conversion_date_display(self, obj):
+        """Display conversion date"""
+        return obj.conversion_date.strftime('%Y-%m-%d %H:%M')
+    conversion_date_display.short_description = 'Converted'
+    
+    def savings_display(self, obj):
+        """Display total savings"""
+        return format_html(
+            '<strong>{} {}</strong> saved ({}% discount)',
+            obj.referee_discount_amount,
+            obj.currency,
+            obj.referee_discount_percent
+        )
+    savings_display.short_description = 'Total Savings'
+    
+    def get_queryset(self, request):
+        """Optimize queries"""
+        qs = super().get_queryset(request)
+        return qs.select_related('referrer', 'referee', 'referral_code', 'subscription')
+    
+    actions = ['mark_as_cancelled_action', 'export_to_csv']
+    
+    def mark_as_cancelled_action(self, request, queryset):
+        """Bulk cancel referrals"""
+        for referral in queryset:
+            referral.mark_as_cancelled(reason='Cancelled via admin bulk action')
+        count = queryset.count()
+        self.message_user(request, f'Successfully cancelled {count} referral(s).')
+    mark_as_cancelled_action.short_description = "Mark as cancelled"
+    
+    def export_to_csv(self, request, queryset):
+        """Export selected referrals to CSV"""
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="referrals_export.csv"'
+        
+        writer = csv.writer(response)
+        writer.writerow([
+            'ID', 'Referrer', 'Referee', 'Referral Code', 'Status',
+            'Original Amount', 'Discount %', 'Discount Amount', 'Final Amount',
+            'Currency', 'Conversion Date', 'Notes'
+        ])
+        
+        for referral in queryset:
+            writer.writerow([
+                str(referral.id),
+                referral.referrer.username,
+                referral.referee.username,
+                referral.referral_code.code,
+                referral.get_status_display(),
+                referral.original_amount,
+                referral.referee_discount_percent,
+                referral.referee_discount_amount,
+                referral.final_amount,
+                referral.currency,
+                referral.conversion_date.strftime('%Y-%m-%d %H:%M:%S'),
+                referral.notes
+            ])
+        
+        return response
+    export_to_csv.short_description = "Export to CSV"
+
+
+@admin.register(ReferralCredit)
+class ReferralCreditAdmin(admin.ModelAdmin):
+    """Admin interface for referral credits (earned discounts)"""
+    list_display = [
+        'user_display', 'credit_percentage', 'status_display',
+        'earned_from_display', 'earned_date', 'used_date_display'
+    ]
+    list_filter = [
+        'is_used', 'earned_date',
+        ('expires_at', admin.EmptyFieldListFilter),
+    ]
+    search_fields = [
+        'user__username', 'user__email', 'notes'
+    ]
+    readonly_fields = [
+        'id', 'earned_date', 'availability_display'
+    ]
+    fieldsets = (
+        ('Credit Information', {
+            'fields': (
+                'id', 'user', 'credit_percentage', 'earned_from_referral'
+            )
+        }),
+        ('Usage Tracking', {
+            'fields': (
+                'is_used', 'used_on_subscription', 'used_date',
+                'availability_display'
+            )
+        }),
+        ('Dates & Expiry', {
+            'fields': (
+                'earned_date', 'expires_at', 'notes'
+            )
+        }),
+    )
+    date_hierarchy = 'earned_date'
+    ordering = ['-earned_date']
+    
+    def user_display(self, obj):
+        """Display user with link"""
+        return format_html(
+            '<a href="{}">{}</a>',
+            reverse('admin:accounts_customuser_change', args=[obj.user.id]),
+            obj.user.username
+        )
+    user_display.short_description = 'User'
+    
+    def status_display(self, obj):
+        """Display status with color"""
+        if obj.is_used:
+            return format_html('<span style="color: #6c757d;">✓ Used</span>')
+        elif obj.is_expired():
+            return format_html('<span style="color: #dc3545;">✗ Expired</span>')
+        else:
+            return format_html('<span style="color: #28a745; font-weight: bold;">● Available</span>')
+    status_display.short_description = 'Status'
+    
+    def earned_from_display(self, obj):
+        """Display the referral that earned this credit"""
+        return format_html(
+            '<a href="{}">Referral {}</a>',
+            reverse('admin:subscriptions_referral_change', args=[obj.earned_from_referral.id]),
+            str(obj.earned_from_referral.id)[:8]
+        )
+    earned_from_display.short_description = 'Earned From'
+    
+    def used_date_display(self, obj):
+        """Display used date or dash"""
+        if obj.used_date:
+            return obj.used_date.strftime('%Y-%m-%d %H:%M')
+        return '—'
+    used_date_display.short_description = 'Used On'
+    
+    def availability_display(self, obj):
+        """Display availability status"""
+        if obj.is_available():
+            return format_html('<span style="color: #28a745; font-weight: bold;">✓ Available for use</span>')
+        elif obj.is_used:
+            return format_html('<span style="color: #6c757d;">Used on {}</span>', obj.used_date.strftime('%Y-%m-%d'))
+        elif obj.is_expired():
+            return format_html('<span style="color: #dc3545;">Expired on {}</span>', obj.expires_at.strftime('%Y-%m-%d'))
+        return '—'
+    availability_display.short_description = 'Availability'
+    
+    def get_queryset(self, request):
+        """Optimize queries"""
+        qs = super().get_queryset(request)
+        return qs.select_related('user', 'earned_from_referral', 'used_on_subscription')
+    
+    actions = ['export_to_csv']
+    
+    def export_to_csv(self, request, queryset):
+        """Export credits to CSV"""
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="referral_credits_export.csv"'
+        
+        writer = csv.writer(response)
+        writer.writerow([
+            'ID', 'User', 'Credit %', 'Is Used', 'Earned Date',
+            'Used Date', 'Expires At', 'Notes'
+        ])
+        
+        for credit in queryset:
+            writer.writerow([
+                str(credit.id),
+                credit.user.username,
+                credit.credit_percentage,
+                'Yes' if credit.is_used else 'No',
+                credit.earned_date.strftime('%Y-%m-%d %H:%M:%S'),
+                credit.used_date.strftime('%Y-%m-%d %H:%M:%S') if credit.used_date else '',
+                credit.expires_at.strftime('%Y-%m-%d') if credit.expires_at else 'Never',
+                credit.notes
+            ])
+        
+        return response
+    export_to_csv.short_description = "Export to CSV"
+
 
 # Admin site customization
 admin.site.site_header = "OxiWorld Pricing & Subscription Management"

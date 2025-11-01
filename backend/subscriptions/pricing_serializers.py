@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import PricingPlan, CouponCode, CouponUsage
+from .models import PricingPlan, Coupon
 
 
 class PricingPlanSerializer(serializers.ModelSerializer):
@@ -56,14 +56,14 @@ class PricingPlanSerializer(serializers.ModelSerializer):
             return 0.0
 
 
-class CouponCodeSerializer(serializers.ModelSerializer):
+class CouponSerializer(serializers.ModelSerializer):
     """Serializer for coupon codes management"""
     usage_percentage = serializers.SerializerMethodField()
     is_valid = serializers.SerializerMethodField()
     days_remaining = serializers.SerializerMethodField()
 
     class Meta:
-        model = CouponCode
+        model = Coupon
         fields = [
             'id', 'code', 'description', 'discount_type', 'discount_value',
             'minimum_amount', 'usage_limit', 'usage_count',
@@ -94,20 +94,6 @@ class CouponCodeSerializer(serializers.ModelSerializer):
             delta = obj.valid_until - now
             return delta.days
         return 0
-
-
-class CouponUsageSerializer(serializers.ModelSerializer):
-    """Serializer for coupon usage tracking"""
-    user_email = serializers.CharField(source='user.email', read_only=True)
-    coupon_code = serializers.CharField(source='coupon.code', read_only=True)
-
-    class Meta:
-        model = CouponUsage
-        fields = [
-            'id', 'user', 'user_email', 'coupon', 'coupon_code',
-            'subscription_id', 'discount_amount', 'original_amount',
-            'final_amount', 'used_at'
-        ]
 
 
 class PricingAnalyticsSerializer(serializers.Serializer):

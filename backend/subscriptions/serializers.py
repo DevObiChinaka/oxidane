@@ -3,7 +3,7 @@ from django.utils import timezone
 from django.contrib.auth import get_user_model
 from .models import (
     PricingPlan, SignalSubscription, PaymentTransaction, 
-    TelegramGroupManagement, CouponCode, CouponUsage,
+    TelegramGroupManagement, Coupon,
     BillingProfile, PaymentMethod, Subscription, Payment
 )
 
@@ -241,7 +241,7 @@ class PendingActionsSerializer(serializers.Serializer):
 
 # New serializers for enhanced pricing system
 
-class CouponCodeSerializer(serializers.ModelSerializer):
+class CouponSerializer(serializers.ModelSerializer):
     """Serializer for coupon code management"""
     status = serializers.ReadOnlyField()
     is_valid = serializers.ReadOnlyField()
@@ -249,7 +249,7 @@ class CouponCodeSerializer(serializers.ModelSerializer):
     usage_percentage = serializers.SerializerMethodField()
     
     class Meta:
-        model = CouponCode
+        model = Coupon
         fields = [
             'id', 'code', 'name', 'description', 'discount_type', 'discount_value',
             'minimum_amount', 'maximum_discount', 'usage_limit', 'usage_count',
@@ -301,11 +301,11 @@ class CouponValidationSerializer(serializers.Serializer):
     def validate_coupon_code(self, value):
         """Validate coupon exists and is active"""
         try:
-            coupon = CouponCode.objects.get(code=value.upper())
+            coupon = Coupon.objects.get(code=value.upper())
             if not coupon.is_valid:
                 raise serializers.ValidationError(f"Coupon {value} is not valid")
             return value.upper()
-        except CouponCode.DoesNotExist:
+        except Coupon.DoesNotExist:
             raise serializers.ValidationError(f"Coupon {value} does not exist")
 
 class CouponApplicationSerializer(serializers.Serializer):
@@ -318,34 +318,13 @@ class CouponApplicationSerializer(serializers.Serializer):
     coupon_code = serializers.CharField(required=False)
     savings_percentage = serializers.DecimalField(max_digits=5, decimal_places=2, required=False)
 
-class CouponUsageSerializer(serializers.ModelSerializer):
-    """Serializer for coupon usage tracking"""
-    coupon_code = serializers.CharField(source='coupon.code', read_only=True)
-    coupon_name = serializers.CharField(source='coupon.name', read_only=True)
-    user_email = serializers.CharField(source='user.email', read_only=True)
-    subscription_reference = serializers.CharField(source='subscription.paystack_reference', read_only=True)
-    savings_percentage = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = CouponUsage
-        fields = [
-            'id', 'coupon_code', 'coupon_name', 'user_email', 'subscription_reference',
-            'original_amount', 'discount_amount', 'final_amount', 'savings_percentage', 'used_at'
-        ]
-        read_only_fields = ['id', 'used_at']
-    
-    def get_savings_percentage(self, obj):
-        """Calculate savings percentage"""
-        if obj.original_amount > 0:
-            return round((obj.discount_amount / obj.original_amount) * 100, 2)
-        return 0
 
 class EnhancedSignalSubscriptionSerializer(serializers.ModelSerializer):
     """Enhanced subscription serializer with pricing and coupon info"""
     user_email = serializers.CharField(source='user.email', read_only=True)
     user_name = serializers.SerializerMethodField()
     pricing_plan_info = PricingPlanSerializer(source='pricing_plan', read_only=True)
-    coupon_info = CouponCodeSerializer(source='coupon_used', read_only=True)
+    coupon_info = CouponSerializer(source='coupon_used', read_only=True)
     plan_category = serializers.ReadOnlyField()
     access_level = serializers.ReadOnlyField()
     telegram_groups = serializers.ReadOnlyField()

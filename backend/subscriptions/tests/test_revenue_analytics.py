@@ -5,7 +5,7 @@ from rest_framework.test import APITestCase, APIClient
 from decimal import Decimal
 from datetime import datetime, timedelta
 from subscriptions.models import (
-    PricingPlan, SignalSubscription, PaymentTransaction, CouponCode
+    PricingPlan, SignalSubscription, PaymentTransaction, Coupon, SubscriptionPlan
 )
 
 User = get_user_model()
@@ -42,17 +42,16 @@ class RevenueAnalyticsTestCase(APITestCase):
         today = timezone.now()
         
         # Create test coupon
-        self.coupon = CouponCode.objects.create(
+        self.coupon = Coupon.objects.create(
             code='TEST20',
-            name='Test Coupon',
             description='Test coupon for revenue analytics tests',
             discount_type='percentage',
             discount_value=Decimal('20.00'),
-            minimum_amount=Decimal('0.00'),
             valid_from=today - timedelta(days=30),
             valid_until=today + timedelta(days=30),
             is_active=True,
-            applicable_categories=[]  # All categories
+            max_uses=None,
+            max_uses_per_user=1
         )
         
         # Create test transactions and subscriptions

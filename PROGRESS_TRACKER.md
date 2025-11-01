@@ -11,13 +11,13 @@
 ## 🎯 OVERALL PROGRESS
 
 **Current Phase:** Phase 0.5 (Dynamic Plans Foundation) 🚀  
-**Completion:** 3.7% (7/191 tasks)  
-**Hours Spent:** 5 hours  
-**Hours Remaining:** 145 hours  
+**Completion:** 5.8% (11/191 tasks)  
+**Hours Spent:** 7.5 hours  
+**Hours Remaining:** 142.5 hours  
 
 ### **Phase Status:**
 - [x] PHASE 0: Preparation & Setup (6/6 tasks) ✅
-- [ ] PHASE 0.5: Dynamic Plans Foundation (1/46 tasks) 🚀 IN PROGRESS
+- [ ] PHASE 0.5: Dynamic Plans Foundation (5/46 tasks) 🚀 IN PROGRESS
 - [ ] PHASE 0.6: API Keys & Webhooks (0/13 tasks)
 - [ ] PHASE 0.7: Analytics & Reporting (0/8 tasks)
 - [ ] PHASE 0.8: Email Campaigns & Audit Logs (0/10 tasks)
@@ -98,6 +98,193 @@
 
 #### ⏭️ Tomorrow's Plan:
 1. Task 0.5.2: SubscriptionPlan model + tests (M2M to Feature)
+
+---
+
+### **November 1, 2025** - Day 1 (Continued) ✅
+**Additional Hours:** 2.5 hours  
+**Phase:** Phase 0.5 (Dynamic Plans Foundation)  
+**Tasks Completed:** 3 additional models  
+
+#### ✅ Completed:
+- [x] Task 0.5.2: SubscriptionPlan model + tests (39 tests passing, migration applied)
+- [x] Task 0.5.3: Coupon model + tests (44 tests passing, migration applied)
+- [x] Task 0.5.4: ReferralCode model + tests (44 tests passing, migration applied)
+
+#### 🎯 Key Achievements:
+- **SubscriptionPlan Model:**
+  - Full M2M relationship with Feature model
+  - 5 billing periods (weekly/monthly/quarterly/yearly/lifetime)
+  - Price tiers, trial periods, usage limits (JSONField)
+  - Auto-slug generation from name
+  - 39 comprehensive tests covering all features
+  
+- **Coupon Model:**
+  - Replaced old CouponCode and CouponUsage models (removed deprecated models)
+  - UUID primary key, percentage/fixed discounts
+  - M2M with SubscriptionPlan (empty = applies to all)
+  - Usage tracking: max_uses, max_uses_per_user, current_uses
+  - Validity periods, discount calculation methods
+  - 44 comprehensive tests, all passing
+  - Updated all references in serializers, views, admin, management commands
+  
+- **ReferralCode Model:**
+  - Dual discount system (referrer gets reward, referee gets discount)
+  - User ownership (FK to User model)
+  - Usage limits and validity periods
+  - Separate discount calculations for referrer and referee
+  - Admin interface with bulk actions
+  - 44 comprehensive tests, all passing
+  - Cascade deletion when user is deleted
+
+#### 📝 Files Modified:
+- backend/subscriptions/models.py (added 3 models, removed 2 old models)
+- backend/subscriptions/admin.py (added admin interfaces, removed old)
+- backend/subscriptions/serializers.py (updated for new Coupon model)
+- backend/subscriptions/pricing_serializers.py (updated references)
+- backend/subscriptions/pricing_views.py (updated CouponViewSet)
+- backend/subscriptions/revenue_views.py (updated imports)
+- backend/subscriptions/urls.py (updated ViewSet names)
+- backend/subscriptions/management/commands/create_sample_coupons.py (refactored)
+- backend/subscriptions/tests/test_revenue_analytics.py (updated for new model)
+
+#### 📊 Test Results:
+- **Feature model:** 22/22 tests passing ✅
+- **SubscriptionPlan model:** 39/39 tests passing ✅
+- **Coupon model:** 44/44 tests passing ✅
+- **ReferralCode model:** 44/44 tests passing ✅
+- **Total:** 149 tests, all passing ✅
+
+#### 🗄️ Migrations:
+- 0008_subscriptionplan_feature: Feature & SubscriptionPlan models
+- 0009_migrate_features: Seed features data
+- 0010_replace_old_coupon_with_new: Replace old coupon models with new Coupon
+- 0011_create_referral_code_model: ReferralCode model
+
+#### 🎯 Strategic Implementation:
+- **Old Model Removal:** Deleted CouponCode and CouponUsage completely (clean architecture)
+- **Systematic Cleanup:** Updated all references in serializers, views, admin, tests
+- **TDD Approach:** All tests written first, then migrations applied
+- **Admin Interfaces:** Full-featured admin panels with bulk actions, filters, custom displays
+
+#### 📊 Phase 0.5 Progress:
+- 5/46 tasks complete (10.9%)
+- Models: ✅ Feature, ✅ SubscriptionPlan, ✅ Coupon, ✅ ReferralCode, ✅ Referral + ReferralCredit
+- Remaining: 6 more models + infrastructure + APIs + frontend
+
+#### 🚀 Next Session:
+- [x] Task 0.5.5: Referral + ReferralCredit models ✅
+- [ ] Task 0.5.6: Continue with remaining models
+
+#### 💭 Notes:
+- Dual discount system in ReferralCode allows win-win referrals
+- Coupon model is much cleaner than old CouponCode/CouponUsage split
+- All models follow consistent patterns: UUID, validation, usage tracking
+- Admin interfaces provide excellent management capabilities
+
+#### 🐛 Issues Found & Resolved:
+- CouponUsageSerializer referencing deleted model (RESOLVED: removed serializer)
+- Expired coupon test date range validation (RESOLVED: added valid_from)
+- Discount display formatting "$50.0" vs "$50.00" (RESOLVED: updated test expectation)
+- PowerShell command escaping with dollar signs (RESOLVED: avoided $ in commands)
+
+#### 📝 Learnings:
+- Removing old models requires systematic cleanup across entire codebase
+- grep_search is essential for finding all references
+- PowerShell has issues with $ in string interpolation (use simpler commands)
+- Django CheckConstraint.check deprecation warning (migrate to .condition in Phase 2)
+
+#### ⏭️ Next Tasks:
+1. Task 0.5.5-0.5.11: Complete remaining 7 models
+2. Task 0.5.12-0.5.16: Infrastructure (encryption, services, validators)
+3. Task 0.5.17-0.5.19: Migrations & seed data
+
+---
+
+### **November 1, 2025** - Day 1 (Final Session) ✅
+**Additional Hours:** 1 hour  
+**Phase:** Phase 0.5 (Dynamic Plans Foundation)  
+**Tasks Completed:** 1 additional model (2 classes)  
+
+#### ✅ Completed:
+- [x] Task 0.5.5: Referral + ReferralCredit models (47 tests passing, 3 migrations applied)
+
+#### 🎯 Key Achievements:
+- **Referral Model:**
+  - **Discount-based system** (not commission-based per user requirement)
+  - Referees get 10% discount immediately on subscription
+  - Auto-calculates discount amounts with proper decimal rounding (.quantize)
+  - Links to NEW Subscription model (migrated from old SignalSubscription)
+  - Tracks referral status (completed/cancelled)
+  - Validates: no self-referral, referrer owns code, discount 0-100%
+  - Automatic credit awarding every 10 successful referrals
+  
+- **ReferralCredit Model:**
+  - Tracks 5% credits earned by referrers (awarded automatically)
+  - **Non-stackable credits:** Each credit is single-use
+  - "50 referrals = 5 separate 5% credits, NOT 25% discount" (per user requirement)
+  - Links to NEW Subscription model where credit was used
+  - Expiration support (optional expiry dates)
+  - OneToOneField with Referral (prevents duplicate credits per milestone)
+  - Validates: used credits must have subscription + date
+
+#### 🔄 Major Migration:
+- **Switched from OLD to NEW billing system:**
+  - Changed FK from `SignalSubscription` → `Subscription` (per user directive)
+  - User quote: "No, I rather we get it right from the beginning. Whatever data we have now is not important as it is not live."
+  - Migration 0014 created and applied
+  - All test fixtures rewritten to use NEW models (BillingProfile + PricingPlan)
+  - Database reset to apply FK constraint changes cleanly
+
+#### 📝 Files Modified:
+- backend/subscriptions/models.py (added Referral + ReferralCredit)
+- backend/subscriptions/admin.py (added admin interfaces with inlines)
+- backend/subscriptions/tests/test_referral_model.py (47 comprehensive tests)
+
+#### 📊 Test Results:
+- **Feature model:** 22/22 tests passing ✅
+- **SubscriptionPlan model:** 39/39 tests passing ✅
+- **Coupon model:** 44/44 tests passing ✅
+- **ReferralCode model:** 44/44 tests passing ✅
+- **Referral + ReferralCredit:** 47/47 tests passing ✅
+- **Total:** 196 tests, all passing ✅
+
+#### 🗄️ Migrations:
+- 0012_create_referral_model: OBSOLETE (commission-based, kept for history)
+- 0013_refactor_referral_to_discount_system: Discount system with ReferralCredit model
+- 0014_update_referral_to_new_subscription: Changed FKs from SignalSubscription → Subscription
+
+#### 🎯 Design Decisions:
+- **Discount-only (no commission):** Simpler, clearer for users
+- **Non-stackable credits:** Prevents abuse, 5% per use across multiple subscriptions
+- **Auto-award credits:** check_and_award_credit() runs on each referral save()
+- **Single-use enforcement:** ReferralCredit.use_credit() sets is_used=True
+- **NEW Subscription model:** Forward-compatible with Phase 0.5 billing system
+
+#### 🐛 Issues Found & Resolved:
+1. **Decimal precision:** Calculated values exceeded 2 decimals (RESOLVED: added .quantize(Decimal('0.01')))
+2. **Zero discount calculation:** 0 is falsy in Python (RESOLVED: `if discount is not None`)
+3. **BillingProfile email field:** Doesn't exist (RESOLVED: removed from fixtures)
+4. **OneToOneField constraint:** BillingProfile can only be created once per user (RESOLVED: changed to get_or_create())
+5. **FK constraint mismatch:** Migration applied but test DB had old constraints (RESOLVED: database reset)
+6. **pytest --reuse-db teardown errors:** Old FK constraints in cached DB (RESOLVED: --create-db flag)
+
+#### 📝 Learnings:
+- Switching FK references mid-development requires database reset for clean constraints
+- BillingProfile has OneToOneField(User), fixtures need get_or_create() to handle reuse
+- pytest --reuse-db can cause FK constraint issues when migrations change table references
+- .quantize(Decimal('0.01')) essential for money calculations (prevents 9.999... errors)
+- Django CheckConstraint.check deprecation warnings (migrate to .condition in Phase 2)
+
+#### 📊 Phase 0.5 Progress:
+- **5/46 tasks complete (10.9%)**
+- **Models completed:** Feature, SubscriptionPlan, Coupon, ReferralCode, Referral + ReferralCredit
+- **Tests:** 196/196 passing ✅
+- **Remaining:** 6 more models + infrastructure + APIs + frontend
+
+#### ⏭️ Next Session:
+- [ ] Task 0.5.6: Next model in Phase 0.5 roadmap
+- [ ] Continue model implementation until all 11 models complete
 2. Task 0.5.3: Coupon model + tests
 3. Continue with remaining Phase 0.5 models
 

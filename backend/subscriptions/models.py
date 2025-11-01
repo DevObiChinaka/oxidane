@@ -136,157 +136,6 @@ class PricingPlan(models.Model):
         else:
             return 'signals'
 
-class CouponCode(models.Model):
-    """Coupon codes for discounts on pricing plans"""
-    DISCOUNT_TYPES = [
-        ('percentage', 'Percentage'),
-        ('fixed_amount', 'Fixed Amount'),
-    ]
-    
-    STATUS_CHOICES = [
-        ('active', 'Active'),
-        ('inactive', 'Inactive'), 
-        ('expired', 'Expired'),
-        ('used_up', 'Used Up'),
-    ]
-    
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    code = models.CharField(max_length=50, unique=True, help_text="Coupon code (e.g., SAVE20)")
-    name = models.CharField(max_length=100, help_text="Internal name for the coupon")
-    description = models.TextField(blank=True, help_text="Description of the offer")
-    
-    # Discount settings
-    discount_type = models.CharField(max_length=15, choices=DISCOUNT_TYPES)
-    discount_value = models.DecimalField(max_digits=10, decimal_places=2, help_text="Percentage (1-100) or fixed amount")
-    minimum_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Minimum purchase amount")
-    maximum_discount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Maximum discount amount (for percentage discounts)")
-    
-    # Usage limits
-    usage_limit = models.PositiveIntegerField(null=True, blank=True, help_text="Maximum number of uses (null = unlimited)")
-    usage_count = models.PositiveIntegerField(default=0, help_text="Current usage count")
-    usage_limit_per_user = models.PositiveIntegerField(default=1, help_text="Uses per user")
-    
-    # Validity
-    valid_from = models.DateTimeField(help_text="Coupon valid from this date")
-    valid_until = models.DateTimeField(help_text="Coupon valid until this date")
-    
-    # Plan restrictions
-    applicable_plans = models.ManyToManyField(PricingPlan, blank=True, help_text="Restrict to specific plans (empty = all plans)")
-    applicable_categories = models.JSONField(default=list, help_text="Restrict to plan categories: ['mentorship', 'signals', 'vip']")
-    
-    # Settings
-    is_active = models.BooleanField(default=True)
-    first_time_users_only = models.BooleanField(default=False, help_text="Only for users with no previous subscriptions")
-    
-    # Tracking
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_coupons')
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    class Meta:
-        ordering = ['-created_at']
-        
-    def __str__(self):
-        return f"{self.code} ({self.get_discount_display()})"
-    
-    def get_discount_display(self):
-        """Get human readable discount display"""
-        if self.discount_type == 'percentage':
-            return f"{self.discount_value}% off"
-        else:
-            return f"${self.discount_value} off"
-    
-    @property
-    def status(self):
-        """Get current status of the coupon"""
-        now = timezone.now()
-        
-        if not self.is_active:
-            return 'inactive'
-        elif now < self.valid_from or now > self.valid_until:
-            return 'expired'
-        elif self.usage_limit and self.usage_count >= self.usage_limit:
-            return 'used_up'
-        else:
-            return 'active'
-    
-    @property
-    def is_valid(self):
-        """Check if coupon is currently valid"""
-        return self.status == 'active'
-    
-    def validate_for_user(self, user, plan):
-        """Validate if coupon can be used by user for specific plan"""
-        if not self.is_valid:
-            return False, f"Coupon {self.code} is not valid"
-        
-        # Check plan restrictions
-        if self.applicable_plans.exists() and plan not in self.applicable_plans.all():
-            return False, "Coupon not applicable to this plan"
-            
-        if self.applicable_categories and plan.plan_category not in self.applicable_categories:
-            return False, "Coupon not applicable to this plan category"
-        
-        # Check first-time user restriction
-        if self.first_time_users_only:
-            if SignalSubscription.objects.filter(user=user, payment_status='verified').exists():
-                return False, "Coupon only for first-time users"
-        
-        # Check per-user usage limit
-        user_usage = CouponUsage.objects.filter(coupon=self, user=user).count()
-        if user_usage >= self.usage_limit_per_user:
-            return False, f"You've already used this coupon {self.usage_limit_per_user} time(s)"
-        
-        return True, "Valid"
-    
-    def calculate_discount(self, amount):
-        """Calculate discount amount for given price"""
-        if self.discount_type == 'percentage':
-            discount = (amount * self.discount_value) / 100
-            if self.maximum_discount:
-                discount = min(discount, self.maximum_discount)
-        else:
-            discount = min(self.discount_value, amount)
-        
-        return min(discount, amount)  # Never exceed the original amount
-    
-    def apply_discount(self, user, plan, amount):
-        """Apply discount and record usage"""
-        is_valid, message = self.validate_for_user(user, plan)
-        if not is_valid:
-            raise ValidationError(message)
-        
-        if amount < self.minimum_amount:
-            raise ValidationError(f"Minimum purchase amount is ${self.minimum_amount}")
-        
-        discount_amount = self.calculate_discount(amount)
-        final_amount = amount - discount_amount
-        
-        return {
-            'original_amount': amount,
-            'discount_amount': discount_amount,
-            'final_amount': final_amount,
-            'coupon_code': self.code
-        }
-
-class CouponUsage(models.Model):
-    """Track coupon usage by users"""
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    coupon = models.ForeignKey(CouponCode, on_delete=models.CASCADE, related_name='usages')
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='coupon_usages')
-    subscription = models.ForeignKey('SignalSubscription', on_delete=models.CASCADE, related_name='coupon_usage')
-    
-    original_amount = models.DecimalField(max_digits=10, decimal_places=2)
-    discount_amount = models.DecimalField(max_digits=10, decimal_places=2)
-    final_amount = models.DecimalField(max_digits=10, decimal_places=2)
-    
-    used_at = models.DateTimeField(auto_now_add=True)
-    
-    class Meta:
-        ordering = ['-used_at']
-        
-    def __str__(self):
-        return f"{self.coupon.code} used by {self.user.email}"
 
 class SignalSubscription(models.Model):
     """Handle all subscription payments (signals and mentorship) and Telegram access"""
@@ -322,8 +171,8 @@ class SignalSubscription(models.Model):
     plan_type = models.CharField(max_length=25, choices=PLAN_TYPES)
     pricing_plan = models.ForeignKey(PricingPlan, on_delete=models.PROTECT, null=True)
     
-    # Coupon information
-    coupon_used = models.ForeignKey(CouponCode, on_delete=models.SET_NULL, null=True, blank=True, related_name='subscriptions')
+    # Coupon information (will be migrated to new Coupon model)
+    coupon_used = models.ForeignKey('Coupon', on_delete=models.SET_NULL, null=True, blank=True, related_name='subscriptions')
     original_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Amount before coupon discount")
     discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Discount applied from coupon")
     
@@ -1206,3 +1055,900 @@ class SubscriptionPlan(models.Model):
                 features_dict[category] = []
             features_dict[category].append(feature)
         return features_dict
+
+
+class Coupon(models.Model):
+    """
+    Discount coupon for subscription plans.
+    Supports percentage and fixed amount discounts with usage limits.
+    """
+    DISCOUNT_TYPE_CHOICES = [
+        ('percentage', 'Percentage Discount'),
+        ('fixed', 'Fixed Amount Discount'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    code = models.CharField(
+        max_length=50,
+        unique=True,
+        db_index=True,
+        help_text='Coupon code (e.g., SAVE20, SUMMER2024)'
+    )
+    
+    # Discount details
+    discount_type = models.CharField(
+        max_length=20,
+        choices=DISCOUNT_TYPE_CHOICES,
+        default='percentage'
+    )
+    discount_value = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text='Percentage (0-100) or fixed amount in USD'
+    )
+    
+    # Applicable plans (empty = applies to all plans)
+    plans = models.ManyToManyField(
+        SubscriptionPlan,
+        related_name='coupons',
+        blank=True,
+        help_text='Plans this coupon applies to (empty = all plans)'
+    )
+    
+    # Validity period
+    valid_from = models.DateTimeField(
+        default=timezone.now,
+        help_text='When the coupon becomes valid'
+    )
+    valid_until = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='When the coupon expires (null = never expires)'
+    )
+    
+    # Usage limits
+    max_uses = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text='Maximum total uses (null = unlimited)'
+    )
+    max_uses_per_user = models.IntegerField(
+        default=1,
+        help_text='Maximum uses per user'
+    )
+    current_uses = models.IntegerField(
+        default=0,
+        help_text='Current number of times used'
+    )
+    
+    # Status
+    is_active = models.BooleanField(
+        default=True,
+        help_text='Whether this coupon is currently active'
+    )
+    
+    # Metadata
+    description = models.TextField(
+        blank=True,
+        help_text='Internal description of the coupon'
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_coupons',
+        help_text='Admin who created this coupon'
+    )
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['code']),
+            models.Index(fields=['is_active', 'valid_from', 'valid_until']),
+            models.Index(fields=['-created_at']),
+        ]
+        verbose_name = 'Coupon'
+        verbose_name_plural = 'Coupons'
+    
+    def __str__(self):
+        discount_display = self.get_discount_display()
+        return f"{self.code} ({discount_display})"
+    
+    def clean(self):
+        """Validate coupon data"""
+        # Ensure code is uppercase
+        if self.code:
+            self.code = self.code.upper().strip()
+            
+            # Validate code format (alphanumeric + underscore/hyphen)
+            import re
+            if not re.match(r'^[A-Z0-9_-]+$', self.code):
+                raise ValidationError({
+                    'code': 'Coupon code must contain only uppercase letters, numbers, underscores, and hyphens.'
+                })
+        
+        # Validate discount value based on type
+        if self.discount_value is not None:
+            if self.discount_type == 'percentage':
+                if self.discount_value < 0 or self.discount_value > 100:
+                    raise ValidationError({
+                        'discount_value': 'Percentage discount must be between 0 and 100.'
+                    })
+            elif self.discount_type == 'fixed':
+                if self.discount_value < 0:
+                    raise ValidationError({
+                        'discount_value': 'Fixed discount amount must be positive.'
+                    })
+        
+        # Validate date range
+        if self.valid_from and self.valid_until:
+            if self.valid_until <= self.valid_from:
+                raise ValidationError({
+                    'valid_until': 'Expiration date must be after start date.'
+                })
+        
+        # Validate usage limits
+        if self.max_uses is not None and self.max_uses < 0:
+            raise ValidationError({
+                'max_uses': 'Maximum uses cannot be negative.'
+            })
+        
+        if self.max_uses_per_user < 0:
+            raise ValidationError({
+                'max_uses_per_user': 'Maximum uses per user cannot be negative.'
+            })
+        
+        if self.current_uses < 0:
+            raise ValidationError({
+                'current_uses': 'Current uses cannot be negative.'
+            })
+    
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+    
+    def get_discount_display(self):
+        """Get formatted discount display"""
+        if self.discount_type == 'percentage':
+            return f"{int(self.discount_value)}% off"
+        else:
+            return f"${self.discount_value} off"
+    
+    def is_valid(self):
+        """Check if coupon is currently valid (time-based only)"""
+        now = timezone.now()
+        
+        # Check if active
+        if not self.is_active:
+            return False
+        
+        # Check if started
+        if self.valid_from and now < self.valid_from:
+            return False
+        
+        # Check if expired
+        if self.valid_until and now > self.valid_until:
+            return False
+        
+        return True
+    
+    def is_usage_available(self):
+        """Check if coupon has usage remaining"""
+        # Check total usage limit
+        if self.max_uses is not None and self.current_uses >= self.max_uses:
+            return False
+        
+        return True
+    
+    def can_be_used(self):
+        """Check if coupon can be used (combines validity and usage checks)"""
+        return self.is_valid() and self.is_usage_available()
+    
+    def applies_to_plan(self, plan):
+        """Check if coupon applies to a specific plan"""
+        # If no plans specified, applies to all
+        if self.plans.count() == 0:
+            return True
+        
+        # Otherwise check if plan is in the list
+        return self.plans.filter(id=plan.id).exists()
+    
+    def calculate_discount(self, original_price):
+        """Calculate discounted price"""
+        original_price = Decimal(str(original_price))
+        
+        if self.discount_type == 'percentage':
+            discount_amount = original_price * (self.discount_value / 100)
+        else:
+            discount_amount = self.discount_value
+        
+        # Ensure discount doesn't make price negative
+        discount_amount = min(discount_amount, original_price)
+        
+        final_price = original_price - discount_amount
+        return {
+            'original_price': original_price,
+            'discount_amount': discount_amount,
+            'final_price': final_price,
+            'savings_percentage': (discount_amount / original_price * 100) if original_price > 0 else 0
+        }
+    
+    def increment_usage(self):
+        """Increment the usage counter"""
+        self.current_uses += 1
+        self.save(update_fields=['current_uses', 'updated_at'])
+    
+    def get_remaining_uses(self):
+        """Get number of remaining uses (None if unlimited)"""
+        if self.max_uses is None:
+            return None
+        return max(0, self.max_uses - self.current_uses)
+
+
+class ReferralCode(models.Model):
+    """
+    Referral code system for user-to-user referrals.
+    Both referrer and referee can receive discounts.
+    """
+    DISCOUNT_TYPE_CHOICES = [
+        ('percentage', 'Percentage Discount'),
+        ('fixed', 'Fixed Amount Discount'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    code = models.CharField(
+        max_length=50,
+        unique=True,
+        db_index=True,
+        help_text='Referral code (e.g., JOHN2024, REFMARY)'
+    )
+    
+    # Referrer (user who owns this referral code)
+    referrer = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='referral_codes',
+        help_text='User who owns this referral code'
+    )
+    
+    # Discount for referrer (reward for referring)
+    referrer_discount_type = models.CharField(
+        max_length=20,
+        choices=DISCOUNT_TYPE_CHOICES,
+        default='percentage',
+        help_text='Type of discount for the referrer'
+    )
+    referrer_discount_value = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('10.00'),
+        help_text='Discount value for referrer'
+    )
+    
+    # Discount for referee (person using the code)
+    referee_discount_type = models.CharField(
+        max_length=20,
+        choices=DISCOUNT_TYPE_CHOICES,
+        default='percentage',
+        help_text='Type of discount for the referee'
+    )
+    referee_discount_value = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('10.00'),
+        help_text='Discount value for referee'
+    )
+    
+    # Usage limits
+    max_uses = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text='Maximum total uses (null = unlimited)'
+    )
+    current_uses = models.IntegerField(
+        default=0,
+        help_text='Current number of times used'
+    )
+    
+    # Validity period
+    valid_from = models.DateTimeField(
+        default=timezone.now,
+        help_text='When the referral code becomes valid'
+    )
+    valid_until = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='When the referral code expires (null = never expires)'
+    )
+    
+    # Status
+    is_active = models.BooleanField(
+        default=True,
+        help_text='Whether this referral code is currently active'
+    )
+    
+    # Metadata
+    description = models.TextField(
+        blank=True,
+        help_text='Optional description'
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['code']),
+            models.Index(fields=['referrer']),
+            models.Index(fields=['is_active', 'valid_from', 'valid_until']),
+            models.Index(fields=['-created_at']),
+        ]
+        verbose_name = 'Referral Code'
+        verbose_name_plural = 'Referral Codes'
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(referrer_discount_value__gte=0),
+                name='referrer_discount_value_positive'
+            ),
+            models.CheckConstraint(
+                check=models.Q(referee_discount_value__gte=0),
+                name='referee_discount_value_positive'
+            ),
+            models.CheckConstraint(
+                check=models.Q(current_uses__gte=0),
+                name='referral_current_uses_positive'
+            ),
+        ]
+    
+    def __str__(self):
+        return f"{self.code} (by {self.referrer.username})"
+    
+    def clean(self):
+        """Validate referral code data"""
+        # Ensure code is uppercase
+        if self.code:
+            self.code = self.code.upper().strip()
+            
+            # Validate code format (alphanumeric + underscore)
+            import re
+            if not re.match(r'^[A-Z0-9_]+$', self.code):
+                raise ValidationError({
+                    'code': 'Referral code must contain only uppercase letters, numbers, and underscores.'
+                })
+            
+            # Minimum length
+            if len(self.code) < 3:
+                raise ValidationError({
+                    'code': 'Referral code must be at least 3 characters long.'
+                })
+        
+        # Validate referrer discount value
+        if self.referrer_discount_value is not None:
+            if self.referrer_discount_type == 'percentage':
+                if self.referrer_discount_value < 0 or self.referrer_discount_value > 100:
+                    raise ValidationError({
+                        'referrer_discount_value': 'Percentage discount must be between 0 and 100.'
+                    })
+            elif self.referrer_discount_type == 'fixed':
+                if self.referrer_discount_value < 0:
+                    raise ValidationError({
+                        'referrer_discount_value': 'Fixed discount amount must be positive.'
+                    })
+        
+        # Validate referee discount value
+        if self.referee_discount_value is not None:
+            if self.referee_discount_type == 'percentage':
+                if self.referee_discount_value < 0 or self.referee_discount_value > 100:
+                    raise ValidationError({
+                        'referee_discount_value': 'Percentage discount must be between 0 and 100.'
+                    })
+            elif self.referee_discount_type == 'fixed':
+                if self.referee_discount_value < 0:
+                    raise ValidationError({
+                        'referee_discount_value': 'Fixed discount amount must be positive.'
+                    })
+        
+        # Validate date range
+        if self.valid_from and self.valid_until:
+            if self.valid_until <= self.valid_from:
+                raise ValidationError({
+                    'valid_until': 'Expiration date must be after start date.'
+                })
+        
+        # Validate usage limits
+        if self.max_uses is not None and self.max_uses < 0:
+            raise ValidationError({
+                'max_uses': 'Maximum uses cannot be negative.'
+            })
+        
+        if self.current_uses < 0:
+            raise ValidationError({
+                'current_uses': 'Current uses cannot be negative.'
+            })
+    
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+    
+    def is_valid(self):
+        """Check if referral code is currently valid (time-based only)"""
+        now = timezone.now()
+        
+        # Check if active
+        if not self.is_active:
+            return False
+        
+        # Check if started
+        if self.valid_from and now < self.valid_from:
+            return False
+        
+        # Check if expired
+        if self.valid_until and now > self.valid_until:
+            return False
+        
+        return True
+    
+    def is_usage_available(self):
+        """Check if referral code has usage remaining"""
+        # Check total usage limit
+        if self.max_uses is not None and self.current_uses >= self.max_uses:
+            return False
+        
+        return True
+    
+    def can_be_used(self):
+        """Check if referral code can be used (combines validity and usage checks)"""
+        return self.is_valid() and self.is_usage_available()
+    
+    def get_referrer_discount_display(self):
+        """Get formatted discount display for referrer"""
+        if self.referrer_discount_type == 'percentage':
+            return f"{int(self.referrer_discount_value)}% off"
+        else:
+            return f"${self.referrer_discount_value} off"
+    
+    def get_referee_discount_display(self):
+        """Get formatted discount display for referee"""
+        if self.referee_discount_type == 'percentage':
+            return f"{int(self.referee_discount_value)}% off"
+        else:
+            return f"${self.referee_discount_value} off"
+    
+    def calculate_referrer_discount(self, original_price):
+        """Calculate discount for the referrer"""
+        original_price = Decimal(str(original_price))
+        
+        if self.referrer_discount_type == 'percentage':
+            discount_amount = original_price * (self.referrer_discount_value / 100)
+        else:
+            discount_amount = self.referrer_discount_value
+        
+        # Ensure discount doesn't make price negative
+        discount_amount = min(discount_amount, original_price)
+        
+        final_price = original_price - discount_amount
+        return {
+            'original_price': original_price,
+            'discount_amount': discount_amount,
+            'final_price': final_price,
+            'savings_percentage': (discount_amount / original_price * 100) if original_price > 0 else 0
+        }
+    
+    def calculate_referee_discount(self, original_price):
+        """Calculate discount for the referee"""
+        original_price = Decimal(str(original_price))
+        
+        if self.referee_discount_type == 'percentage':
+            discount_amount = original_price * (self.referee_discount_value / 100)
+        else:
+            discount_amount = self.referee_discount_value
+        
+        # Ensure discount doesn't make price negative
+        discount_amount = min(discount_amount, original_price)
+        
+        final_price = original_price - discount_amount
+        return {
+            'original_price': original_price,
+            'discount_amount': discount_amount,
+            'final_price': final_price,
+            'savings_percentage': (discount_amount / original_price * 100) if original_price > 0 else 0
+        }
+    
+    def increment_usage(self):
+        """Increment the usage counter"""
+        self.current_uses += 1
+        self.save(update_fields=['current_uses', 'updated_at'])
+    
+    def get_remaining_uses(self):
+        """Get number of remaining uses (None if unlimited)"""
+        if self.max_uses is None:
+            return None
+        return max(0, self.max_uses - self.current_uses)
+
+class Referral(models.Model):
+    """
+    Track actual referral conversions when someone uses a referral code.
+    Records the discount applied to the referee (new user).
+    Referrer earns credits separately (see ReferralCredit model).
+    """
+    STATUS_CHOICES = [
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    
+    # Referral relationships
+    referral_code = models.ForeignKey(
+        ReferralCode,
+        on_delete=models.CASCADE,
+        related_name='referrals',
+        help_text='The referral code that was used'
+    )
+    referrer = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='referrals_made',
+        help_text='User who referred (owner of the code)'
+    )
+    referee = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='referrals_received',
+        help_text='User who was referred (used the code)'
+    )
+    
+    # Subscription that resulted from referral
+    subscription = models.ForeignKey(
+        'Subscription',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='referral',
+        help_text='Subscription created from this referral (NEW billing system)'
+    )
+    
+    # Discount tracking (referee only - referrer gets credits)
+    original_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text='Original subscription price before discount'
+    )
+    referee_discount_percent = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal('10.00'),
+        help_text='Discount percentage applied to referee (default 10%)'
+    )
+    referee_discount_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text='Discount amount given to referee in currency'
+    )
+    final_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text='Final amount paid after discount'
+    )
+    currency = models.CharField(
+        max_length=3,
+        default='USD',
+        help_text='Currency code'
+    )
+    
+    # Status and dates
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='completed',
+        help_text='Status of this referral'
+    )
+    conversion_date = models.DateTimeField(
+        auto_now_add=True,
+        help_text='When the referral conversion occurred'
+    )
+    cancelled_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='When this referral was cancelled (if applicable)'
+    )
+    
+    # Metadata
+    notes = models.TextField(
+        blank=True,
+        help_text='Internal notes about this referral'
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-conversion_date']
+        indexes = [
+            models.Index(fields=['referrer', '-conversion_date']),
+            models.Index(fields=['referee']),
+            models.Index(fields=['status']),
+            models.Index(fields=['-conversion_date']),
+        ]
+        verbose_name = 'Referral'
+        verbose_name_plural = 'Referrals'
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(original_amount__gte=0),
+                name='referral_original_amount_positive'
+            ),
+            models.CheckConstraint(
+                check=models.Q(referee_discount_amount__gte=0),
+                name='referral_referee_discount_positive'
+            ),
+            models.CheckConstraint(
+                check=models.Q(final_amount__gte=0),
+                name='referral_final_amount_positive'
+            ),
+            models.CheckConstraint(
+                check=models.Q(referee_discount_percent__gte=0) & models.Q(referee_discount_percent__lte=100),
+                name='referral_discount_percent_valid'
+            ),
+        ]
+    
+    def __str__(self):
+        return f"Referral: {self.referrer.username} → {self.referee.username} ({self.status})"
+    
+    def clean(self):
+        """Validate referral data"""
+        # Ensure referrer matches the referral code owner
+        if self.referral_code and self.referrer:
+            if self.referral_code.referrer != self.referrer:
+                raise ValidationError({
+                    'referrer': 'Referrer must be the owner of the referral code.'
+                })
+        
+        # Ensure referee is not the same as referrer
+        if self.referrer and self.referee:
+            if self.referrer == self.referee:
+                raise ValidationError({
+                    'referee': 'Referee cannot be the same as referrer (self-referral not allowed).'
+                })
+        
+        # Validate amounts are non-negative
+        if self.original_amount and self.original_amount < 0:
+            raise ValidationError({
+                'original_amount': 'Original amount cannot be negative.'
+            })
+        
+        if self.referee_discount_amount and self.referee_discount_amount < 0:
+            raise ValidationError({
+                'referee_discount_amount': 'Referee discount amount cannot be negative.'
+            })
+        
+        if self.final_amount and self.final_amount < 0:
+            raise ValidationError({
+                'final_amount': 'Final amount cannot be negative.'
+            })
+        
+        # Validate discount percentage is 0-100
+        if self.referee_discount_percent is not None:
+            if self.referee_discount_percent < 0 or self.referee_discount_percent > 100:
+                raise ValidationError({
+                    'referee_discount_percent': 'Discount percentage must be between 0 and 100.'
+                })
+        
+        # Validate discount makes sense
+        if self.original_amount and self.final_amount:
+            if self.final_amount > self.original_amount:
+                raise ValidationError({
+                    'final_amount': 'Final amount cannot be greater than original amount.'
+                })
+    
+    def save(self, *args, **kwargs):
+        # Calculate discount amount if not set (round to 2 decimal places)
+        if self.original_amount and self.referee_discount_percent is not None:
+            discount_raw = self.original_amount * (self.referee_discount_percent / 100)
+            self.referee_discount_amount = discount_raw.quantize(Decimal('0.01'))
+        
+        # Calculate final amount if not set (round to 2 decimal places)
+        if self.original_amount and self.referee_discount_amount is not None:
+            final_raw = self.original_amount - self.referee_discount_amount
+            self.final_amount = final_raw.quantize(Decimal('0.01'))
+        
+        self.full_clean()
+        super().save(*args, **kwargs)
+        
+        # Check if referrer should earn a credit (every 10 referrals)
+        self.check_and_award_credit()
+    
+    def mark_as_cancelled(self, reason=''):
+        """Mark referral as cancelled"""
+        self.status = 'cancelled'
+        self.cancelled_date = timezone.now()
+        
+        if reason:
+            self.notes = f"{self.notes}\nCancelled: {reason}" if self.notes else f"Cancelled: {reason}"
+        
+        self.save()
+    
+    def check_and_award_credit(self):
+        """
+        Check if referrer has earned a new credit.
+        Awards 5% discount credit for every 10 completed referrals.
+        """
+        if self.status != 'completed':
+            return
+        
+        # Count completed referrals by this referrer
+        completed_count = Referral.objects.filter(
+            referrer=self.referrer,
+            status='completed'
+        ).count()
+        
+        # Check if this is a milestone (every 10 referrals)
+        if completed_count % 10 == 0:
+            # Check if credit already exists for this referral
+            if not ReferralCredit.objects.filter(earned_from_referral=self).exists():
+                ReferralCredit.objects.create(
+                    user=self.referrer,
+                    credit_percentage=Decimal('5.00'),
+                    earned_from_referral=self,
+                    notes=f'Earned from {completed_count} completed referrals'
+                )
+    
+    def get_status_display_color(self):
+        """Get color for status display"""
+        colors = {
+            'completed': '#28a745',  # Green
+            'cancelled': '#dc3545',  # Red
+        }
+        return colors.get(self.status, '#6c757d')
+
+
+class ReferralCredit(models.Model):
+    """
+    Track discount credits earned by referrers.
+    Referrers earn 5% discount credits for every 10 successful referrals.
+    Credits are single-use and cannot be stacked.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    
+    # Who earned this credit
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='referral_credits',
+        help_text='User who earned this discount credit'
+    )
+    
+    # Credit details
+    credit_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal('5.00'),
+        help_text='Discount percentage (typically 5%)'
+    )
+    
+    # Tracking
+    earned_from_referral = models.OneToOneField(
+        Referral,
+        on_delete=models.CASCADE,
+        related_name='generated_credit',
+        help_text='The referral that triggered this credit'
+    )
+    
+    # Usage tracking
+    is_used = models.BooleanField(
+        default=False,
+        help_text='Whether this credit has been redeemed'
+    )
+    used_on_subscription = models.ForeignKey(
+        'Subscription',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='referral_credit_used',
+        help_text='Subscription where this credit was applied (NEW billing system)'
+    )
+    
+    # Dates
+    earned_date = models.DateTimeField(
+        auto_now_add=True,
+        help_text='When this credit was earned'
+    )
+    used_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='When this credit was redeemed'
+    )
+    expires_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='When this credit expires (null = never expires)'
+    )
+    
+    # Metadata
+    notes = models.TextField(
+        blank=True,
+        help_text='Internal notes about this credit'
+    )
+    
+    class Meta:
+        ordering = ['-earned_date']
+        indexes = [
+            models.Index(fields=['user', 'is_used']),
+            models.Index(fields=['user', '-earned_date']),
+            models.Index(fields=['is_used']),
+        ]
+        verbose_name = 'Referral Credit'
+        verbose_name_plural = 'Referral Credits'
+    
+    def __str__(self):
+        status = "Used" if self.is_used else "Available"
+        return f"{self.user.username} - {self.credit_percentage}% ({status})"
+    
+    def clean(self):
+        """Validate credit data"""
+        # Validate credit percentage
+        if self.credit_percentage < 0 or self.credit_percentage > 100:
+            raise ValidationError({
+                'credit_percentage': 'Credit percentage must be between 0 and 100.'
+            })
+        
+        # If used, must have used_on_subscription and used_date
+        if self.is_used:
+            if not self.used_on_subscription:
+                raise ValidationError({
+                    'used_on_subscription': 'Used credits must have an associated subscription.'
+                })
+            if not self.used_date:
+                raise ValidationError({
+                    'used_date': 'Used credits must have a used date.'
+                })
+        
+        # Check expiry
+        if self.expires_at and self.earned_date:
+            if self.expires_at < self.earned_date:
+                raise ValidationError({
+                    'expires_at': 'Expiry date cannot be before earned date.'
+                })
+    
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+    
+    def use_credit(self, subscription):
+        """
+        Mark this credit as used on a specific subscription.
+        Returns the credit percentage to apply.
+        """
+        if self.is_used:
+            raise ValidationError('This credit has already been used.')
+        
+        if self.is_expired():
+            raise ValidationError('This credit has expired.')
+        
+        self.is_used = True
+        self.used_on_subscription = subscription
+        self.used_date = timezone.now()
+        self.save()
+        
+        return self.credit_percentage
+    
+    def is_expired(self):
+        """Check if this credit has expired"""
+        if not self.expires_at:
+            return False
+        return timezone.now() > self.expires_at
+    
+    def is_available(self):
+        """Check if this credit is available for use"""
+        return not self.is_used and not self.is_expired()
+
