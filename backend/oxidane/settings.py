@@ -127,12 +127,31 @@ WSGI_APPLICATION = 'oxidane.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# PostgreSQL Configuration (with SQLite fallback for local dev)
+import dj_database_url
+
+DATABASE_URL = os.getenv('DATABASE_URL', '')
+
+# Temporarily comment out to backup SQLite data
+USE_POSTGRESQL = DATABASE_URL and DATABASE_URL.startswith('postgresql')
+
+if USE_POSTGRESQL:
+    # Use PostgreSQL from environment variable
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
     }
-}
+else:
+    # Fallback to SQLite for development
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 # Password validation
@@ -242,10 +261,15 @@ GOOGLE_OAUTH_CLIENT_SECRET = os.getenv('GOOGLE_OAUTH_CLIENT_SECRET', '')
 GOOGLE_OAUTH_REDIRECT_URI = os.getenv('GOOGLE_OAUTH_REDIRECT_URI', 'http://localhost:8000/api/auth/google/callback/')
 
 
-#Telegram Bot Details and Group Details
-TELEGRAM_BOT_TOKEN = "8386662254:AAFwqfss8wXc6SULYyX73yVvJ6OV686JI1I"
+# ========================================
+# TELEGRAM BOT CONFIGURATION
+# ========================================
+# Read from environment variables (will be moved to database in Phase 0.5)
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '8386662254:AAFwqfss8wXc6SULYyX73yVvJ6OV686JI1I')
+TELEGRAM_BOT_USERNAME = os.getenv('TELEGRAM_BOT_USERNAME', 'oxiworld_bot')
+TELEGRAM_ADMIN_USER_ID = os.getenv('TELEGRAM_ADMIN_USER_ID', '1741840281')
 
-# Telegram Groups Configuration
+# Telegram Groups Configuration (fallback, will be moved to database)
 TELEGRAM_GROUPS = {
     'premium_signals': {
         'name': 'OxiWorld Premium Signals', 
@@ -264,5 +288,92 @@ TELEGRAM_GROUPS = {
         'chat_id': '-4811814960',
         'type': 'group', 
         'access_level': 'vip'
+    },
+}
+
+# ========================================
+# REDIS & CELERY CONFIGURATION
+# ========================================
+# Redis URL from environment
+REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+
+# Celery Configuration
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', REDIS_URL)
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', REDIS_URL)
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
+CELERY_RESULT_EXPIRES = 3600  # 1 hour
+
+# Celery Beat Schedule (will be populated in Phase 4)
+CELERY_BEAT_SCHEDULE = {}
+
+# ========================================
+# CACHE CONFIGURATION
+# ========================================
+# Use Redis for caching
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': REDIS_URL,
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'SOCKET_CONNECT_TIMEOUT': 5,
+            'SOCKET_TIMEOUT': 5,
+            'RETRY_ON_TIMEOUT': True,
+            'MAX_CONNECTIONS': 50,
+            'CONNECTION_POOL_KWARGS': {'max_connections': 50}
+        },
+        'KEY_PREFIX': 'oxidane',
+        'TIMEOUT': 300,  # 5 minutes default
+    }
+}
+
+# ========================================
+# ENCRYPTION CONFIGURATION
+# ========================================
+# Fernet encryption key for sensitive data (tokens, API keys, passwords)
+ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY', '')
+
+# ========================================
+# MONITORING & LOGGING
+# ========================================
+# Sentry DSN for error tracking (optional, will be configured in Phase 9)
+SENTRY_DSN = os.getenv('SENTRY_DSN', '')
+
+# Structured logging with structlog (will be configured in Phase 1)
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'celery': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
     },
 }
