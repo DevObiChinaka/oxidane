@@ -1,0 +1,1 @@
+# Subscriptions and pricing app for OxiWorld Forex Academy

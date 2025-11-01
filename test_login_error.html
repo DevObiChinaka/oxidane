@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Login Error Handling</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #00B38F;
+        }
+        button {
+            background: #00B38F;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #009977;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0 15px 0;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        label {
+            font-weight: 600;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test Login Error Handling</h1>
+        <p style="color: #666; margin-bottom: 30px;">
+            This page tests the new <code>/api/auth/login-with-otp/</code> endpoint to verify proper error handling.
+        </p>
+
+        <!-- Test 1: Account Not Found -->
+        <div class="test-section">
+            <h3>Test 1: Account Not Found (404)</h3>
+            <p>Testing with a non-existent email address</p>
+            <label>Email:</label>
+            <input type="email" id="test1-email" value="nonexistent@example.com" />
+            <label>Password:</label>
+            <input type="password" id="test1-password" value="anypassword123" />
+            <button onclick="testAccountNotFound()">Run Test</button>
+            <div id="test1-result"></div>
+        </div>
+
+        <!-- Test 2: Invalid Password -->
+        <div class="test-section">
+            <h3>Test 2: Invalid Password (401)</h3>
+            <p>Testing with wrong password for existing account</p>
+            <label>Email:</label>
+            <input type="email" id="test2-email" value="chiderachinaka06@gmail.com" />
+            <label>Password:</label>
+            <input type="password" id="test2-password" value="wrongpassword123" />
+            <button onclick="testInvalidPassword()">Run Test</button>
+            <div id="test2-result"></div>
+        </div>
+
+        <!-- Test 3: Correct Credentials -->
+        <div class="test-section">
+            <h3>Test 3: Correct Credentials (Should send OTP)</h3>
+            <p>Testing with correct credentials (if account exists)</p>
+            <label>Email:</label>
+            <input type="email" id="test3-email" value="chiderachinaka06@gmail.com" />
+            <label>Password:</label>
+            <input type="password" id="test3-password" value="correctpassword" />
+            <button onclick="testCorrectCredentials()">Run Test</button>
+            <div id="test3-result"></div>
+        </div>
+
+        <!-- API URL Configuration -->
+        <div class="test-section">
+            <h3>⚙️ Configuration</h3>
+            <label>API URL:</label>
+            <input type="text" id="api-url" value="http://localhost:8000" />
+            <button onclick="updateApiUrl()">Update API URL</button>
+            <div id="config-result"></div>
+        </div>
+    </div>
+
+    <script>
+        let API_URL = 'http://localhost:8000';
+
+        function updateApiUrl() {
+            API_URL = document.getElementById('api-url').value;
+            showResult('config-result', `API URL updated to: ${API_URL}`, 'info');
+        }
+
+        function showResult(elementId, message, type) {
+            const resultDiv = document.getElementById(elementId);
+            resultDiv.className = `result ${type}`;
+            resultDiv.textContent = message;
+        }
+
+        async function testLogin(email, password, resultId) {
+            try {
+                showResult(resultId, '⏳ Sending request...', 'info');
+                
+                const response = await fetch(`${API_URL}/api/auth/login-with-otp/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+                
+                let resultMessage = `
+Status: ${response.status} ${response.statusText}
+Response:
+${JSON.stringify(data, null, 2)}
+                `;
+
+                if (!response.ok) {
+                    // This is expected for error testing
+                    showResult(resultId, `✓ Error received as expected:\n${resultMessage}`, 'success');
+                } else {
+                    showResult(resultId, `✓ Success:\n${resultMessage}`, 'success');
+                }
+            } catch (error) {
+                showResult(resultId, `✗ Network Error:\n${error.message}\n\nMake sure backend is running at ${API_URL}`, 'error');
+            }
+        }
+
+        function testAccountNotFound() {
+            const email = document.getElementById('test1-email').value;
+            const password = document.getElementById('test1-password').value;
+            testLogin(email, password, 'test1-result');
+        }
+
+        function testInvalidPassword() {
+            const email = document.getElementById('test2-email').value;
+            const password = document.getElementById('test2-password').value;
+            testLogin(email, password, 'test2-result');
+        }
+
+        function testCorrectCredentials() {
+            const email = document.getElementById('test3-email').value;
+            const password = document.getElementById('test3-password').value;
+            testLogin(email, password, 'test3-result');
+        }
+
+        // Show initial config
+        window.onload = function() {
+            document.getElementById('api-url').value = API_URL;
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,562 @@
+# 🔄 CONTEXT FOR NEW CHAT SESSIONS
+
+**Purpose:** This file helps you maintain context when starting a new GitHub Copilot chat session.
+
+---
+
+## 📋 CURRENT PROJECT STATUS
+
+**Project:** Enterprise Subscription Management Platform (White-Label SaaS)  
+**Branch:** `enterprise-platform-v1` (create in Phase 0.5)  
+**Start Date:** November 4, 2025 (planned)  
+**Target Launch:** December 13, 2025  
+**Total Duration:** 150 hours (~20 days)  
+
+---
+
+## ✅ PREREQUISITES CHECKLIST
+
+Before starting any work, ensure you have:
+
+- [ ] **Telegram User ID:** _________________ (from @userinfobot)
+- [ ] **Redis Cloud URL:** redis://_________________ (from redis.com/try-free)
+- [ ] **PostgreSQL Installed:** Version _____ (or Docker container running)
+- [ ] **Feature Branch Created:** `git checkout -b enterprise-platform-v1`
+- [ ] **Dependencies Installed:** celery, redis, python-telegram-bot, etc.
+
+---
+
+## 🎯 QUICK START FOR NEW CHAT
+
+### **Step 1: Tell Copilot What You're Working On**
+
+Copy and paste this into your new chat:
+
+```
+I'm working on an enterprise subscription management platform with Telegram automation.
+
+PROJECT DETAILS:
+- White-label SaaS for forex traders/educators
+- Django 5.2 + DRF + PostgreSQL + Redis + Celery
+- Next.js + TypeScript frontend
+- 150-hour roadmap (20 days)
+
+CURRENT PHASE: [INSERT PHASE NUMBER/NAME]
+LAST COMPLETED TASK: [INSERT TASK ID]
+CURRENTLY WORKING ON: [INSERT TASK ID]
+
+Please read:
+1. ENTERPRISE_PLATFORM_ROADMAP.md (full roadmap)
+2. CONTEXT_FOR_NEW_CHAT.md (this file)
+3. Current progress from todo list
+
+What should I do next?
+```
+
+### **Step 2: Reference Key Files**
+
+Always mention these files so Copilot can read them:
+- `ENTERPRISE_PLATFORM_ROADMAP.md` - Complete roadmap (this is the master reference)
+- `backend/subscriptions/models.py` - Existing models
+- `backend/oxidane/settings.py` - Django settings
+- `frontend/src/app/pricing/page.tsx` - Current pricing page
+
+### **Step 3: Check Current Progress**
+
+Use Copilot's todo list feature:
+```
+Show me the todo list and mark task [X] as completed
+```
+
+---
+
+## 📂 FILE STRUCTURE (For Reference)
+
+### **Backend Structure:**
+```
+backend/
+├── oxidane/
+│   ├── celery.py              # CREATE IN PHASE 1
+│   ├── settings.py            # UPDATE in Phase 0.5
+│   └── __init__.py            # UPDATE in Phase 1
+├── subscriptions/
+│   ├── models.py              # UPDATE in Phase 0.5 (add 11 models)
+│   ├── tasks.py               # CREATE IN PHASE 1
+│   ├── encryption.py          # CREATE IN PHASE 0.5
+│   ├── telegram/              # CREATE IN PHASE 3
+│   │   ├── __init__.py
+│   │   ├── config.py
+│   │   ├── manager.py
+│   │   └── utils.py
+│   ├── views/
+│   │   ├── admin_views.py     # UPDATE in Phase 0.5
+│   │   └── public_views.py    # UPDATE in Phase 0.5
+│   └── management/
+│       └── commands/
+│           ├── seed_default_features.py    # CREATE
+│           └── seed_default_plans.py       # CREATE
+```
+
+### **Frontend Structure:**
+```
+frontend/src/app/
+├── admin/
+│   ├── plans/page.tsx         # CREATE IN PHASE 0.5
+│   ├── features/page.tsx      # CREATE IN PHASE 0.5
+│   ├── coupons/page.tsx       # CREATE IN PHASE 0.5
+│   ├── api-keys/page.tsx      # CREATE IN PHASE 0.6
+│   ├── webhooks/page.tsx      # CREATE IN PHASE 0.6
+│   ├── analytics/page.tsx     # CREATE IN PHASE 0.7
+│   ├── campaigns/page.tsx     # CREATE IN PHASE 0.8
+│   ├── audit-logs/page.tsx    # CREATE IN PHASE 0.8
+│   ├── dunning/page.tsx       # CREATE IN PHASE 0.9
+│   ├── telegram/page.tsx      # CREATE IN PHASE 0.5
+│   ├── payment/page.tsx       # CREATE IN PHASE 0.5
+│   ├── email/page.tsx         # CREATE IN PHASE 0.5
+│   └── setup/page.tsx         # CREATE IN PHASE 0.5
+├── pricing/page.tsx           # UPDATE in Phase 0.5
+└── dashboard/page.tsx         # UPDATE in Phase 7
+```
+
+---
+
+## 🔑 KEY MODELS (11 New Models)
+
+When discussing models, reference these:
+
+1. **Feature** - Platform features (access_premium_signals, etc.)
+2. **SubscriptionPlan** - Admin-created plans (multi-currency)
+3. **Subscription** - Updated (add plan FK, referral FK, coupon FK)
+4. **Coupon** - Discount codes
+5. **CouponUsage** - Track usage
+6. **ReferralCode** - User referral codes
+7. **Referral** - Individual referrals
+8. **TelegramConfiguration** - Bot settings (singleton, encrypted)
+9. **TelegramGroup** - Group definitions
+10. **PaymentConfiguration** - Paystack (singleton, encrypted)
+11. **EmailConfiguration** - SMTP (singleton, encrypted)
+
+**Phase 0.6+:**
+12. **APIKey** - Client API keys
+13. **WebhookEndpoint** - Webhook URLs
+14. **WebhookDelivery** - Delivery tracking
+15. **DailyAnalytics** - Analytics data
+16. **EmailCampaign** - Email campaigns
+17. **EmailRecipient** - Email tracking
+18. **AuditLog** - Admin action logs
+19. **PaymentAttempt** - Dunning attempts
+
+---
+
+## 🎯 PHASE-BY-PHASE GUIDANCE
+
+### **If Starting Phase 0.5 (Dynamic Plans):**
+```
+I'm starting Phase 0.5: Dynamic Plans Foundation.
+
+GOAL: Create 11 new models for subscription system.
+
+NEXT TASKS:
+- Create Feature model (0.5.1)
+- Create SubscriptionPlan model (0.5.2)
+- Update Subscription model (0.5.3)
+[... continue with remaining models]
+
+Please help me create the Feature model first. It should have:
+- key (unique CharField)
+- name (CharField)
+- description (TextField)
+- category (CharField with choices: telegram/content/support)
+- icon (CharField for icon name)
+- sort_order (IntegerField)
+- is_active (BooleanField)
+
+Show me the complete model code.
+```
+
+### **If Starting Phase 1 (Celery):**
+```
+I'm starting Phase 1: Celery Foundation.
+
+PREREQUISITES COMPLETED:
+✅ All 11 models created
+✅ Migrations run successfully
+✅ PostgreSQL connected
+✅ Redis Cloud URL: redis://[YOUR_URL]
+
+NEXT TASK: Create Celery app configuration (1.1)
+
+Please show me the complete code for backend/oxidane/celery.py
+```
+
+### **If Starting Phase 4 (Celery Tasks):**
+```
+I'm starting Phase 4: Celery Tasks Implementation.
+
+CONTEXT:
+- TelegramManager is created in backend/subscriptions/telegram/manager.py
+- It has methods: add_user_to_groups(user_id, plan), remove_user_from_groups()
+- Subscription model has: plan FK, telegram_status field
+
+NEXT TASK: Implement add_user_to_telegram task (4.1)
+
+This task should:
+1. Fetch subscription by ID
+2. Get user's telegram_user_id
+3. Get plan's telegram_groups
+4. Use TelegramManager to add user
+5. Update telegram_status
+6. Trigger webhook (subscription.created)
+7. Retry on failure: 1m, 5m, 15m, 30m, 1h
+
+Show me the complete task code.
+```
+
+---
+
+## 🧠 MENTAL MODEL FOR COPILOT
+
+### **How to Phrase Questions:**
+
+❌ **Bad:** "How do I add a model?"  
+✅ **Good:** "I'm working on Phase 0.5 task 0.5.2. Show me the complete SubscriptionPlan model code with fields: name, slug, description, prices (JSONField), currency_default, duration_days, telegram_groups (M2M to TelegramGroup), features (M2M to Feature), grace_period_days, warning_days (JSON), is_active, is_featured, display_badge, sort_order, allows_upgrade, allows_downgrade."
+
+❌ **Bad:** "Celery not working"  
+✅ **Good:** "I'm in Phase 1. I've created oxidane/celery.py and updated __init__.py. When I run `celery -A oxidane worker -l info --pool=solo`, I get error: [PASTE ERROR]. Here's my celery.py code: [PASTE CODE]. What's wrong?"
+
+❌ **Bad:** "How do I test?"  
+✅ **Good:** "I'm in Phase 8 task 8.1. I need to test the complete subscription flow: user verifies → applies coupon + referral → pays → gets added to Telegram groups. What specific steps should I take to test this end-to-end?"
+
+### **Always Provide Context:**
+
+1. **Current Phase:** "I'm in Phase 0.5"
+2. **Current Task:** "Working on task 0.5.14"
+3. **What's Working:** "All models created, migrations run"
+4. **What's Not Working:** "Getting error when running seed command"
+5. **Error Message:** "Paste full error with traceback"
+6. **Relevant Code:** "Here's my current code: [PASTE]"
+
+---
+
+## 💾 SAVE YOUR PROGRESS
+
+### **After Each Session:**
+
+1. **Update TODO List:**
+   ```
+   Mark completed tasks as done in the todo list
+   ```
+
+2. **Commit Your Code:**
+   ```powershell
+   git add .
+   git commit -m "Phase 0.5: Created Feature and SubscriptionPlan models"
+   git push origin enterprise-platform-v1
+   ```
+
+3. **Document Issues (If Any):**
+   Create a file: `KNOWN_ISSUES.md`
+   ```markdown
+   ## Issue 1: Celery connection refused
+   - **Phase:** Phase 1
+   - **Task:** 1.5
+   - **Error:** [Errno 10061] No connection could be made
+   - **Status:** Fixed by starting Redis server
+   ```
+
+4. **Take Notes:**
+   Create a file: `PROGRESS_NOTES.md`
+   ```markdown
+   ## November 5, 2025
+   - ✅ Completed Phase 0.5 tasks 0.5.1 - 0.5.8 (all models)
+   - ✅ Ran migrations successfully
+   - ⏳ Started seed commands (0.5.16)
+   - 🔴 Need to fix: Feature icon field validation
+   - ⏭️ Next session: Continue with seed commands
+   ```
+
+---
+
+## 📞 EMERGENCY RECOVERY
+
+### **If You Lost All Context:**
+
+1. **Read These Files (In Order):**
+   - `ENTERPRISE_PLATFORM_ROADMAP.md` (this is your bible)
+   - `CONTEXT_FOR_NEW_CHAT.md` (this file)
+   - `PROGRESS_NOTES.md` (if you created it)
+   - `KNOWN_ISSUES.md` (if you created it)
+
+2. **Check Git History:**
+   ```powershell
+   git log --oneline enterprise-platform-v1
+   ```
+
+3. **Check Database Migrations:**
+   ```powershell
+   python manage.py showmigrations subscriptions
+   ```
+
+4. **Ask Copilot to Assess:**
+   ```
+   I lost context on my enterprise platform project. Please:
+   1. Read ENTERPRISE_PLATFORM_ROADMAP.md
+   2. Check backend/subscriptions/models.py (tell me what models exist)
+   3. Look at the todo list
+   4. Tell me what phase I'm likely on and what to do next
+   ```
+
+---
+
+## 🎯 COMMON SCENARIOS
+
+### **Scenario 1: Starting a New Phase**
+
+```
+I'm starting Phase [X]: [PHASE NAME]
+
+COMPLETED PHASES: [List phases you've finished]
+
+PREREQUISITES FOR THIS PHASE:
+[List what should be done before this phase]
+
+FIRST TASK: [Task ID and description]
+
+What should I do first?
+```
+
+### **Scenario 2: Stuck on a Task**
+
+```
+I'm stuck on task [X.Y.Z] in Phase [X].
+
+TASK DESCRIPTION: [Paste from roadmap]
+
+WHAT I'VE TRIED:
+1. [Thing 1]
+2. [Thing 2]
+
+CURRENT ERROR: [Paste error message]
+
+RELEVANT CODE: [Paste code]
+
+What am I doing wrong?
+```
+
+### **Scenario 3: Completed a Phase**
+
+```
+I've completed Phase [X]: [PHASE NAME]
+
+COMPLETED TASKS:
+✅ [Task 1]
+✅ [Task 2]
+✅ [Task 3]
+
+VERIFICATION:
+- All tests passing: [YES/NO]
+- No errors in console: [YES/NO]
+- Git committed: [YES/NO]
+
+Ready to start Phase [X+1]. What are the prerequisites?
+```
+
+### **Scenario 4: Need to Make a Change**
+
+```
+I need to modify the [MODEL/VIEW/COMPONENT] because [REASON].
+
+CURRENT CODE: [Paste current code]
+
+DESIRED CHANGE: [Describe what you want]
+
+CONCERNS: [Any concerns about breaking things]
+
+How should I make this change safely?
+```
+
+---
+
+## 🔄 RESUMING WORK CHECKLIST
+
+Before starting a new session:
+
+- [ ] Open VS Code to the correct folder: `c:\Users\user\OneDrive\Desktop\Oxidane`
+- [ ] Check current branch: `git branch` (should be on `enterprise-platform-v1`)
+- [ ] Read `ENTERPRISE_PLATFORM_ROADMAP.md` to remember the overall plan
+- [ ] Check todo list to see current progress
+- [ ] Review last git commit: `git log -1`
+- [ ] Start backend services if needed:
+  - Redis: Check if running
+  - PostgreSQL: Check if running
+  - Django: `python manage.py runserver`
+  - Celery (if Phase 1+): `celery -A oxidane worker -l info --pool=solo`
+
+---
+
+## 📚 QUICK REFERENCE COMMANDS
+
+### **Git Commands:**
+```powershell
+# Check current status
+git status
+
+# Check current branch
+git branch
+
+# Switch to feature branch
+git checkout enterprise-platform-v1
+
+# View recent commits
+git log --oneline -10
+
+# View uncommitted changes
+git diff
+
+# Commit progress
+git add .
+git commit -m "Phase X.Y: Description"
+git push origin enterprise-platform-v1
+```
+
+### **Django Commands:**
+```powershell
+# Create migrations
+python manage.py makemigrations subscriptions
+
+# Run migrations
+python manage.py migrate
+
+# Check migration status
+python manage.py showmigrations subscriptions
+
+# Open shell
+python manage.py shell
+
+# Run server
+python manage.py runserver
+
+# Create superuser
+python manage.py createsuperuser
+
+# Run seed commands
+python manage.py seed_default_features
+python manage.py seed_default_plans
+```
+
+### **Celery Commands:**
+```powershell
+# Start worker (Windows)
+celery -A oxidane worker -l info --pool=solo
+
+# Start beat scheduler
+celery -A oxidane beat -l info
+
+# Start flower (monitoring UI)
+celery -A oxidane flower
+```
+
+### **Redis Commands:**
+```powershell
+# Test connection
+redis-cli -u redis://your-url ping
+
+# Check keys
+redis-cli -u redis://your-url keys "*"
+```
+
+---
+
+## 🎓 LEARNING RESOURCES
+
+If you encounter unfamiliar concepts:
+
+- **Celery:** https://docs.celeryq.dev/en/stable/
+- **Django Signals:** https://docs.djangoproject.com/en/5.0/topics/signals/
+- **DRF Serializers:** https://www.django-rest-framework.org/api-guide/serializers/
+- **React Hooks:** https://react.dev/reference/react
+- **TypeScript:** https://www.typescriptlang.org/docs/
+
+---
+
+## ⚠️ IMPORTANT REMINDERS
+
+1. **Never Skip Prerequisites:** Each phase depends on previous phases
+2. **Always Test Incrementally:** Don't write 100 lines without testing
+3. **Commit Often:** After each completed task
+4. **Read Error Messages Fully:** Don't guess, read the full traceback
+5. **Reference the Roadmap:** It has all the details you need
+6. **Don't Hardcode:** Everything should be configurable (DB or .env)
+7. **Encrypt Sensitive Data:** Use encryption.py for tokens/keys
+8. **Add Logging:** Use structlog for debugging
+9. **Write Docstrings:** Future you will thank you
+10. **Ask Specific Questions:** Give Copilot full context
+
+---
+
+## 🚀 FINAL TIPS FOR NEW CHATS
+
+### **What to Include in Your First Message:**
+
+✅ **Project name:** "Enterprise subscription platform"  
+✅ **Current phase:** "Phase 0.5" or "Phase 3"  
+✅ **Last completed task:** "0.5.8: Created TelegramConfiguration model"  
+✅ **Current task:** "0.5.9: Create TelegramGroup model"  
+✅ **Request:** "Show me the complete TelegramGroup model code"  
+✅ **Key files to read:** "Please read ENTERPRISE_PLATFORM_ROADMAP.md and backend/subscriptions/models.py"  
+
+### **What NOT to Do:**
+
+❌ Start with vague question: "How do I build a subscription system?"  
+❌ No context: "Fix my model"  
+❌ No code: "I'm getting an error" (without showing error)  
+❌ No phase info: "What should I do?" (without saying where you are)  
+
+### **Perfect First Message Template:**
+
+```
+I'm working on an enterprise subscription management platform (white-label SaaS).
+
+PROJECT CONTEXT:
+- Tech stack: Django 5.2 + PostgreSQL + Redis + Celery + Next.js
+- Branch: enterprise-platform-v1
+- Total roadmap: 150 hours, 11 phases
+- Goal: $20k-$25k white-label platform for forex traders
+
+CURRENT STATUS:
+- Phase: [PHASE NUMBER/NAME]
+- Last completed task: [TASK ID]: [DESCRIPTION]
+- Currently working on: [TASK ID]: [DESCRIPTION]
+
+PLEASE READ:
+1. ENTERPRISE_PLATFORM_ROADMAP.md
+2. CONTEXT_FOR_NEW_CHAT.md (this file)
+
+QUESTION/REQUEST:
+[Your specific question or request here]
+
+[Optional: Paste relevant code, error messages, or context]
+```
+
+---
+
+## 📞 SUPPORT
+
+If you're truly stuck:
+1. Take a break (seriously, 15 minutes helps)
+2. Re-read the relevant section of ENTERPRISE_PLATFORM_ROADMAP.md
+3. Check if Redis/PostgreSQL are running
+4. Review recent git commits to see what changed
+5. Ask Copilot with FULL context (use template above)
+6. Search Django/Celery docs for specific error messages
+
+---
+
+**Remember:** This is a 150-hour project. You can't do it in one chat. Break it into sessions, save progress religiously, and use this file to maintain context.
+
+**You got this! 🚀**
+
+---
+
+**Last Updated:** October 31, 2025  
+**Next Update:** After each major milestone

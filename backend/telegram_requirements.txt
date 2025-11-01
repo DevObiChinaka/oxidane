@@ -1,0 +1,15 @@
+# Telegram Bot Dependencies for OxiWord Bot
+# Install with: pip install -r telegram_requirements.txt
+
+# Core Telegram Bot Library
+python-telegram-bot==20.6
+
+# Additional utilities (if needed)
+pytz==2023.3
+requests==2.31.0
+
+# Optional: For enhanced user agent parsing (if you want device detection)
+user-agents==2.2.0
+
+# Optional: For IP geolocation (if you want location tracking) 
+# requests[socks]==2.31.0  # For proxy support
