@@ -16,7 +16,8 @@ import csv
 from .models import (
     PricingPlan, SignalSubscription,
     TelegramGroupManagement, Coupon, ReferralCode, Referral, ReferralCredit,
-    PaymentConfiguration, EmailConfiguration, TelegramConfiguration, TelegramGroup
+    PaymentConfiguration, EmailConfiguration, TelegramConfiguration, TelegramGroup,
+    ExchangeRate
 )
 
 @admin.register(PricingPlan)
@@ -1322,6 +1323,217 @@ class TelegramGroupAdmin(admin.ModelAdmin):
         """Optimize queryset with prefetch"""
         qs = super().get_queryset(request)
         return qs.prefetch_related('associated_plans')
+
+
+@admin.register(ExchangeRate)
+class ExchangeRateAdmin(admin.ModelAdmin):
+    """
+    Admin interface for currency exchange rates.
+    Manages rates for multi-currency pricing with auto-conversion.
+    Phase 0.5, Task 0.5.10
+    """
+    list_display = [
+        'currency_pair_display', 'rate_display', 'last_updated_display',
+        'staleness_display', 'conversion_calculator'
+    ]
+    list_filter = ['base_currency', 'target_currency', 'last_updated']
+    search_fields = ['base_currency', 'target_currency']
+    readonly_fields = [
+        'id', 'created_at', 'last_updated',
+        'reverse_rate_display', 'staleness_info'
+    ]
+    fieldsets = (
+        ('Currency Pair', {
+            'fields': ('base_currency', 'target_currency'),
+            'description': 'Currency codes (e.g., USD, NGN, GBP, EUR)'
+        }),
+        ('Exchange Rate', {
+            'fields': ('rate', 'reverse_rate_display'),
+            'description': 'Rate from base to target currency'
+        }),
+        ('Status', {
+            'fields': ('last_updated', 'staleness_info'),
+            'description': 'Rate freshness and update information'
+        }),
+        ('Metadata', {
+            'fields': ('id', 'created_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    ordering = ['base_currency', 'target_currency']
+    
+    # Custom actions
+    actions = ['mark_as_stale', 'refresh_rates', 'delete_selected']
+    
+    def currency_pair_display(self, obj):
+        """Display currency pair with flag emojis"""
+        # Basic flag mapping (extend as needed)
+        flags = {
+            'USD': '🇺🇸', 'NGN': '🇳🇬', 'GBP': '🇬🇧', 'EUR': '🇪🇺',
+            'CAD': '🇨🇦', 'JPY': '🇯🇵', 'CNY': '🇨🇳', 'INR': '🇮🇳'
+        }
+        base_flag = flags.get(obj.base_currency, '🌐')
+        target_flag = flags.get(obj.target_currency, '🌐')
+        
+        return format_html(
+            '{} <strong>{}</strong> → {} <strong>{}</strong>',
+            base_flag, obj.base_currency,
+            target_flag, obj.target_currency
+        )
+    currency_pair_display.short_description = 'Currency Pair'
+    
+    def rate_display(self, obj):
+        """Display rate with formatting"""
+        # Use different precision based on rate magnitude
+        if obj.rate >= 100:
+            formatted_rate = f'{obj.rate:,.2f}'
+        elif obj.rate >= 1:
+            formatted_rate = f'{obj.rate:.4f}'
+        else:
+            formatted_rate = f'{obj.rate:.6f}'
+        
+        return format_html(
+            '<span style="font-family: monospace; font-weight: bold;">{}</span>',
+            formatted_rate
+        )
+    rate_display.short_description = 'Rate'
+    
+    def last_updated_display(self, obj):
+        """Display last update time in human-readable format"""
+        from django.utils.timesince import timesince
+        time_ago = timesince(obj.last_updated)
+        
+        return format_html(
+            '<span title="{}">{} ago</span>',
+            obj.last_updated.strftime('%Y-%m-%d %H:%M:%S'),
+            time_ago
+        )
+    last_updated_display.short_description = 'Last Updated'
+    
+    def staleness_display(self, obj):
+        """Display staleness indicator"""
+        if obj.is_stale(hours=24):
+            hours_stale = (timezone.now() - obj.last_updated).total_seconds() / 3600
+            return format_html(
+                '<span style="background: #dc3545; color: white; padding: 3px 8px; border-radius: 3px;" '
+                'title="Rate is {:.1f} hours old">⚠ Stale</span>',
+                hours_stale
+            )
+        elif obj.is_stale(hours=12):
+            return format_html(
+                '<span style="background: #ffc107; color: #000; padding: 3px 8px; border-radius: 3px;">'
+                '⚡ Aging</span>'
+            )
+        return format_html(
+            '<span style="background: #28a745; color: white; padding: 3px 8px; border-radius: 3px;">'
+            '✓ Fresh</span>'
+        )
+    staleness_display.short_description = 'Status'
+    
+    def conversion_calculator(self, obj):
+        """Quick conversion calculator link"""
+        return format_html(
+            '<a href="#" onclick="alert(\'1 {} = {} {}\\n1 {} = {:.6f} {}\'); return false;" '
+            'style="color: #007bff; text-decoration: none;">📊 Calculate</a>',
+            obj.base_currency, obj.rate, obj.target_currency,
+            obj.target_currency, 1/obj.rate, obj.base_currency
+        )
+    conversion_calculator.short_description = 'Calculator'
+    
+    def reverse_rate_display(self, obj):
+        """Display reverse rate"""
+        if obj.rate > 0:
+            reverse = 1 / obj.rate
+            if reverse >= 100:
+                formatted = f'{reverse:,.2f}'
+            elif reverse >= 1:
+                formatted = f'{reverse:.4f}'
+            else:
+                formatted = f'{reverse:.6f}'
+            
+            return format_html(
+                '1 {} = <strong>{}</strong> {} (reverse)',
+                obj.target_currency, formatted, obj.base_currency
+            )
+        return 'N/A'
+    reverse_rate_display.short_description = 'Reverse Rate'
+    
+    def staleness_info(self, obj):
+        """Detailed staleness information"""
+        from django.utils.timesince import timesince
+        hours_old = (timezone.now() - obj.last_updated).total_seconds() / 3600
+        
+        if obj.is_stale(hours=24):
+            color = '#dc3545'
+            status = 'STALE - needs update'
+        elif obj.is_stale(hours=12):
+            color = '#ffc107'
+            status = 'AGING - update soon'
+        else:
+            color = '#28a745'
+            status = 'FRESH'
+        
+        return format_html(
+            '<div style="padding: 10px; background: #f8f9fa; border-left: 4px solid {};">'
+            '<strong>{}</strong><br>'
+            'Last updated: {} ago ({:.1f} hours)<br>'
+            'Updated at: {}'
+            '</div>',
+            color, status,
+            timesince(obj.last_updated), hours_old,
+            obj.last_updated.strftime('%Y-%m-%d %H:%M:%S')
+        )
+    staleness_info.short_description = 'Staleness Information'
+    
+    # Custom actions
+    
+    def mark_as_stale(self, request, queryset):
+        """Mark selected rates as stale (for testing)"""
+        from datetime import timedelta
+        from django.utils import timezone
+        
+        old_time = timezone.now() - timedelta(hours=25)
+        updated = 0
+        
+        for rate in queryset:
+            # Use update() to bypass auto_now
+            ExchangeRate.objects.filter(id=rate.id).update(last_updated=old_time)
+            updated += 1
+        
+        self.message_user(
+            request,
+            f'Marked {updated} rate(s) as stale.',
+            messages.SUCCESS
+        )
+    mark_as_stale.short_description = 'Mark as stale (for testing)'
+    
+    def refresh_rates(self, request, queryset):
+        """Refresh selected rates (placeholder for future API integration)"""
+        self.message_user(
+            request,
+            'Rate refresh functionality will be implemented in Phase 0.5 infrastructure tasks.',
+            messages.INFO
+        )
+    refresh_rates.short_description = 'Refresh rates (placeholder)'
+    
+    # Permissions
+    
+    def has_delete_permission(self, request, obj=None):
+        """Only superusers can delete rates"""
+        return request.user.is_superuser
+    
+    # Save override
+    
+    def save_model(self, request, obj, form, change):
+        """Add logging for rate changes"""
+        if change and 'rate' in form.changed_data:
+            old_rate = ExchangeRate.objects.get(id=obj.id).rate
+            self.message_user(
+                request,
+                f'Rate updated: {old_rate} → {obj.rate} ({obj.base_currency}/{obj.target_currency})',
+                messages.SUCCESS
+            )
+        super().save_model(request, obj, form, change)
 
 
 # Admin site customization

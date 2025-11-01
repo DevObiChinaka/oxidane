@@ -3,6 +3,7 @@ from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from decimal import Decimal
+from datetime import timedelta
 import uuid
 import json
 from django.core.exceptions import ValidationError
@@ -3215,4 +3216,323 @@ class EmailConfiguration(models.Model):
             for key, value in original_values.items():
                 setattr(self, key, value)
             raise e
+
+
+# ============================================================================
+# EXCHANGE RATE MODEL (Phase 0.5, Task 0.5.10)
+# ============================================================================
+
+class ExchangeRate(models.Model):
+    """
+    Model to store currency exchange rates for multi-currency pricing.
+    
+    Supports:
+    - Direct currency pair rates (e.g., USD -> NGN)
+    - Automatic reverse rate calculation (e.g., NGN -> USD)
+    - Currency conversion with precision
+    - Staleness detection for rate updates
+    - Bulk rate updates
+    
+    Design:
+    - Base currency is typically USD (industry standard)
+    - Rates stored as Decimal for precision
+    - Last update timestamp for staleness checks
+    - Unique constraint on currency pairs
+    """
+    
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
+    base_currency = models.CharField(
+        max_length=3,
+        help_text="Base currency code (e.g., USD)"
+    )
+    target_currency = models.CharField(
+        max_length=3,
+        help_text="Target currency code (e.g., NGN)"
+    )
+    rate = models.DecimalField(
+        max_digits=20,
+        decimal_places=6,
+        help_text="Exchange rate from base to target currency"
+    )
+    last_updated = models.DateTimeField(
+        auto_now=True,
+        help_text="Last time this rate was updated"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'exchange_rates'
+        verbose_name = 'Exchange Rate'
+        verbose_name_plural = 'Exchange Rates'
+        unique_together = [['base_currency', 'target_currency']]
+        indexes = [
+            models.Index(fields=['base_currency', 'target_currency']),
+            models.Index(fields=['last_updated']),
+        ]
+        ordering = ['base_currency', 'target_currency']
+    
+    def __str__(self):
+        """String representation."""
+        return f"1 {self.base_currency} = {self.rate} {self.target_currency}"
+    
+    def clean(self):
+        """Validate exchange rate data."""
+        errors = {}
+        
+        # Note: Normalization happens in save() before validation
+        
+        # Validate currency code length
+        if self.base_currency and len(self.base_currency) != 3:
+            errors['base_currency'] = 'Currency code must be exactly 3 characters'
+        
+        if self.target_currency and len(self.target_currency) != 3:
+            errors['target_currency'] = 'Currency code must be exactly 3 characters'
+        
+        # Validate rate is positive and non-zero
+        if self.rate is not None:
+            if self.rate <= 0:
+                errors['rate'] = 'Exchange rate must be greater than zero'
+        
+        # Validate base and target are different
+        if self.base_currency and self.target_currency:
+            if self.base_currency == self.target_currency:
+                errors['target_currency'] = 'Base and target currencies must be different'
+        
+        if errors:
+            raise ValidationError(errors)
+    
+    def save(self, *args, **kwargs):
+        """Override save to normalize and validate."""
+        # Normalize currency codes BEFORE validation
+        if self.base_currency:
+            self.base_currency = self.base_currency.strip().upper()
+        if self.target_currency:
+            self.target_currency = self.target_currency.strip().upper()
+        
+        self.full_clean()
+        super().save(*args, **kwargs)
+    
+    # ========================================================================
+    # RATE RETRIEVAL METHODS
+    # ========================================================================
+    
+    @classmethod
+    def get_rate(cls, from_currency, to_currency):
+        """
+        Get exchange rate between two currencies.
+        
+        Supports:
+        - Direct rates (USD -> NGN)
+        - Reverse rates (NGN -> USD, calculated as 1/rate)
+        - Same currency (returns 1.0)
+        
+        Args:
+            from_currency (str): Source currency code
+            to_currency (str): Target currency code
+            
+        Returns:
+            Decimal: Exchange rate, or None if not found
+        """
+        from_currency = from_currency.upper()
+        to_currency = to_currency.upper()
+        
+        # Same currency
+        if from_currency == to_currency:
+            return Decimal('1.00')
+        
+        # Try direct rate
+        try:
+            rate = cls.objects.get(
+                base_currency=from_currency,
+                target_currency=to_currency
+            )
+            return rate.rate
+        except cls.DoesNotExist:
+            pass
+        
+        # Try reverse rate
+        try:
+            rate = cls.objects.get(
+                base_currency=to_currency,
+                target_currency=from_currency
+            )
+            return Decimal('1') / rate.rate
+        except cls.DoesNotExist:
+            return None
+    
+    @classmethod
+    def get_all_rates_for_base(cls, base_currency):
+        """
+        Get all exchange rates for a base currency.
+        
+        Args:
+            base_currency (str): Base currency code
+            
+        Returns:
+            dict: Dictionary of {target_currency: rate}
+        """
+        base_currency = base_currency.upper()
+        rates = cls.objects.filter(base_currency=base_currency)
+        return {rate.target_currency: rate.rate for rate in rates}
+    
+    @classmethod
+    def get_supported_currencies(cls):
+        """
+        Get list of all supported currencies.
+        
+        Returns:
+            set: Set of currency codes
+        """
+        rates = cls.objects.all()
+        currencies = set()
+        for rate in rates:
+            currencies.add(rate.base_currency)
+            currencies.add(rate.target_currency)
+        return currencies
+    
+    @classmethod
+    def is_supported(cls, currency_code):
+        """
+        Check if a currency is supported.
+        
+        Args:
+            currency_code (str): Currency code to check
+            
+        Returns:
+            bool: True if currency is supported
+        """
+        currency_code = currency_code.upper()
+        return cls.objects.filter(
+            models.Q(base_currency=currency_code) |
+            models.Q(target_currency=currency_code)
+        ).exists()
+    
+    # ========================================================================
+    # CURRENCY CONVERSION METHODS
+    # ========================================================================
+    
+    @classmethod
+    def convert_amount(cls, amount, from_currency, to_currency, round_result=False):
+        """
+        Convert amount from one currency to another.
+        
+        Args:
+            amount (Decimal): Amount to convert
+            from_currency (str): Source currency
+            to_currency (str): Target currency
+            round_result (bool): Whether to round to 2 decimal places
+            
+        Returns:
+            Decimal: Converted amount, or None if rate not found
+        """
+        rate = cls.get_rate(from_currency, to_currency)
+        
+        if rate is None:
+            return None
+        
+        result = amount * rate
+        
+        if round_result:
+            from decimal import ROUND_HALF_UP
+            return result.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        
+        return result
+    
+    # ========================================================================
+    # RATE UPDATE METHODS
+    # ========================================================================
+    
+    @classmethod
+    def update_rate(cls, base_currency, target_currency, rate):
+        """
+        Update or create an exchange rate.
+        
+        Args:
+            base_currency (str): Base currency code
+            target_currency (str): Target currency code
+            rate (Decimal): Exchange rate
+            
+        Returns:
+            ExchangeRate: The updated or created rate object
+        """
+        base_currency = base_currency.upper()
+        target_currency = target_currency.upper()
+        
+        obj, created = cls.objects.update_or_create(
+            base_currency=base_currency,
+            target_currency=target_currency,
+            defaults={'rate': rate}
+        )
+        return obj
+    
+    @classmethod
+    def bulk_update_rates(cls, base_currency, rates_dict):
+        """
+        Bulk update multiple exchange rates for a base currency.
+        
+        Args:
+            base_currency (str): Base currency code
+            rates_dict (dict): Dictionary of {target_currency: rate}
+            
+        Returns:
+            list: List of created/updated ExchangeRate objects
+        """
+        base_currency = base_currency.upper()
+        results = []
+        
+        for target_currency, rate in rates_dict.items():
+            obj = cls.update_rate(base_currency, target_currency, rate)
+            results.append(obj)
+        
+        return results
+    
+    def is_stale(self, hours=24):
+        """
+        Check if this exchange rate is stale.
+        
+        Args:
+            hours (int): Number of hours before rate is considered stale
+            
+        Returns:
+            bool: True if rate is older than specified hours
+        """
+        if not self.last_updated:
+            return True
+        
+        age = timezone.now() - self.last_updated
+        return age > timedelta(hours=hours)
+    
+    @classmethod
+    def get_stale_rates(cls, hours=24):
+        """
+        Get all rates that are older than specified hours.
+        
+        Args:
+            hours (int): Number of hours before rate is considered stale
+            
+        Returns:
+            QuerySet: ExchangeRate objects that need updating
+        """
+        cutoff_time = timezone.now() - timedelta(hours=hours)
+        return cls.objects.filter(last_updated__lt=cutoff_time)
+    
+    @classmethod
+    def needs_update(cls, hours=24):
+        """
+        Check if any rates need updating.
+        
+        Args:
+            hours (int): Number of hours before rate is considered stale
+            
+        Returns:
+            bool: True if no rates exist or any rates are stale
+        """
+        if not cls.objects.exists():
+            return True
+        
+        return cls.get_stale_rates(hours=hours).exists()
 
