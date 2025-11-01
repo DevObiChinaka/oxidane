@@ -11,13 +11,13 @@
 ## 🎯 OVERALL PROGRESS
 
 **Current Phase:** Phase 0.5 (Dynamic Plans Foundation) 🚀  
-**Completion:** 3.2% (6/191 tasks)  
-**Hours Spent:** 4 hours  
-**Hours Remaining:** 146 hours  
+**Completion:** 3.7% (7/191 tasks)  
+**Hours Spent:** 5 hours  
+**Hours Remaining:** 145 hours  
 
 ### **Phase Status:**
 - [x] PHASE 0: Preparation & Setup (6/6 tasks) ✅
-- [ ] PHASE 0.5: Dynamic Plans Foundation (0/46 tasks) 🚀 NEXT
+- [ ] PHASE 0.5: Dynamic Plans Foundation (1/46 tasks) 🚀 IN PROGRESS
 - [ ] PHASE 0.6: API Keys & Webhooks (0/13 tasks)
 - [ ] PHASE 0.7: Analytics & Reporting (0/8 tasks)
 - [ ] PHASE 0.8: Email Campaigns & Audit Logs (0/10 tasks)
@@ -74,29 +74,52 @@
 - ✅ Superuser created (admin/chiderachinaka06@gmail.com)
 
 #### 🚀 Next Session:
-- [ ] Start Phase 0.5: Dynamic Plans Foundation
-- [ ] Task 0.5.1: Create Feature model + tests
+- [x] Start Phase 0.5: Dynamic Plans Foundation ✅
+- [x] Task 0.5.1: Create Feature model + tests ✅
 - [ ] Task 0.5.2: Create SubscriptionPlan model + tests
 
 #### 🔴 Blocked:
-- [ ] Task X.Y.Z: Description (Reason: ...)
+- None
 
 #### 💭 Notes:
-- 
-- 
+- Successfully granted CREATEDB permission to PostgreSQL 'oxidane' user for test database creation
+- TDD approach working perfectly: tests before migrations
+- Feature model uses UUID primary key for better scalability
+- Key validation ensures consistent lowercase + underscore format
 
 #### 🐛 Issues Found:
-- 
-- 
+- PostgreSQL permission error (RESOLVED): oxidane user needed CREATEDB for pytest
+- Test expected IntegrityError but got ValidationError (RESOLVED): Updated test to match model's full_clean() behavior
 
 #### 📝 Learnings:
-- 
-- 
+- pytest-django requires CREATEDB permission on PostgreSQL user
+- Django's save() calling full_clean() changes exception type from IntegrityError to ValidationError
+- Test database naming: Django creates test_<dbname> automatically
 
 #### ⏭️ Tomorrow's Plan:
-1. 
-2. 
-3. 
+1. Task 0.5.2: SubscriptionPlan model + tests (M2M to Feature)
+2. Task 0.5.3: Coupon model + tests
+3. Continue with remaining Phase 0.5 models
+
+---
+
+### **November 1, 2025** - Day 1 Continued ✅
+**Additional Hours:** 1 hour  
+**Phase:** Phase 0.5 (Dynamic Plans Foundation)  
+**Tasks Completed:** 1/46  
+
+#### ✅ Completed:
+- [x] Task 0.5.1: Create Feature model + tests
+  - Created Feature model with UUID, unique key, 6 categories
+  - Implemented key validation (lowercase, underscores only)
+  - Created 22 comprehensive tests (all passing)
+  - Applied migration successfully
+  - Verified model works in PostgreSQL
+
+#### 🧪 Testing:
+- 22/22 Feature model tests passing ✅
+- Test coverage: creation, uniqueness, validation, ordering, filtering, edge cases
+- pytest infrastructure set up with Django integration 
 
 ---
 
