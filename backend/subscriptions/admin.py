@@ -16,7 +16,7 @@ import csv
 from .models import (
     PricingPlan, SignalSubscription,
     TelegramGroupManagement, Coupon, ReferralCode, Referral, ReferralCredit,
-    TelegramConfiguration, TelegramGroup
+    PaymentConfiguration, TelegramConfiguration, TelegramGroup
 )
 
 @admin.register(PricingPlan)
@@ -610,6 +610,157 @@ class ReferralCreditAdmin(admin.ModelAdmin):
         
         return response
     export_to_csv.short_description = "Export to CSV"
+
+
+@admin.register(PaymentConfiguration)
+class PaymentConfigurationAdmin(admin.ModelAdmin):
+    """
+    Admin interface for payment gateway configuration (singleton).
+    Manages Paystack and Stripe API keys, webhook settings, and provider selection.
+    Phase 0.5, Task 0.5.8
+    """
+    list_display = [
+        'primary_provider_display', 'mode_display', 'paystack_status',
+        'stripe_status', 'currencies_display'
+    ]
+    readonly_fields = [
+        'id', 'created_at', 'updated_at',
+        'masked_paystack_public', 'masked_paystack_secret',
+        'masked_stripe_publishable', 'masked_stripe_secret'
+    ]
+    fieldsets = (
+        ('Primary Settings', {
+            'fields': (
+                'id', 'primary_provider', 'is_test_mode', 'supported_currencies'
+            ),
+            'description': 'Core payment configuration and currency support'
+        }),
+        ('Paystack Configuration', {
+            'fields': (
+                'paystack_enabled',
+                'paystack_public_key', 'masked_paystack_public',
+                'paystack_secret_key', 'masked_paystack_secret',
+                'paystack_webhook_secret', 'paystack_webhook_url'
+            ),
+            'description': 'Paystack payment gateway settings (Nigerian market)'
+        }),
+        ('Stripe Configuration', {
+            'fields': (
+                'stripe_enabled',
+                'stripe_publishable_key', 'masked_stripe_publishable',
+                'stripe_secret_key', 'masked_stripe_secret',
+                'stripe_webhook_secret', 'stripe_webhook_url'
+            ),
+            'description': 'Stripe payment gateway settings (International)'
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def primary_provider_display(self, obj):
+        """Display primary provider with icon"""
+        icons = {
+            'paystack': '🇳🇬',
+            'stripe': '🌐'
+        }
+        icon = icons.get(obj.primary_provider, '❓')
+        return format_html(
+            '{} <strong>{}</strong>',
+            icon,
+            obj.get_primary_provider_display()
+        )
+    primary_provider_display.short_description = 'Primary Provider'
+    
+    def mode_display(self, obj):
+        """Display test/live mode"""
+        if obj.is_test_mode:
+            return format_html(
+                '<span style="background: #fff3cd; color: #856404; padding: 3px 8px; border-radius: 3px;">'
+                '🧪 Test Mode</span>'
+            )
+        return format_html(
+            '<span style="background: #d4edda; color: #155724; padding: 3px 8px; border-radius: 3px;">'
+            '✓ Live Mode</span>'
+        )
+    mode_display.short_description = 'Mode'
+    
+    def paystack_status(self, obj):
+        """Display Paystack configuration status"""
+        if not obj.paystack_enabled:
+            return format_html('<span style="color: #6c757d;">○ Disabled</span>')
+        elif obj.is_paystack_configured():
+            return format_html('<span style="color: #28a745;">● Configured</span>')
+        return format_html('<span style="color: #dc3545;">○ Not Configured</span>')
+    paystack_status.short_description = 'Paystack'
+    
+    def stripe_status(self, obj):
+        """Display Stripe configuration status"""
+        if not obj.stripe_enabled:
+            return format_html('<span style="color: #6c757d;">○ Disabled</span>')
+        elif obj.is_stripe_configured():
+            return format_html('<span style="color: #28a745;">● Configured</span>')
+        return format_html('<span style="color: #dc3545;">○ Not Configured</span>')
+    stripe_status.short_description = 'Stripe'
+    
+    def currencies_display(self, obj):
+        """Display supported currencies"""
+        if not obj.supported_currencies:
+            return format_html('<em style="color: #dc3545;">(none)</em>')
+        currencies_str = ', '.join(obj.supported_currencies[:3])
+        if len(obj.supported_currencies) > 3:
+            currencies_str += f' +{len(obj.supported_currencies) - 3} more'
+        return format_html('<code>{}</code>', currencies_str)
+    currencies_display.short_description = 'Currencies'
+    
+    def masked_paystack_public(self, obj):
+        """Display masked Paystack public key"""
+        masked = obj.get_masked_paystack_public_key()
+        if masked == '(not set)':
+            return format_html('<em style="color: #dc3545;">{}</em>', masked)
+        return format_html('<code>{}</code>', masked)
+    masked_paystack_public.short_description = 'Public Key (Masked)'
+    
+    def masked_paystack_secret(self, obj):
+        """Display masked Paystack secret key"""
+        masked = obj.get_masked_paystack_secret_key()
+        if masked == '(not set)':
+            return format_html('<em style="color: #dc3545;">{}</em>', masked)
+        return format_html('<code style="color: #dc3545;">{}</code>', masked)
+    masked_paystack_secret.short_description = 'Secret Key (Masked)'
+    
+    def masked_stripe_publishable(self, obj):
+        """Display masked Stripe publishable key"""
+        masked = obj.get_masked_stripe_publishable_key()
+        if masked == '(not set)':
+            return format_html('<em style="color: #dc3545;">{}</em>', masked)
+        return format_html('<code>{}</code>', masked)
+    masked_stripe_publishable.short_description = 'Publishable Key (Masked)'
+    
+    def masked_stripe_secret(self, obj):
+        """Display masked Stripe secret key"""
+        masked = obj.get_masked_stripe_secret_key()
+        if masked == '(not set)':
+            return format_html('<em style="color: #dc3545;">{}</em>', masked)
+        return format_html('<code style="color: #dc3545;">{}</code>', masked)
+    masked_stripe_secret.short_description = 'Secret Key (Masked)'
+    
+    def has_add_permission(self, request):
+        """Prevent adding more than one configuration (singleton)"""
+        from .models import PaymentConfiguration
+        if PaymentConfiguration.objects.exists():
+            return False
+        return super().has_add_permission(request)
+    
+    def has_delete_permission(self, request, obj=None):
+        """Allow delete to reset configuration if needed (superuser only)"""
+        return request.user.is_superuser
+    
+    def save_model(self, request, obj, form, change):
+        """Override to handle key changes"""
+        # Could add validation or notifications here
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(TelegramConfiguration)

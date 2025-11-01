@@ -2448,3 +2448,404 @@ class TelegramGroup(models.Model):
         
         return message
 
+
+class PaymentConfiguration(models.Model):
+    """
+    Singleton model for storing payment gateway configuration.
+    Manages Paystack and Stripe API keys, webhook settings, and provider selection.
+    
+    Phase 0.5, Task 0.5.8
+    """
+    PROVIDER_CHOICES = [
+        ('paystack', 'Paystack (Nigerian Market)'),
+        ('stripe', 'Stripe (International)'),
+    ]
+    
+    # Singleton ID
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
+    
+    # Paystack Configuration
+    paystack_public_key = models.CharField(
+        max_length=500,
+        blank=True,
+        default='',
+        help_text='Paystack public/publishable key (pk_test_... or pk_live_...)'
+    )
+    paystack_secret_key = models.CharField(
+        max_length=500,
+        blank=True,
+        default='',
+        help_text='Paystack secret key (sk_test_... or sk_live_...)'
+    )
+    paystack_webhook_secret = models.CharField(
+        max_length=500,
+        blank=True,
+        default='',
+        help_text='Paystack webhook secret for signature verification'
+    )
+    paystack_webhook_url = models.URLField(
+        blank=True,
+        help_text='Auto-generated webhook URL for Paystack'
+    )
+    paystack_enabled = models.BooleanField(
+        default=True,
+        help_text='Enable Paystack as a payment option'
+    )
+    
+    # Stripe Configuration
+    stripe_publishable_key = models.CharField(
+        max_length=500,
+        blank=True,
+        default='',
+        help_text='Stripe publishable key (pk_test_... or pk_live_...)'
+    )
+    stripe_secret_key = models.CharField(
+        max_length=500,
+        blank=True,
+        default='',
+        help_text='Stripe secret key (sk_test_... or sk_live_...)'
+    )
+    stripe_webhook_secret = models.CharField(
+        max_length=500,
+        blank=True,
+        default='',
+        help_text='Stripe webhook secret (whsec_...)'
+    )
+    stripe_webhook_url = models.URLField(
+        blank=True,
+        help_text='Auto-generated webhook URL for Stripe'
+    )
+    stripe_enabled = models.BooleanField(
+        default=False,
+        help_text='Enable Stripe as a payment option'
+    )
+    
+    # General Settings
+    primary_provider = models.CharField(
+        max_length=20,
+        choices=PROVIDER_CHOICES,
+        default='paystack',
+        help_text='Primary payment provider to use'
+    )
+    is_test_mode = models.BooleanField(
+        default=True,
+        help_text='Use test API keys (sandbox mode)'
+    )
+    supported_currencies = models.JSONField(
+        default=list,
+        blank=True,
+        help_text='List of supported currency codes (e.g., ["NGN", "USD", "GBP"])'
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Payment Configuration'
+        verbose_name_plural = 'Payment Configuration'
+    
+    def __str__(self):
+        return "Payment Configuration"
+    
+    def clean(self):
+        """Validate model fields."""
+        super().clean()
+        
+        # Validate Paystack key formats
+        if self.paystack_public_key and not self.paystack_public_key.startswith('pk_'):
+            raise ValidationError({
+                'paystack_public_key': 'Paystack public key must start with "pk_"'
+            })
+        
+        if self.paystack_secret_key and not self.paystack_secret_key.startswith('sk_'):
+            raise ValidationError({
+                'paystack_secret_key': 'Paystack secret key must start with "sk_"'
+            })
+        
+        # Validate Stripe key formats
+        if self.stripe_publishable_key and not self.stripe_publishable_key.startswith('pk_'):
+            raise ValidationError({
+                'stripe_publishable_key': 'Stripe publishable key must start with "pk_"'
+            })
+        
+        if self.stripe_secret_key and not self.stripe_secret_key.startswith('sk_'):
+            raise ValidationError({
+                'stripe_secret_key': 'Stripe secret key must start with "sk_"'
+            })
+        
+        # Validate currency codes
+        if self.supported_currencies:
+            for currency in self.supported_currencies:
+                if not isinstance(currency, str) or len(currency) != 3 or not currency.isupper():
+                    raise ValidationError({
+                        'supported_currencies': f'Invalid currency code: {currency}. Must be 3 uppercase letters (e.g., "NGN", "USD")'
+                    })
+        
+        # Enforce singleton pattern
+        existing_count = PaymentConfiguration.objects.exclude(pk=self.pk).count()
+        if existing_count > 0:
+            raise ValidationError('Only one PaymentConfiguration instance is allowed.')
+    
+    def save(self, *args, **kwargs):
+        """Override save to run validation and set defaults."""
+        # Set default currencies if empty (only on initial creation)
+        if self._state.adding and not self.supported_currencies:
+            self.supported_currencies = ['NGN', 'USD']
+        
+        self.full_clean()
+        super().save(*args, **kwargs)
+    
+    @classmethod
+    def get_instance(cls):
+        """
+        Get or create the singleton instance.
+        
+        Returns:
+            PaymentConfiguration: The singleton instance
+        """
+        instance = cls.objects.first()
+        if not instance:
+            instance = cls()
+            instance.save()
+        return instance
+    
+    # ============================================================================
+    # PROVIDER STATUS METHODS
+    # ============================================================================
+    
+    def is_paystack_configured(self):
+        """
+        Check if Paystack is properly configured.
+        
+        Returns:
+            bool: True if both public and secret keys are set
+        """
+        return bool(self.paystack_public_key and self.paystack_secret_key)
+    
+    def is_stripe_configured(self):
+        """
+        Check if Stripe is properly configured.
+        
+        Returns:
+            bool: True if both publishable and secret keys are set
+        """
+        return bool(self.stripe_publishable_key and self.stripe_secret_key)
+    
+    def has_any_provider_configured(self):
+        """
+        Check if at least one payment provider is configured.
+        
+        Returns:
+            bool: True if any provider is configured
+        """
+        return self.is_paystack_configured() or self.is_stripe_configured()
+    
+    # ============================================================================
+    # KEY MASKING METHODS
+    # ============================================================================
+    
+    def get_masked_paystack_public_key(self):
+        """Get masked Paystack public key for display."""
+        return self._mask_key(self.paystack_public_key)
+    
+    def get_masked_paystack_secret_key(self):
+        """Get masked Paystack secret key for display."""
+        return self._mask_key(self.paystack_secret_key)
+    
+    def get_masked_stripe_publishable_key(self):
+        """Get masked Stripe publishable key for display."""
+        return self._mask_key(self.stripe_publishable_key)
+    
+    def get_masked_stripe_secret_key(self):
+        """Get masked Stripe secret key for display."""
+        return self._mask_key(self.stripe_secret_key)
+    
+    def _mask_key(self, key):
+        """
+        Mask an API key for secure display.
+        
+        Args:
+            key: The API key to mask
+            
+        Returns:
+            str: Masked key (e.g., "pk_test_***cdef")
+        """
+        if not key:
+            return ""
+        
+        if len(key) < 4:
+            return "***"
+        
+        # Show prefix and last 4 characters
+        if '_' in key:
+            prefix = key.split('_')[0] + '_' + key.split('_')[1]
+            return f"{prefix}_***{key[-4:]}"
+        
+        return f"***{key[-4:]}"
+    
+    # ============================================================================
+    # SETTINGS MANAGEMENT METHODS
+    # ============================================================================
+    
+    def get_settings(self):
+        """
+        Get all configuration settings as a dictionary.
+        
+        Returns:
+            dict: All settings
+        """
+        return {
+            'paystack_public_key': self.paystack_public_key,
+            'paystack_secret_key': self.paystack_secret_key,
+            'paystack_webhook_secret': self.paystack_webhook_secret,
+            'paystack_webhook_url': self.paystack_webhook_url,
+            'paystack_enabled': self.paystack_enabled,
+            'stripe_publishable_key': self.stripe_publishable_key,
+            'stripe_secret_key': self.stripe_secret_key,
+            'stripe_webhook_secret': self.stripe_webhook_secret,
+            'stripe_webhook_url': self.stripe_webhook_url,
+            'stripe_enabled': self.stripe_enabled,
+            'primary_provider': self.primary_provider,
+            'is_test_mode': self.is_test_mode,
+            'supported_currencies': self.supported_currencies,
+        }
+    
+    def get_paystack_settings(self):
+        """
+        Get Paystack-specific settings.
+        
+        Returns:
+            dict: Paystack settings
+        """
+        return {
+            'public_key': self.paystack_public_key,
+            'secret_key': self.paystack_secret_key,
+            'webhook_secret': self.paystack_webhook_secret,
+            'webhook_url': self.paystack_webhook_url,
+            'enabled': self.paystack_enabled,
+        }
+    
+    def get_stripe_settings(self):
+        """
+        Get Stripe-specific settings.
+        
+        Returns:
+            dict: Stripe settings
+        """
+        return {
+            'publishable_key': self.stripe_publishable_key,
+            'secret_key': self.stripe_secret_key,
+            'webhook_secret': self.stripe_webhook_secret,
+            'webhook_url': self.stripe_webhook_url,
+            'enabled': self.stripe_enabled,
+        }
+    
+    def get_active_provider_settings(self):
+        """
+        Get settings for the active (primary) provider.
+        
+        Returns:
+            dict: Active provider settings with provider name
+        """
+        settings = {
+            'provider': self.primary_provider,
+            'is_test_mode': self.is_test_mode,
+        }
+        
+        if self.primary_provider == 'paystack':
+            settings.update({
+                'public_key': self.paystack_public_key,
+                'secret_key': self.paystack_secret_key,
+                'webhook_secret': self.paystack_webhook_secret,
+            })
+        else:  # stripe
+            settings.update({
+                'public_key': self.stripe_publishable_key,
+                'secret_key': self.stripe_secret_key,
+                'webhook_secret': self.stripe_webhook_secret,
+            })
+        
+        return settings
+    
+    def update_settings(self, settings_dict):
+        """
+        Bulk update settings from dictionary.
+        
+        Args:
+            settings_dict: Dictionary of settings to update
+            
+        Raises:
+            ValidationError: If validation fails
+        """
+        # Store original values for rollback
+        original_values = {}
+        readonly_fields = ['id', 'created_at', 'updated_at']
+        
+        for key, value in settings_dict.items():
+            if key in readonly_fields:
+                continue  # Skip readonly fields
+            
+            if hasattr(self, key):
+                original_values[key] = getattr(self, key)
+                setattr(self, key, value)
+        
+        try:
+            self.save()
+        except ValidationError:
+            # Rollback changes on validation error
+            for key, value in original_values.items():
+                setattr(self, key, value)
+            raise
+    
+    # ============================================================================
+    # CURRENCY MANAGEMENT METHODS
+    # ============================================================================
+    
+    def add_currency(self, currency_code):
+        """
+        Add a currency to supported currencies.
+        
+        Args:
+            currency_code: 3-letter currency code (e.g., "GBP")
+        """
+        if currency_code not in self.supported_currencies:
+            self.supported_currencies.append(currency_code)
+            self.save()
+    
+    def remove_currency(self, currency_code):
+        """
+        Remove a currency from supported currencies.
+        
+        Args:
+            currency_code: 3-letter currency code to remove
+        """
+        if currency_code in self.supported_currencies:
+            self.supported_currencies.remove(currency_code)
+            self.save()
+    
+    def is_currency_supported(self, currency_code):
+        """
+        Check if a currency is supported.
+        
+        Args:
+            currency_code: Currency code to check
+            
+        Returns:
+            bool: True if currency is supported
+        """
+        return currency_code in self.supported_currencies
+    
+    def get_default_currency(self):
+        """
+        Get the default currency (first in the list).
+        
+        Returns:
+            str: Default currency code
+        """
+        return self.supported_currencies[0] if self.supported_currencies else "USD"
+
