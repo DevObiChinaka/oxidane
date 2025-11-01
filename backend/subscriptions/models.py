@@ -948,3 +948,96 @@ class Payment(models.Model):
         self.failed_at = timezone.now()
         self.failure_reason = reason
         self.save()
+
+
+# ============================================================================
+# PHASE 0.5: DYNAMIC PLANS FOUNDATION - NEW MODELS
+# ============================================================================
+
+class Feature(models.Model):
+    """
+    Represents a platform capability that can be assigned to subscription plans.
+    
+    Features are granular, reusable capabilities that define what users can access.
+    Examples:
+    - view_premium_signals: Access to premium trading signals
+    - telegram_vip_group: Access to VIP Telegram group
+    - download_course_materials: Download course files
+    - one_on_one_mentorship: 1-on-1 mentorship sessions
+    
+    Features are organized by category for better admin UI organization.
+    """
+    
+    CATEGORY_CHOICES = [
+        ('signals', 'Signals & Trading'),
+        ('telegram', 'Telegram Groups'),
+        ('courses', 'Courses & Education'),
+        ('support', 'Support & Mentorship'),
+        ('api', 'API & Integrations'),
+        ('analytics', 'Analytics & Reporting'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    key = models.CharField(
+        max_length=100, 
+        unique=True, 
+        db_index=True,
+        help_text="Unique identifier for programmatic access (e.g., 'view_premium_signals')"
+    )
+    name = models.CharField(
+        max_length=200,
+        help_text="Display name shown to users (e.g., 'View Premium Signals')"
+    )
+    description = models.TextField(
+        blank=True,
+        help_text="Detailed description of what this feature provides"
+    )
+    category = models.CharField(
+        max_length=50, 
+        choices=CATEGORY_CHOICES,
+        help_text="Feature category for organization"
+    )
+    icon = models.CharField(
+        max_length=10, 
+        default='✨',
+        help_text="Emoji icon for visual representation"
+    )
+    sort_order = models.IntegerField(
+        default=0,
+        help_text="Display order (lower numbers appear first)"
+    )
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Whether this feature is currently available"
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['category', 'sort_order', 'name']
+        verbose_name = 'Feature'
+        verbose_name_plural = 'Features'
+        indexes = [
+            models.Index(fields=['category', 'is_active']),
+            models.Index(fields=['key']),
+        ]
+    
+    def __str__(self):
+        return f"{self.icon} {self.name}"
+    
+    def clean(self):
+        """Validate feature key format"""
+        if self.key:
+            # Ensure key is lowercase with underscores
+            if not self.key.replace('_', '').replace('-', '').isalnum():
+                raise ValidationError({
+                    'key': 'Feature key must contain only letters, numbers, underscores, and hyphens.'
+                })
+            # Auto-convert to lowercase
+            self.key = self.key.lower().replace('-', '_')
+    
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
