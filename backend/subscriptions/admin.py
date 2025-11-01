@@ -15,7 +15,8 @@ import csv
 
 from .models import (
     PricingPlan, SignalSubscription,
-    TelegramGroupManagement, Coupon, ReferralCode, Referral, ReferralCredit
+    TelegramGroupManagement, Coupon, ReferralCode, Referral, ReferralCredit,
+    TelegramConfiguration, TelegramGroup
 )
 
 @admin.register(PricingPlan)
@@ -609,6 +610,426 @@ class ReferralCreditAdmin(admin.ModelAdmin):
         
         return response
     export_to_csv.short_description = "Export to CSV"
+
+
+@admin.register(TelegramConfiguration)
+class TelegramConfigurationAdmin(admin.ModelAdmin):
+    """
+    Admin interface for Telegram bot configuration (singleton).
+    Only one instance should exist.
+    """
+    list_display = [
+        'bot_username_display', 'status_display', 'connection_display',
+        'auto_add_enabled', 'auto_remove_enabled', 'last_health_check'
+    ]
+    readonly_fields = [
+        'id', 'created_at', 'updated_at', 'masked_token_display',
+        'connection_status_display', 'last_health_check'
+    ]
+    fieldsets = (
+        ('Bot Credentials', {
+            'fields': (
+                'id', 'bot_token', 'masked_token_display', 'bot_username'
+            ),
+            'description': 'Configure your Telegram bot credentials from @BotFather'
+        }),
+        ('Status', {
+            'fields': (
+                'is_enabled', 'connection_status_display', 'last_health_check'
+            )
+        }),
+        ('Automation Settings', {
+            'fields': (
+                'auto_add_enabled', 'auto_remove_enabled'
+            ),
+            'description': 'Control automatic user management'
+        }),
+        ('Messages', {
+            'fields': (
+                'welcome_message', 'removal_message'
+            ),
+            'classes': ('collapse',),
+            'description': 'Customize messages sent to users'
+        }),
+        ('Queue & Rate Limiting', {
+            'fields': (
+                'max_retries', 'retry_delay_seconds', 'rate_limit_per_minute'
+            ),
+            'classes': ('collapse',),
+            'description': 'Configure queue processing and rate limiting'
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def bot_username_display(self, obj):
+        """Display bot username or placeholder"""
+        if obj.bot_username:
+            return format_html('<strong>{}</strong>', obj.bot_username)
+        return format_html('<em style="color: #6c757d;">(not configured)</em>')
+    bot_username_display.short_description = 'Bot Username'
+    
+    def status_display(self, obj):
+        """Display enabled/disabled status"""
+        if obj.is_enabled:
+            return format_html('<span style="color: #28a745;">● Enabled</span>')
+        return format_html('<span style="color: #dc3545;">○ Disabled</span>')
+    status_display.short_description = 'Status'
+    
+    def connection_display(self, obj):
+        """Display connection status"""
+        if not obj.is_enabled:
+            return format_html('<span style="color: #6c757d;">⚫ Disabled</span>')
+        elif obj.is_connected:
+            return format_html('<span style="color: #28a745;">● Connected</span>')
+        else:
+            return format_html('<span style="color: #dc3545;">○ Disconnected</span>')
+    connection_display.short_description = 'Connection'
+    
+    def masked_token_display(self, obj):
+        """Display masked bot token for security"""
+        masked = obj.get_masked_token()
+        if masked == '(not set)':
+            return format_html('<em style="color: #dc3545;">{}</em>', masked)
+        return format_html('<code>{}</code>', masked)
+    masked_token_display.short_description = 'Token (Masked)'
+    
+    def connection_status_display(self, obj):
+        """Display detailed connection status"""
+        if not obj.is_enabled:
+            return format_html('<div style="color: #6c757d;">⚫ Bot is disabled</div>')
+        
+        if obj.is_connected:
+            return format_html(
+                '<div style="color: #28a745;"><strong>✓ Connected</strong></div>'
+                '<div style="font-size: 11px; color: #6c757d;">Bot is operational</div>'
+            )
+        else:
+            error_msg = obj.connection_error or 'Not tested yet'
+            return format_html(
+                '<div style="color: #dc3545;"><strong>✗ Disconnected</strong></div>'
+                '<div style="font-size: 11px; color: #dc3545;">{}</div>',
+                error_msg
+            )
+    connection_status_display.short_description = 'Connection Status'
+    
+    def has_add_permission(self, request):
+        """Prevent adding more than one configuration (singleton)"""
+        if TelegramConfiguration.objects.exists():
+            return False
+        return super().has_add_permission(request)
+    
+    def has_delete_permission(self, request, obj=None):
+        """Allow delete to reset configuration if needed"""
+        return request.user.is_superuser
+    
+    def save_model(self, request, obj, form, change):
+        """Override to handle token changes"""
+        if 'bot_token' in form.changed_data and obj.bot_token:
+            # Token changed, mark as disconnected for re-verification
+            obj.is_connected = False
+            obj.connection_error = 'Token changed - please test connection'
+        super().save_model(request, obj, form, change)
+    
+    def get_queryset(self, request):
+        """No special optimization needed for singleton"""
+        return super().get_queryset(request)
+
+
+@admin.register(TelegramGroup)
+class TelegramGroupAdmin(admin.ModelAdmin):
+    """
+    Admin interface for TelegramGroup model.
+    Manages Telegram groups with plan associations, settings, and permissions.
+    Phase 0.5, Task 0.5.7
+    """
+    list_display = [
+        'name',
+        'chat_id_display',
+        'is_active_badge',
+        'is_private',
+        'member_count_display',
+        'capacity_status',
+        'plan_count',
+        'auto_settings_display',
+        'created_at',
+    ]
+    
+    list_filter = [
+        'is_active',
+        'is_private',
+        'auto_add_enabled',
+        'auto_remove_enabled',
+        'notification_enabled',
+        'is_admin',
+        'created_at',
+    ]
+    
+    search_fields = [
+        'name',
+        'chat_id',
+        'group_key',
+        'description',
+    ]
+    
+    readonly_fields = [
+        'id',
+        'created_at',
+        'updated_at',
+        'last_sync_at',
+        'capacity_indicator',
+        'permissions_summary',
+    ]
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': (
+                'id',
+                'name',
+                'chat_id',
+                'group_key',
+                'description',
+            )
+        }),
+        ('Status & Visibility', {
+            'fields': (
+                'is_active',
+                'is_private',
+                'invite_link',
+                'sort_order',
+            )
+        }),
+        ('Member Tracking', {
+            'fields': (
+                'member_count',
+                'max_members',
+                'capacity_indicator',
+                'last_sync_at',
+            )
+        }),
+        ('Auto-Management Settings', {
+            'fields': (
+                'auto_add_enabled',
+                'auto_remove_enabled',
+                'welcome_message',
+                'removal_message',
+                'notification_enabled',
+            ),
+            'classes': ['collapse'],
+        }),
+        ('Bot Permissions', {
+            'fields': (
+                'permissions_summary',
+                'can_send_messages',
+                'can_add_users',
+                'can_remove_users',
+                'can_pin_messages',
+                'can_delete_messages',
+                'is_admin',
+            ),
+            'classes': ['collapse'],
+        }),
+        ('Associated Plans', {
+            'fields': ('associated_plans',),
+            'description': 'Select subscription plans that grant access to this group'
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ['collapse'],
+        }),
+    )
+    
+    filter_horizontal = ['associated_plans']
+    
+    ordering = ['sort_order', 'name']
+    
+    actions = [
+        'activate_groups',
+        'deactivate_groups',
+        'enable_auto_add',
+        'disable_auto_add',
+        'reset_member_counts',
+    ]
+    
+    # Custom display methods
+    
+    @admin.display(description='Chat ID', ordering='chat_id')
+    def chat_id_display(self, obj):
+        """Display chat ID with copy button"""
+        return format_html(
+            '<span title="Click to copy" style="cursor:pointer; font-family:monospace">{}</span>',
+            obj.chat_id
+        )
+    
+    @admin.display(description='Status', boolean=True)
+    def is_active_badge(self, obj):
+        """Display active status as badge"""
+        return obj.is_active
+    
+    @admin.display(description='Members', ordering='member_count')
+    def member_count_display(self, obj):
+        """Display member count with max limit"""
+        if obj.max_members:
+            percentage = (obj.member_count / obj.max_members) * 100
+            color = 'green' if percentage < 80 else 'orange' if percentage < 95 else 'red'
+            return format_html(
+                '<span style="color:{}">{} / {}</span>',
+                color,
+                obj.member_count,
+                obj.max_members
+            )
+        return f"{obj.member_count} (unlimited)"
+    
+    @admin.display(description='Capacity')
+    def capacity_status(self, obj):
+        """Display capacity status"""
+        if obj.max_members is None:
+            return format_html('<span style="color:green">✓ Unlimited</span>')
+        if obj.has_capacity():
+            available = obj.max_members - obj.member_count
+            return format_html('<span style="color:green">✓ {} slots</span>', available)
+        return format_html('<span style="color:red">✗ Full</span>')
+    
+    @admin.display(description='Plans', ordering='associated_plans__count')
+    def plan_count(self, obj):
+        """Display count of associated plans"""
+        count = obj.associated_plans.count()
+        if count == 0:
+            return format_html('<span style="color:gray">No plans</span>')
+        return format_html('<span style="color:blue">{} plan(s)</span>', count)
+    
+    @admin.display(description='Auto-Management')
+    def auto_settings_display(self, obj):
+        """Display auto-add/remove settings"""
+        add_icon = '✓' if obj.auto_add_enabled else '✗'
+        remove_icon = '✓' if obj.auto_remove_enabled else '✗'
+        return format_html(
+            'Add:{} Remove:{}',
+            add_icon,
+            remove_icon
+        )
+    
+    @admin.display(description='Capacity Status')
+    def capacity_indicator(self, obj):
+        """Show detailed capacity information"""
+        if obj.max_members is None:
+            return "Unlimited capacity"
+        
+        percentage = (obj.member_count / obj.max_members) * 100 if obj.max_members > 0 else 0
+        status = "Available" if obj.has_capacity() else "Full"
+        color = 'green' if percentage < 80 else 'orange' if percentage < 95 else 'red'
+        
+        return format_html(
+            '<div style="color:{}">'
+            '<strong>{}</strong><br>'
+            'Current: {} / {} members<br>'
+            'Usage: {:.1f}%'
+            '</div>',
+            color, status, obj.member_count, obj.max_members, percentage
+        )
+    
+    @admin.display(description='Permissions Summary')
+    def permissions_summary(self, obj):
+        """Show bot permissions in this group"""
+        perms = []
+        if obj.can_send_messages:
+            perms.append('Send Messages')
+        if obj.can_add_users:
+            perms.append('Add Users')
+        if obj.can_remove_users:
+            perms.append('Remove Users')
+        if obj.can_pin_messages:
+            perms.append('Pin Messages')
+        if obj.can_delete_messages:
+            perms.append('Delete Messages')
+        if obj.is_admin:
+            perms.append('<strong>Admin</strong>')
+        
+        if not perms:
+            return format_html('<span style="color:gray">No permissions</span>')
+        
+        return format_html('<br>'.join(['✓ ' + p for p in perms]))
+    
+    # Bulk actions
+    
+    @admin.action(description='✓ Activate selected groups')
+    def activate_groups(self, request, queryset):
+        """Bulk activate groups"""
+        updated = queryset.update(is_active=True)
+        self.message_user(
+            request,
+            f'Successfully activated {updated} group(s).',
+            messages.SUCCESS
+        )
+    
+    @admin.action(description='✗ Deactivate selected groups')
+    def deactivate_groups(self, request, queryset):
+        """Bulk deactivate groups"""
+        updated = queryset.update(is_active=False)
+        self.message_user(
+            request,
+            f'Successfully deactivated {updated} group(s).',
+            messages.WARNING
+        )
+    
+    @admin.action(description='🔄 Enable auto-add for selected groups')
+    def enable_auto_add(self, request, queryset):
+        """Bulk enable auto-add"""
+        updated = queryset.update(auto_add_enabled=True)
+        self.message_user(
+            request,
+            f'Enabled auto-add for {updated} group(s).',
+            messages.SUCCESS
+        )
+    
+    @admin.action(description='⏸️ Disable auto-add for selected groups')
+    def disable_auto_add(self, request, queryset):
+        """Bulk disable auto-add"""
+        updated = queryset.update(auto_add_enabled=False)
+        self.message_user(
+            request,
+            f'Disabled auto-add for {updated} group(s).',
+            messages.INFO
+        )
+    
+    @admin.action(description='🔄 Reset member counts to 0')
+    def reset_member_counts(self, request, queryset):
+        """Bulk reset member counts (for testing/cleanup)"""
+        from django.utils import timezone
+        updated = queryset.update(member_count=0, last_sync_at=timezone.now())
+        self.message_user(
+            request,
+            f'Reset member counts for {updated} group(s).',
+            messages.WARNING
+        )
+    
+    # Override save to add custom logic
+    
+    def save_model(self, request, obj, form, change):
+        """Add custom save logic"""
+        # If deactivating, log warning
+        if change and 'is_active' in form.changed_data and not obj.is_active:
+            self.message_user(
+                request,
+                f'Warning: Deactivated "{obj.name}". Users will not be auto-added to this group.',
+                messages.WARNING
+            )
+        
+        # If member_count manually changed, update sync timestamp
+        if 'member_count' in form.changed_data:
+            from django.utils import timezone
+            obj.last_sync_at = timezone.now()
+        
+        super().save_model(request, obj, form, change)
+    
+    # Custom queryset optimization
+    
+    def get_queryset(self, request):
+        """Optimize queryset with prefetch"""
+        qs = super().get_queryset(request)
+        return qs.prefetch_related('associated_plans')
 
 
 # Admin site customization

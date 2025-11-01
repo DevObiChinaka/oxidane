@@ -1952,3 +1952,499 @@ class ReferralCredit(models.Model):
         """Check if this credit is available for use"""
         return not self.is_used and not self.is_expired()
 
+
+# ============================================================================
+# TELEGRAM CONFIGURATION MODEL (Phase 0.5 - Task 0.5.6)
+# ============================================================================
+
+class TelegramConfiguration(models.Model):
+    """
+    Singleton model for storing Telegram bot configuration.
+    Only one instance of this model should exist at any time.
+    
+    This replaces the old settings-based approach with a proper model.
+    """
+    
+    # Bot Credentials (bot_token will be encrypted in Phase 0.5.12)
+    bot_token = models.CharField(
+        max_length=500,
+        blank=True,
+        default='',
+        help_text='Telegram bot API token from @BotFather'
+    )
+    bot_username = models.CharField(
+        max_length=100,
+        blank=True,
+        default='',
+        help_text='Bot username (e.g., @OxidaneBot)'
+    )
+    
+    # Status
+    is_enabled = models.BooleanField(
+        default=True,
+        help_text='Enable/disable Telegram integration'
+    )
+    is_connected = models.BooleanField(
+        default=False,
+        help_text='Whether the bot is currently connected'
+    )
+    connection_error = models.TextField(
+        blank=True,
+        default='',
+        help_text='Last connection error message'
+    )
+    last_health_check = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='Last time bot connection was verified'
+    )
+    
+    # Automation Settings
+    auto_add_enabled = models.BooleanField(
+        default=True,
+        help_text='Automatically add users to groups on subscription'
+    )
+    auto_remove_enabled = models.BooleanField(
+        default=True,
+        help_text='Automatically remove users from groups when subscription expires'
+    )
+    
+    # Messages
+    welcome_message = models.TextField(
+        blank=True,
+        default='',
+        help_text='Welcome message sent to users when added to groups'
+    )
+    removal_message = models.TextField(
+        blank=True,
+        default='',
+        help_text='Message sent when users are removed from groups'
+    )
+    
+    # Queue Settings
+    max_retries = models.PositiveIntegerField(
+        default=3,
+        help_text='Maximum number of retry attempts for failed operations'
+    )
+    retry_delay_seconds = models.PositiveIntegerField(
+        default=300,  # 5 minutes
+        help_text='Delay in seconds between retry attempts'
+    )
+    
+    # Rate Limiting
+    rate_limit_per_minute = models.PositiveIntegerField(
+        default=30,
+        help_text='Maximum Telegram API calls per minute'
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Telegram Configuration'
+        verbose_name_plural = 'Telegram Configuration'
+    
+    def __str__(self):
+        return f'Telegram Bot: {self.bot_username or "(not configured)"}'
+    
+    def clean(self):
+        """Validate model fields"""
+        # Enforce singleton pattern
+        if not self.pk and TelegramConfiguration.objects.exists():
+            raise ValidationError(
+                'Only one Telegram configuration instance is allowed. '
+                'Please update the existing configuration instead.'
+            )
+        
+        # Validate bot_username format if provided
+        if self.bot_username and not self.bot_username.startswith('@'):
+            raise ValidationError({
+                'bot_username': 'Bot username must start with @ (e.g., @OxidaneBot)'
+            })
+        
+        # Validate positive integers
+        if self.max_retries < 0:
+            raise ValidationError({
+                'max_retries': 'Max retries must be 0 or greater.'
+            })
+        
+        if self.retry_delay_seconds <= 0:
+            raise ValidationError({
+                'retry_delay_seconds': 'Retry delay must be greater than 0.'
+            })
+        
+        if self.rate_limit_per_minute <= 0:
+            raise ValidationError({
+                'rate_limit_per_minute': 'Rate limit must be greater than 0.'
+            })
+    
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+    
+    @classmethod
+    def get_instance(cls):
+        """
+        Get the singleton instance.
+        Creates one with defaults if it doesn't exist.
+        """
+        instance = cls.objects.first()
+        if not instance:
+            instance = cls.objects.create(
+                bot_token='',
+                is_enabled=True,
+            )
+        return instance
+    
+    def mark_as_connected(self, bot_username=None):
+        """Mark the bot as successfully connected"""
+        self.is_connected = True
+        self.connection_error = ''
+        self.last_health_check = timezone.now()
+        if bot_username:
+            self.bot_username = bot_username
+        self.save()
+    
+    def mark_as_disconnected(self, error_message=''):
+        """Mark the bot as disconnected"""
+        self.is_connected = False
+        self.connection_error = error_message
+        self.last_health_check = timezone.now()
+        self.save()
+    
+    def is_healthy(self):
+        """Check if the bot is healthy and ready to use"""
+        return self.is_enabled and self.is_connected
+    
+    def set_bot_token(self, token):
+        """
+        Update the bot token.
+        Marks as disconnected since new token needs verification.
+        """
+        self.bot_token = token
+        self.is_connected = False
+        self.connection_error = ''
+        self.save()
+    
+    def has_valid_token(self):
+        """Check if bot token has valid format (basic check)"""
+        if not self.bot_token:
+            return False
+        # Telegram tokens format: numbers:letters (e.g., 123456789:ABCdefGHI...)
+        parts = self.bot_token.split(':')
+        return len(parts) == 2 and parts[0].isdigit() and len(parts[1]) > 0
+    
+    def get_masked_token(self):
+        """Get a masked version of the token for display"""
+        if not self.bot_token:
+            return '(not set)'
+        
+        parts = self.bot_token.split(':')
+        if len(parts) != 2:
+            return '***'
+        
+        # Show first part and mask second part
+        return f'{parts[0]}:***{parts[1][-4:]}'
+    
+    def get_settings(self):
+        """Get all settings as a dictionary (excluding sensitive data)"""
+        return {
+            'bot_username': self.bot_username,
+            'is_enabled': self.is_enabled,
+            'is_connected': self.is_connected,
+            'connection_error': self.connection_error,
+            'last_health_check': self.last_health_check,
+            'auto_add_enabled': self.auto_add_enabled,
+            'auto_remove_enabled': self.auto_remove_enabled,
+            'welcome_message': self.welcome_message,
+            'removal_message': self.removal_message,
+            'max_retries': self.max_retries,
+            'retry_delay_seconds': self.retry_delay_seconds,
+            'rate_limit_per_minute': self.rate_limit_per_minute,
+        }
+    
+    def update_settings(self, settings_dict):
+        """
+        Update multiple settings at once.
+        Protected fields like bot_token and timestamps are ignored.
+        Validates before saving - raises ValidationError if invalid.
+        """
+        protected_fields = ['bot_token', 'created_at', 'updated_at', 'id', 'pk']
+        
+        # Store original values for rollback on validation error
+        original_values = {}
+        
+        for key, value in settings_dict.items():
+            if key not in protected_fields and hasattr(self, key):
+                original_values[key] = getattr(self, key)
+                setattr(self, key, value)
+        
+        try:
+            self.save()
+        except ValidationError:
+            # Rollback changes on validation error
+            for key, value in original_values.items():
+                setattr(self, key, value)
+            raise
+
+
+class TelegramGroup(models.Model):
+    """
+    Model representing a Telegram group/channel for subscription management.
+    Replaces the old TelegramGroupManagement queue-based system.
+    This model represents actual Telegram groups with their properties,
+    not queue actions for adding/removing users.
+    
+    Phase 0.5, Task 0.5.7
+    """
+    # Primary identification
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
+    name = models.CharField(
+        max_length=200,
+        unique=True,
+        help_text="Display name for the Telegram group"
+    )
+    chat_id = models.CharField(
+        max_length=50,
+        unique=True,
+        help_text="Telegram chat ID (must start with '-', e.g., -1001234567890)"
+    )
+    group_key = models.SlugField(
+        max_length=100,
+        unique=True,
+        help_text="Internal identifier for the group (lowercase, no spaces)"
+    )
+    
+    # Group metadata
+    description = models.TextField(
+        blank=True,
+        help_text="Description of the group's purpose and content"
+    )
+    invite_link = models.URLField(
+        blank=True,
+        help_text="Telegram invite link for public groups"
+    )
+    
+    # Status and visibility
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Whether this group is currently active"
+    )
+    is_private = models.BooleanField(
+        default=False,
+        help_text="Private groups require bot invitation; public groups use invite links"
+    )
+    
+    # Member tracking
+    member_count = models.PositiveIntegerField(
+        default=0,
+        help_text="Current number of members in the group"
+    )
+    max_members = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Maximum allowed members (null = unlimited)"
+    )
+    last_sync_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Last time member count was synced from Telegram"
+    )
+    
+    # Settings
+    auto_add_enabled = models.BooleanField(
+        default=True,
+        help_text="Automatically add users when they subscribe"
+    )
+    auto_remove_enabled = models.BooleanField(
+        default=True,
+        help_text="Automatically remove users when subscription expires"
+    )
+    welcome_message = models.TextField(
+        blank=True,
+        help_text="Custom welcome message for new members (supports {{user_name}}, {{group_name}} variables)"
+    )
+    removal_message = models.TextField(
+        blank=True,
+        help_text="Custom message when removing members (supports {{user_name}}, {{group_name}} variables)"
+    )
+    notification_enabled = models.BooleanField(
+        default=True,
+        help_text="Enable notifications for group events"
+    )
+    
+    # Bot permissions in this group
+    can_send_messages = models.BooleanField(
+        default=True,
+        help_text="Bot can send messages in this group"
+    )
+    can_add_users = models.BooleanField(
+        default=True,
+        help_text="Bot can add users to this group"
+    )
+    can_remove_users = models.BooleanField(
+        default=True,
+        help_text="Bot can remove users from this group"
+    )
+    can_pin_messages = models.BooleanField(
+        default=False,
+        help_text="Bot can pin messages in this group"
+    )
+    can_delete_messages = models.BooleanField(
+        default=False,
+        help_text="Bot can delete messages in this group"
+    )
+    is_admin = models.BooleanField(
+        default=False,
+        help_text="Bot has admin privileges in this group"
+    )
+    
+    # Relationships
+    associated_plans = models.ManyToManyField(
+        'SubscriptionPlan',
+        related_name='telegram_groups',
+        blank=True,
+        help_text="Subscription plans that grant access to this group"
+    )
+    
+    # Display order
+    sort_order = models.PositiveIntegerField(
+        default=0,
+        help_text="Order for displaying groups (lower numbers first)"
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['sort_order', 'name']
+        verbose_name = 'Telegram Group'
+        verbose_name_plural = 'Telegram Groups'
+        indexes = [
+            models.Index(fields=['is_active', 'sort_order']),
+            models.Index(fields=['chat_id']),
+            models.Index(fields=['group_key']),
+        ]
+    
+    def __str__(self):
+        return self.name
+    
+    def clean(self):
+        """Validate model fields."""
+        super().clean()
+        
+        # Validate chat_id format (must be negative for groups)
+        if self.chat_id and not self.chat_id.startswith('-'):
+            raise ValidationError({
+                'chat_id': 'Telegram group chat ID must start with "-" (negative number)'
+            })
+        
+        # Validate member_count is non-negative
+        if self.member_count < 0:
+            raise ValidationError({
+                'member_count': 'Member count cannot be negative'
+            })
+        
+        # Validate max_members if set
+        if self.max_members is not None and self.max_members < 0:
+            raise ValidationError({
+                'max_members': 'Maximum members cannot be negative'
+            })
+    
+    def save(self, *args, **kwargs):
+        """Override save to run validation."""
+        self.full_clean()
+        super().save(*args, **kwargs)
+    
+    # ============================================================================
+    # HELPER METHODS
+    # ============================================================================
+    
+    def get_member_count(self):
+        """Get current member count."""
+        return self.member_count
+    
+    def can_auto_add(self):
+        """Check if auto-add is enabled and group is active."""
+        return self.is_active and self.auto_add_enabled
+    
+    def can_auto_remove(self):
+        """Check if auto-remove is enabled and group is active."""
+        return self.is_active and self.auto_remove_enabled
+    
+    def is_accessible_to_plan(self, plan):
+        """
+        Check if a subscription plan can access this group.
+        
+        Args:
+            plan: SubscriptionPlan instance
+            
+        Returns:
+            bool: True if plan has access to this group
+        """
+        return self.associated_plans.filter(id=plan.id).exists()
+    
+    def has_capacity(self):
+        """
+        Check if group has capacity for new members.
+        
+        Returns:
+            bool: True if group can accept new members
+        """
+        if self.max_members is None:
+            return True  # Unlimited capacity
+        return self.member_count < self.max_members
+    
+    def update_member_count(self, new_count):
+        """
+        Update member count and sync timestamp.
+        
+        Args:
+            new_count: New member count value
+        """
+        self.member_count = new_count
+        self.last_sync_at = timezone.now()
+        self.save()
+    
+    def get_welcome_message(self, user_name=None):
+        """
+        Get formatted welcome message with variable substitution.
+        
+        Args:
+            user_name: Optional username to substitute in message
+            
+        Returns:
+            str: Formatted welcome message
+        """
+        message = self.welcome_message or "Welcome to the group!"
+        
+        if user_name:
+            message = message.replace('{{user_name}}', user_name)
+        message = message.replace('{{group_name}}', self.name)
+        
+        return message
+    
+    def get_removal_message(self, user_name=None):
+        """
+        Get formatted removal message with variable substitution.
+        
+        Args:
+            user_name: Optional username to substitute in message
+            
+        Returns:
+            str: Formatted removal message
+        """
+        message = self.removal_message or "Your subscription has ended."
+        
+        if user_name:
+            message = message.replace('{{user_name}}', user_name)
+        message = message.replace('{{group_name}}', self.name)
+        
+        return message
+
