@@ -8,9 +8,9 @@
 
 ## 📊 PROGRESS UPDATE
 
-**Phase 0.5 Completion:** 10/46 tasks (21.7%)  
-**Test Coverage:** 432/433 tests passing (99.8%)  
-**Migrations Applied:** 0008-0019 (12 migrations)
+**Phase 0.5 Completion:** 11/46 tasks (23.9%)  
+**Test Coverage:** 463/466 tests passing (99.4%)  
+**Migrations Applied:** 0008-0020 (13 migrations)
 
 ### Completed Models:
 - ✅ **Feature** (Task 0.5.1) - 22 tests | Migration 0008
@@ -23,9 +23,10 @@
 - ✅ **PaymentConfiguration** (Task 0.5.8) - 60 tests | Migration 0017 (singleton for Paystack/Stripe)
 - ✅ **EmailConfiguration** (Task 0.5.9) - 50 tests | Migration 0018 (singleton for SMTP)
 - ✅ **ExchangeRate** (Task 0.5.10) - 45 tests | Migration 0019 (currency auto-conversion)
+- ✅ **Subscription Updates** (Task 0.5.11) - 30 tests | Migration 0020 (new plan, referral, metadata fields)
 
 ### In Progress:
-- 🔄 **Subscription model update** (Task 0.5.11) - Next up
+- 🔄 **Encryption utilities** (Task 0.5.12) - Next up
 
 ### Key Achievements:
 - ✅ Discount-based referral system (non-stackable credits)

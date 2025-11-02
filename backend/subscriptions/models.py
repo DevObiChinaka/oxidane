@@ -642,7 +642,14 @@ class PaymentMethod(models.Model):
 
 
 class Subscription(models.Model):
-    """User subscriptions (replaces SignalSubscription, more flexible)"""
+    """
+    User subscriptions (replaces SignalSubscription, more flexible).
+    
+    Phase 0.5 Updates (Task 0.5.11):
+    - Added `plan` FK to SubscriptionPlan (replaces pricing_plan)
+    - Added `referral` FK to Referral (optional, for tracking referral conversions)
+    - Added `metadata` JSONField (for flexible data storage)
+    """
     STATUS_CHOICES = [
         ('active', 'Active'),
         ('cancelled', 'Cancelled'),
@@ -654,7 +661,35 @@ class Subscription(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     billing_profile = models.ForeignKey(BillingProfile, on_delete=models.CASCADE, 
                                        related_name='subscriptions')
-    pricing_plan = models.ForeignKey(PricingPlan, on_delete=models.PROTECT)
+    
+    # NEW: SubscriptionPlan relationship (Phase 0.5)
+    plan = models.ForeignKey(
+        'SubscriptionPlan',
+        on_delete=models.PROTECT,
+        related_name='subscriptions',
+        null=True,  # Temporary for migration
+        blank=True,
+        help_text='New Phase 0.5 dynamic subscription plan'
+    )
+    
+    # OLD: PricingPlan relationship (deprecated, will be removed after migration)
+    pricing_plan = models.ForeignKey(
+        PricingPlan,
+        on_delete=models.PROTECT,
+        null=True,  # Made nullable for migration
+        blank=True,
+        help_text='DEPRECATED: Old pricing plan (Phase 0.4)'
+    )
+    
+    # NEW: Referral tracking (Phase 0.5)
+    referral = models.ForeignKey(
+        'Referral',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='converted_subscriptions',
+        help_text='Referral that led to this subscription (if any)'
+    )
     
     # Subscription Period
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
@@ -675,7 +710,14 @@ class Subscription(models.Model):
     cancelled_at = models.DateTimeField(null=True, blank=True)
     cancellation_reason = models.TextField(blank=True)
     
-    # Metadata
+    # NEW: Flexible metadata storage (Phase 0.5)
+    metadata = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='Additional subscription metadata (source, campaign, notes, etc.)'
+    )
+    
+    # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -687,7 +729,9 @@ class Subscription(models.Model):
         ]
     
     def __str__(self):
-        return f"{self.billing_profile.user.email} - {self.pricing_plan.name} ({self.status})"
+        # Support both new and old plan fields during migration
+        plan_name = self.plan.name if self.plan else (self.pricing_plan.name if self.pricing_plan else 'No Plan')
+        return f"{self.billing_profile.user.email} - {plan_name} ({self.status})"
     
     @property
     def is_active(self):
@@ -1612,7 +1656,7 @@ class Referral(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='referral',
+        related_name='referral_entry',
         help_text='Subscription created from this referral (NEW billing system)'
     )
     
