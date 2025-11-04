@@ -6,7 +6,7 @@ from django.utils import timezone
 from datetime import timedelta
 from decimal import Decimal
 
-from .models import PricingPlan, Coupon, SignalSubscription
+from .models import SubscriptionPlan as PricingPlan, Coupon, Subscription as SignalSubscription
 from .pricing_serializers import (
     PricingPlanSerializer, CouponSerializer,
     PricingAnalyticsSerializer, CouponValidationSerializer

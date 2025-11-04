@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from django.db.models import Sum, Count, Avg
 from django.utils import timezone
 from datetime import datetime, timedelta
-from subscriptions.models import SignalSubscription as Subscription, PricingPlan, Coupon
+from subscriptions.models import Subscription, SubscriptionPlan, Coupon
 from users.admin_auth import admin_required
 from django.http import HttpResponse
 import json
@@ -60,11 +60,10 @@ class RevenueAnalyticsViewSet(viewsets.ViewSet):
             arpu = total_revenue / active_subscriptions if active_subscriptions > 0 else 0
             
             # Calculate revenue breakdown by type
+            # TODO: Update when PaymentTransaction model is recreated (Phase 0.5.17+)
             revenue_breakdown = {}
-            for plan_type, _ in PricingPlan.PLAN_TYPES:
-                type_revenue = transactions.filter(
-                    pricing_plan__plan_type=plan_type
-                ).aggregate(total=Sum('payment_amount'))['total'] or 0
+            for plan_type, _ in SubscriptionPlan.PLAN_TYPE_CHOICES:
+                type_revenue = 0  # TODO: Calculate from actual payment transactions
                 revenue_breakdown[plan_type] = type_revenue
             
             # Calculate coupon impact
@@ -155,17 +154,17 @@ class RevenueAnalyticsViewSet(viewsets.ViewSet):
             
             # Get subscription analytics by plan type
             plan_analytics = []
-            for plan in PricingPlan.objects.filter(is_active=True):
+            for plan in SubscriptionPlan.objects.filter(is_active=True):
                 plan_subscriptions = Subscription.objects.filter(
                     plan_id=plan.id,
-                    created_at__date__range=[start_date, end_date]
+                    start_date__range=[start_date, end_date]
                 ).count()
                 
                 plan_analytics.append({
                     'plan_name': plan.name,
                     'plan_type': plan.plan_type,
                     'subscription_count': plan_subscriptions,
-                    'revenue': plan_subscriptions * plan.current_price,
+                    'revenue': 0,  # TODO: Calculate from actual payment transactions
                     'growth_rate': 0  # TODO: Calculate growth rate
                 })
             

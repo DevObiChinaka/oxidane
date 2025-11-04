@@ -750,3 +750,161 @@ TOTAL: 60 TESTS
 Target: 40+ tests ✅
 Coverage: All major functionality ✅
 """
+
+
+# ============================================================================
+# CATEGORY 9: ENCRYPTION METHODS (Task 0.5.13) (12 tests)
+# ============================================================================
+
+@pytest.mark.django_db
+class TestPaymentConfigurationEncryption:
+    """Test encryption methods for sensitive fields."""
+
+    def test_encrypt_field_paystack_secret_key(self):
+        """Test encrypting Paystack secret key."""
+        config = PaymentConfiguration.get_instance()
+        config.paystack_secret_key = 'sk_test_abc123xyz789'
+        config.save()
+        
+        # Encrypt the field
+        config.encrypt_field('paystack_secret_key')
+        
+        # Reload from database
+        config.refresh_from_db()
+        
+        # Field should be encrypted (starts with gAAAAA)
+        assert config.paystack_secret_key.startswith('gAAAAA')
+        assert 'abc123' not in config.paystack_secret_key
+    
+    def test_decrypt_field_paystack_secret_key(self):
+        """Test decrypting Paystack secret key."""
+        config = PaymentConfiguration.get_instance()
+        original_key = 'sk_test_abc123xyz789'
+        config.paystack_secret_key = original_key
+        config.save()
+        
+        # Encrypt then decrypt
+        config.encrypt_field('paystack_secret_key')
+        decrypted = config.decrypt_field('paystack_secret_key')
+        
+        assert decrypted == original_key
+    
+    def test_encrypt_field_stripe_secret_key(self):
+        """Test encrypting Stripe secret key."""
+        config = PaymentConfiguration.get_instance()
+        config.stripe_secret_key = 'sk_test_stripe123'
+        config.save()
+        
+        config.encrypt_field('stripe_secret_key')
+        config.refresh_from_db()
+        
+        assert config.stripe_secret_key.startswith('gAAAAA')
+    
+    def test_decrypt_field_stripe_secret_key(self):
+        """Test decrypting Stripe secret key."""
+        config = PaymentConfiguration.get_instance()
+        original_key = 'sk_test_stripe123'
+        config.stripe_secret_key = original_key
+        config.save()
+        
+        config.encrypt_field('stripe_secret_key')
+        decrypted = config.decrypt_field('stripe_secret_key')
+        
+        assert decrypted == original_key
+    
+    def test_encrypt_field_webhook_secrets(self):
+        """Test encrypting webhook secrets."""
+        config = PaymentConfiguration.get_instance()
+        config.paystack_webhook_secret = 'webhook_secret_123'
+        config.stripe_webhook_secret = 'whsec_abc123'
+        config.save()
+        
+        config.encrypt_field('paystack_webhook_secret')
+        config.encrypt_field('stripe_webhook_secret')
+        
+        config.refresh_from_db()
+        assert config.paystack_webhook_secret.startswith('gAAAAA')
+        assert config.stripe_webhook_secret.startswith('gAAAAA')
+    
+    def test_decrypt_field_webhook_secrets(self):
+        """Test decrypting webhook secrets."""
+        config = PaymentConfiguration.get_instance()
+        paystack_secret = 'webhook_secret_123'
+        stripe_secret = 'whsec_abc123'
+        config.paystack_webhook_secret = paystack_secret
+        config.stripe_webhook_secret = stripe_secret
+        config.save()
+        
+        config.encrypt_field('paystack_webhook_secret')
+        config.encrypt_field('stripe_webhook_secret')
+        
+        assert config.decrypt_field('paystack_webhook_secret') == paystack_secret
+        assert config.decrypt_field('stripe_webhook_secret') == stripe_secret
+    
+    def test_encrypt_field_invalid_field_raises_error(self):
+        """Test encrypting invalid field raises ValueError."""
+        config = PaymentConfiguration.get_instance()
+        
+        with pytest.raises(ValueError) as exc_info:
+            config.encrypt_field('invalid_field')
+        
+        assert 'not encryptable' in str(exc_info.value)
+    
+    def test_decrypt_field_invalid_field_raises_error(self):
+        """Test decrypting invalid field raises ValueError."""
+        config = PaymentConfiguration.get_instance()
+        
+        with pytest.raises(ValueError) as exc_info:
+            config.decrypt_field('invalid_field')
+        
+        assert 'not encryptable' in str(exc_info.value)
+    
+    def test_encrypt_field_empty_value_does_nothing(self):
+        """Test encrypting empty field does nothing."""
+        config = PaymentConfiguration.get_instance()
+        config.paystack_secret_key = ''
+        config.save()
+        
+        # Should not raise error
+        config.encrypt_field('paystack_secret_key')
+        
+        assert config.paystack_secret_key == ''
+    
+    def test_decrypt_field_empty_value_returns_empty_string(self):
+        """Test decrypting empty field returns empty string."""
+        config = PaymentConfiguration.get_instance()
+        config.paystack_secret_key = ''
+        config.save()
+        
+        decrypted = config.decrypt_field('paystack_secret_key')
+        
+        assert decrypted == ""
+    
+    def test_encrypt_field_already_encrypted_skips(self):
+        """Test encrypting already encrypted field skips re-encryption."""
+        config = PaymentConfiguration.get_instance()
+        config.paystack_secret_key = 'sk_test_abc123'
+        config.save()
+        
+        # Encrypt once
+        config.encrypt_field('paystack_secret_key')
+        encrypted_value = config.paystack_secret_key
+        
+        # Encrypt again (should skip)
+        config.encrypt_field('paystack_secret_key')
+        
+        # Value should not change
+        assert config.paystack_secret_key == encrypted_value
+    
+    def test_decrypt_field_plaintext_returns_as_is(self):
+        """Test decrypting plaintext field returns it as-is."""
+        config = PaymentConfiguration.get_instance()
+        plaintext = 'sk_test_plaintext'
+        config.paystack_secret_key = plaintext
+        config.save()
+        
+        # Decrypt without encrypting first
+        decrypted = config.decrypt_field('paystack_secret_key')
+        
+        # Should return plaintext as-is
+        assert decrypted == plaintext

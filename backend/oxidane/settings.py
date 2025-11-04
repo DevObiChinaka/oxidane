@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',  # For token rotation/blacklisting
+    'oxidane',  # Core utilities (encryption, etc.)
     'users',
     'courses',
     'subscriptions',
@@ -377,3 +378,12 @@ LOGGING = {
         },
     },
 }
+
+# ============================================================================
+# ENCRYPTION CONFIGURATION (Phase 0.5.12)
+# ============================================================================
+# Key for encrypting sensitive data (API keys, tokens, passwords)
+# In production, load from environment variable:
+# ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY')
+# ============================================================================
+ENCRYPTION_KEY = '4ji0ZN6vG1VLvQR5cxb6hCPRzlbHwuVG-Q1NiTrq2c8='

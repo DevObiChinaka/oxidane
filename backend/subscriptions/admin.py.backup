@@ -26,11 +26,210 @@ from .models import (
 # - PricingPlanAdmin (for PricingPlan model)
 # - SignalSubscriptionAdmin (for SignalSubscription model)
 # - TelegramGroupManagementAdmin (for TelegramGroupManagement model)
-# These models were replaced by:
-# - PricingPlan → SubscriptionPlan
-# - SignalSubscription → Subscription
-# - TelegramGroupManagement → TelegramGroup
 # ============================================================================
+
+# Deprecated admin classes for PricingPlan, SignalSubscription removed here
+# (Phase 0.5 Cleanup - November 2, 2025)
+    list_filter = [
+        'plan_category', 'billing_cycle', 'currency', 'is_active', 
+        'is_featured', 'created_at'
+    ]
+    search_fields = ['name', 'plan_type', 'description']
+    ordering = ['sort_order', 'plan_category', 'billing_cycle', 'price']
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('plan_type', 'plan_category', 'billing_cycle', 'name', 'description')
+        }),
+        ('Pricing', {
+            'fields': ('price', 'currency', 'discount_percentage', 'promotional_price'),
+            'classes': ('wide',)
+        }),
+        ('Promotions', {
+            'fields': ('promotion_start', 'promotion_end'),
+            'classes': ('collapse',)
+        }),
+        ('Telegram Integration', {
+            'fields': ('telegram_groups',),
+            'description': 'JSON list of telegram group keys: ["mentorship", "signals", "vip"]',
+            'classes': ('wide',)
+        }),
+        ('Display & Marketing', {
+            'fields': ('features_list', 'call_to_action', 'is_featured', 'sort_order'),
+            'classes': ('collapse',)
+        }),
+        ('Settings', {
+            'fields': ('is_active',),
+        }),
+    )
+    
+    readonly_fields = ['created_at', 'updated_at']
+    
+    # Custom form widgets for better UX
+    formfield_overrides = {
+        models.CharField: {'widget': TextInput(attrs={'size': '40'})},
+        models.TextField: {'widget': Textarea(attrs={'rows': 4, 'cols': 60})},
+        models.DecimalField: {'widget': NumberInput(attrs={'step': '0.01'})},
+    }
+    
+    actions = ['activate_plans', 'deactivate_plans', 'bulk_update_currency', 'export_plans']
+    
+    def current_price_display(self, obj):
+        """Display current effective price with promotion indicators"""
+        price = obj.current_price
+        if obj.is_on_promotion:
+            return format_html(
+                '<span style="text-decoration: line-through; color: #999;">${}</span> '
+                '<strong style="color: #28a745;">${}</strong>',
+                obj.price, price
+            )
+        return f"${price}"
+    current_price_display.short_description = "Current Price"
+    current_price_display.admin_order_field = 'price'
+    
+    def is_active_display(self, obj):
+        """Display active status with color coding"""
+        if obj.is_active:
+            return format_html('<span style="color: #28a745;">✓ Active</span>')
+        return format_html('<span style="color: #dc3545;">✗ Inactive</span>')
+    is_active_display.short_description = "Status"
+    is_active_display.admin_order_field = 'is_active'
+    
+    def promotion_status(self, obj):
+        """Display promotion status"""
+        if obj.is_on_promotion:
+            savings = obj.savings_amount
+            return format_html(
+                '<span style="color: #ffc107; font-weight: bold;">🎯 Save ${}</span>', 
+                savings
+            )
+        return format_html('<span style="color: #6c757d;">No promotion</span>')
+    promotion_status.short_description = "Promotion"
+    
+    def usage_count(self, obj):
+        """Show how many active subscriptions use this plan"""
+        count = SignalSubscription.objects.filter(
+            pricing_plan=obj, 
+            payment_status='verified'
+        ).count()
+        if count > 0:
+            url = reverse('admin:subscriptions_signalsubscription_changelist') + f'?pricing_plan__id__exact={obj.id}'
+            return format_html('<a href="{}">{} subscriptions</a>', url, count)
+        return "0 subscriptions"
+    usage_count.short_description = "Usage"
+    
+    # Custom actions
+    def activate_plans(self, request, queryset):
+        """Bulk activate plans"""
+        count = queryset.update(is_active=True)
+        self.message_user(request, f'{count} plans activated.')
+    activate_plans.short_description = "Activate selected plans"
+    
+    def deactivate_plans(self, request, queryset):
+        """Bulk deactivate plans"""
+        count = queryset.update(is_active=False)
+        self.message_user(request, f'{count} plans deactivated.')
+    deactivate_plans.short_description = "Deactivate selected plans"
+    
+    def export_plans(self, request, queryset):
+        """Export plans to CSV"""
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="pricing_plans.csv"'
+        
+        writer = csv.writer(response)
+        writer.writerow(['Name', 'Plan Type', 'Category', 'Billing Cycle', 'Price', 'Currency', 'Active'])
+        
+        for plan in queryset:
+            writer.writerow([
+                plan.name, plan.plan_type, plan.plan_category,
+                plan.billing_cycle, plan.current_price, plan.currency, plan.is_active
+            ])
+        
+        return response
+    export_plans.short_description = "Export selected plans to CSV"
+
+
+# Enhanced SignalSubscription admin with pricing integration
+class SignalSubscriptionAdmin(admin.ModelAdmin):
+    """Enhanced subscription admin with pricing plan integration"""
+    list_display = [
+        'user_email', 'plan_display', 'amount_with_savings', 'payment_status',
+        'subscription_period', 'telegram_status', 'created_at'
+    ]
+    list_filter = [
+        'plan_type', 'payment_status', 'telegram_status', 'pricing_plan',
+        'created_at', 'coupon_used'
+    ]
+    search_fields = [
+        'user__email', 'user__first_name', 'user__last_name',
+        'paystack_reference', 'telegram_username'
+    ]
+    ordering = ['-created_at']
+    
+    readonly_fields = ['paystack_reference', 'created_at', 'updated_at', 'payment_verified_at']
+    
+    fieldsets = (
+        ('User Information', {
+            'fields': ('user', 'telegram_username')
+        }),
+        ('Subscription Details', {
+            'fields': ('plan_type', 'pricing_plan', 'subscription_start', 'subscription_end'),
+        }),
+        ('Payment Information', {
+            'fields': ('amount_paid', 'currency', 'paystack_reference', 'payment_status', 'payment_verified_at'),
+        }),
+        ('Coupon Information', {
+            'fields': ('coupon_used', 'original_amount', 'discount_amount'),
+            'classes': ('collapse',)
+        }),
+        ('Telegram Status', {
+            'fields': ('telegram_status', 'telegram_group_name', 'telegram_added_at'),
+        }),
+        ('Admin Notes', {
+            'fields': ('admin_notes',),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def user_email(self, obj):
+        return obj.user.email
+    user_email.short_description = "User Email"
+    user_email.admin_order_field = 'user__email'
+    
+    def plan_display(self, obj):
+        """Display plan with pricing plan info"""
+        if obj.pricing_plan:
+            return format_html(
+                '<strong>{}</strong><br><small>{}</small>',
+                obj.pricing_plan.name,
+                obj.plan_type
+            )
+        return obj.plan_type
+    plan_display.short_description = "Plan"
+    
+    def amount_with_savings(self, obj):
+        """Display amount with coupon savings if applicable"""
+        if obj.coupon_used and obj.discount_amount > 0:
+            return format_html(
+                '<span style="text-decoration: line-through; color: #999;">${}</span><br>'
+                '<strong style="color: #28a745;">${}</strong> '
+                '<small style="color: #28a745;">(Save ${})</small>',
+                obj.original_amount, obj.amount_paid, obj.discount_amount
+            )
+        return f"${obj.amount_paid}"
+    amount_with_savings.short_description = "Amount"
+    amount_with_savings.admin_order_field = 'amount_paid'
+    
+    def subscription_period(self, obj):
+        """Display subscription period"""
+        if obj.subscription_start and obj.subscription_end:
+            return f"{obj.subscription_start.strftime('%m/%d/%Y')} - {obj.subscription_end.strftime('%m/%d/%Y')}"
+        return "Not set"
+    subscription_period.short_description = "Subscription Period"
+
+# Register the enhanced admin
+admin.site.register(SignalSubscription, SignalSubscriptionAdmin)
+
 
 @admin.register(ReferralCode)
 class ReferralCodeAdmin(admin.ModelAdmin):

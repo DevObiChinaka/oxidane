@@ -14,8 +14,8 @@ from datetime import timedelta
 from django.db.models import Q
 from decimal import Decimal
 
-from .models import SignalSubscription
-from .serializers import SignalSubscriptionSerializer
+from .models import Subscription, BillingProfile
+# from .serializers import SignalSubscriptionSerializer  # TODO: Create new SubscriptionSerializer for Phase 0.5
 
 
 class UserSubscriptionViewSet(viewsets.ViewSet):
@@ -33,30 +33,45 @@ class UserSubscriptionViewSet(viewsets.ViewSet):
         user = request.user
         subscriptions = []
         
-        # Get Signal Subscriptions
-        signal_subs = SignalSubscription.objects.filter(
-            user=user,
-            payment_status='verified'
-        ).order_by('-created_at')
+        # Get user's billing profile
+        try:
+            billing_profile = BillingProfile.objects.get(user=user)
+        except BillingProfile.DoesNotExist:
+            # No billing profile, no subscriptions
+            return Response({
+                'subscriptions': [],
+                'stats': {
+                    'active_count': 0,
+                    'total_monthly_cost': 0,
+                    'next_renewal_date': None,
+                    'days_until_renewal': None,
+                }
+            })
+        
+        # Get Signal Subscriptions (exclude mentorship plans)
+        signal_subs = Subscription.objects.filter(
+            billing_profile=billing_profile,
+            status='active'
+        ).exclude(plan__slug__icontains='mentorship').select_related('plan').order_by('-created_at')
         
         for sub in signal_subs:
             # Check if subscription is active
             is_active = False
-            if sub.subscription_start and sub.subscription_end:
+            if sub.start_date and sub.end_date:
                 is_active = (
-                    sub.payment_status == 'verified' and
-                    timezone.now() >= sub.subscription_start and
-                    timezone.now() <= sub.subscription_end
+                    sub.status == 'active' and
+                    timezone.now() >= sub.start_date and
+                    timezone.now() <= sub.end_date
                 )
             
             days_remaining = None
-            if is_active and sub.subscription_end:
-                days_remaining = (sub.subscription_end - timezone.now()).days
+            if is_active and sub.end_date:
+                days_remaining = (sub.end_date - timezone.now()).days
             
             # Determine status
             if is_active:
                 subscription_status = 'active'
-            elif sub.subscription_end and timezone.now() > sub.subscription_end:
+            elif sub.end_date and timezone.now() > sub.end_date:
                 subscription_status = 'expired'
             else:
                 subscription_status = 'cancelled'
@@ -64,45 +79,51 @@ class UserSubscriptionViewSet(viewsets.ViewSet):
             # Get features based on plan
             features = self._get_plan_features(sub, 'signal')
             
+            # TODO: Get actual payment amount from Payment model (Phase 0.5.17+)
+            amount = float(sub.plan.base_price) if sub.plan else 0
+            
             subscriptions.append({
                 'id': str(sub.id),
-                'plan_name': sub.pricing_plan.name if sub.pricing_plan else 'Signal Plan',
+                'plan_name': sub.plan.name if sub.plan else 'Signal Plan',
                 'plan_type': 'signal',
                 'status': subscription_status,
-                'amount': float(sub.amount_paid),
-                'currency': sub.currency,
-                'billing_cycle': 'monthly',  # Adjust based on your plan structure
-                'start_date': sub.subscription_start.date().isoformat() if sub.subscription_start else sub.created_at.date().isoformat(),
-                'end_date': sub.subscription_end.date().isoformat() if sub.subscription_end else None,
-                'auto_renew': sub.auto_renewal,
+                'amount': amount,
+                'currency': billing_profile.currency_preference or 'USD',
+                'billing_cycle': sub.plan.billing_period if sub.plan else 'monthly',
+                'start_date': sub.start_date.date().isoformat() if sub.start_date else sub.created_at.date().isoformat(),
+                'end_date': sub.end_date.date().isoformat() if sub.end_date else None,
+                'auto_renew': sub.auto_renew,
                 'features': features,
-                'telegram_username': sub.telegram_username,
+                'telegram_username': billing_profile.telegram_username,
                 'days_remaining': days_remaining,
             })
         
-        # Get Mentorship Purchases (now stored in SignalSubscription with plan_type starting with 'mentorship')
-        mentorship_subs = SignalSubscription.objects.filter(
-            user=user,
-            payment_status='verified',
-            plan_type__startswith='mentorship'
-        ).order_by('-created_at')
+        # Get Mentorship Purchases
+        mentorship_subs = Subscription.objects.filter(
+            billing_profile=billing_profile,
+            status='active',
+            plan__slug__icontains='mentorship'
+        ).select_related('plan').order_by('-created_at')
         
         for sub in mentorship_subs:
             # Mentorship is lifetime, so always active if verified
-            is_active = sub.payment_status == 'verified'
+            is_active = sub.status == 'active'
             days_remaining = None  # Lifetime access, no expiration
             
             features = self._get_plan_features(sub, 'mentorship')
             
+            # TODO: Get actual payment amount from Payment model (Phase 0.5.17+)
+            amount = float(sub.plan.base_price) if sub.plan else 0
+            
             subscriptions.append({
                 'id': str(sub.id),
-                'plan_name': 'Mentorship Program',
+                'plan_name': sub.plan.name if sub.plan else 'Mentorship Program',
                 'plan_type': 'mentorship',
                 'status': 'active' if is_active else 'inactive',
-                'amount': float(sub.amount_paid),
-                'currency': sub.currency,
+                'amount': amount,
+                'currency': billing_profile.currency_preference or 'USD',
                 'billing_cycle': 'one_time',
-                'start_date': sub.subscription_start.date().isoformat() if sub.subscription_start else sub.created_at.date().isoformat(),
+                'start_date': sub.start_date.date().isoformat() if sub.start_date else sub.created_at.date().isoformat(),
                 'end_date': None,  # Lifetime access
                 'auto_renew': False,  # One-time payment
                 'features': features,
@@ -137,15 +158,31 @@ class UserSubscriptionViewSet(viewsets.ViewSet):
         """
         user = request.user
         
-        # Try to find in signal subscriptions
+        # Get user's billing profile
         try:
-            signal_sub = SignalSubscription.objects.get(id=pk, user=user)
+            billing_profile = BillingProfile.objects.get(user=user)
+        except BillingProfile.DoesNotExist:
+            return Response(
+                {'error': 'Billing profile not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Try to find subscription
+        try:
+            subscription = Subscription.objects.get(id=pk, billing_profile=billing_profile)
+            
+            # Check if it's a mentorship (one-time lifetime payment)
+            if subscription.plan and 'mentorship' in subscription.plan.slug.lower():
+                return Response(
+                    {'error': 'Mentorship is a one-time purchase and cannot be cancelled. You have lifetime access.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
             
             # Check if active
             is_active = (
-                signal_sub.payment_status == 'verified' and
-                signal_sub.subscription_end and
-                timezone.now() <= signal_sub.subscription_end
+                subscription.status == 'active' and
+                subscription.end_date and
+                timezone.now() <= subscription.end_date
             )
             
             if not is_active:
@@ -155,30 +192,18 @@ class UserSubscriptionViewSet(viewsets.ViewSet):
                 )
             
             # Mark for cancellation at end of period
-            signal_sub.auto_renewal = False
-            
-            # Add cancellation note
-            current_notes = signal_sub.admin_notes or ""
-            signal_sub.admin_notes = f"{current_notes}\nCancelled by user on {timezone.now().date()}"
-            signal_sub.save()
+            subscription.auto_renew = False
+            subscription.save()
             
             return Response({
                 'message': 'Subscription cancelled successfully. Access will continue until end of billing period.',
-                'end_date': signal_sub.subscription_end.date().isoformat() if signal_sub.subscription_end else None,
+                'end_date': subscription.end_date.date().isoformat() if subscription.end_date else None,
             })
-        except SignalSubscription.DoesNotExist:
-            # Check if it's a mentorship (one-time payment)
-            try:
-                mentorship_sub = SignalSubscription.objects.get(id=pk, user=user, plan_type__startswith='mentorship')
-                return Response(
-                    {'error': 'Mentorship is a one-time purchase and cannot be cancelled. You have lifetime access.'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            except SignalSubscription.DoesNotExist:
-                return Response(
-                    {'error': 'Subscription not found'},
-                    status=status.HTTP_404_NOT_FOUND
-                )
+        except Subscription.DoesNotExist:
+            return Response(
+                {'error': 'Subscription not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
     @action(detail=True, methods=['patch'], url_path='auto-renewal')
     def toggle_auto_renewal(self, request, pk=None):
@@ -194,27 +219,36 @@ class UserSubscriptionViewSet(viewsets.ViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Try signal subscription
+        # Get user's billing profile
         try:
-            signal_sub = SignalSubscription.objects.get(id=pk, user=user)
-            signal_sub.auto_renewal = auto_renew
-            signal_sub.save()
+            billing_profile = BillingProfile.objects.get(user=user)
+        except BillingProfile.DoesNotExist:
+            return Response(
+                {'error': 'Billing profile not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Try to find subscription
+        try:
+            subscription = Subscription.objects.get(id=pk, billing_profile=billing_profile)
+            
+            # Check if it's mentorship (one-time purchase)
+            if subscription.plan and 'mentorship' in subscription.plan.slug.lower():
+                return Response({
+                    'error': 'Mentorship is a one-time purchase and does not have auto-renewal',
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            subscription.auto_renew = auto_renew
+            subscription.save()
             return Response({
                 'message': 'Auto-renewal updated successfully',
                 'auto_renew': auto_renew,
             })
-        except SignalSubscription.DoesNotExist:
-            # Check if it's mentorship (one-time purchase)
-            try:
-                SignalSubscription.objects.get(id=pk, user=user, plan_type__startswith='mentorship')
-                return Response({
-                    'error': 'Mentorship is a one-time purchase and does not have auto-renewal',
-                }, status=status.HTTP_400_BAD_REQUEST)
-            except SignalSubscription.DoesNotExist:
-                return Response(
-                    {'error': 'Subscription not found'},
-                    status=status.HTTP_404_NOT_FOUND
-                )
+        except Subscription.DoesNotExist:
+            return Response(
+                {'error': 'Subscription not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
     @action(detail=True, methods=['post'], url_path='reactivate')
     def reactivate_subscription(self, request, pk=None):
@@ -223,63 +257,80 @@ class UserSubscriptionViewSet(viewsets.ViewSet):
         """
         user = request.user
         
-        # Try signal subscription
+        # Get user's billing profile
         try:
-            signal_sub = SignalSubscription.objects.get(id=pk, user=user)
-            
-            # Check if active
-            is_active = (
-                signal_sub.payment_status == 'verified' and
-                signal_sub.subscription_end and
-                timezone.now() <= signal_sub.subscription_end
+            billing_profile = BillingProfile.objects.get(user=user)
+        except BillingProfile.DoesNotExist:
+            return Response(
+                {'error': 'Billing profile not found'},
+                status=status.HTTP_404_NOT_FOUND
             )
+        
+        # Try to find subscription
+        try:
+            subscription = Subscription.objects.get(id=pk, billing_profile=billing_profile)
             
-            if is_active:
-                return Response(
-                    {'error': 'Subscription is already active'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
+            # Check if mentorship
+            is_mentorship = subscription.plan and 'mentorship' in subscription.plan.slug.lower()
             
-            # Reactivate for another period
-            signal_sub.subscription_start = timezone.now()
-            signal_sub.subscription_end = timezone.now() + timedelta(days=30)  # Default to 30 days
-            signal_sub.payment_status = 'verified'
-            signal_sub.auto_renewal = True
-            signal_sub.save()
-            
-            return Response({
-                'message': 'Subscription reactivated successfully',
-                'end_date': signal_sub.subscription_end.date().isoformat(),
-            })
-        except SignalSubscription.DoesNotExist:
-            # Check if it's mentorship
-            try:
-                mentorship_sub = SignalSubscription.objects.get(id=pk, user=user, plan_type__startswith='mentorship')
+            if is_mentorship:
                 # Mentorship is lifetime, doesn't need reactivation
-                if mentorship_sub.payment_status == 'verified':
+                if subscription.status == 'active':
                     return Response(
                         {'error': 'Mentorship is already active with lifetime access'},
                         status=status.HTTP_400_BAD_REQUEST
                     )
                 
                 # Reactivate if payment was somehow not verified
-                mentorship_sub.payment_status = 'verified'
-                mentorship_sub.save()
+                subscription.status = 'active'
+                subscription.save()
                 
                 return Response({
                     'message': 'Mentorship access reactivated successfully',
                     'end_date': None,  # Lifetime
                 })
-            except SignalSubscription.DoesNotExist:
-                return Response(
-                    {'error': 'Subscription not found'},
-                    status=status.HTTP_404_NOT_FOUND
+            else:
+                # Signal subscription
+                # Check if active
+                is_active = (
+                    subscription.status == 'active' and
+                    subscription.end_date and
+                    timezone.now() <= subscription.end_date
                 )
+                
+                if is_active:
+                    return Response(
+                        {'error': 'Subscription is already active'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                # Reactivate for another period
+                subscription.start_date = timezone.now()
+                subscription.end_date = timezone.now() + timedelta(days=30)  # Default to 30 days
+                subscription.status = 'active'
+                subscription.auto_renew = True
+                subscription.save()
+                
+                return Response({
+                    'message': 'Subscription reactivated successfully',
+                    'end_date': subscription.end_date.date().isoformat(),
+                })
+        except Subscription.DoesNotExist:
+            return Response(
+                {'error': 'Subscription not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
     def _get_plan_features(self, subscription, plan_type):
         """
         Get features list for a subscription
         """
+        # Get features from the subscription plan's M2M relationship
+        if subscription.plan and subscription.plan.features.exists():
+            # Return feature names from the Feature model (M2M relationship)
+            return [feature.name for feature in subscription.plan.features.all()]
+        
+        # Fallback to default features based on plan type
         if plan_type == 'signal':
             features = [
                 'Daily Trading Signals',
@@ -287,10 +338,6 @@ class UserSubscriptionViewSet(viewsets.ViewSet):
                 'Market Analysis',
                 'Entry & Exit Points',
             ]
-            if hasattr(subscription, 'pricing_plan') and subscription.pricing_plan:
-                # Add plan-specific features
-                if hasattr(subscription.pricing_plan, 'signals_per_day') and subscription.pricing_plan.signals_per_day:
-                    features.insert(0, f'{subscription.pricing_plan.signals_per_day} Signals per Day')
         elif plan_type == 'mentorship':
             features = [
                 'Premium Course Access',
@@ -299,11 +346,6 @@ class UserSubscriptionViewSet(viewsets.ViewSet):
                 'Priority Support',
                 'Private Community Access',
             ]
-            if hasattr(subscription, 'mentorship_plan') and subscription.mentorship_plan:
-                # Add plan-specific features
-                plan = subscription.mentorship_plan
-                if hasattr(plan, 'one_on_one_sessions') and plan.one_on_one_sessions:
-                    features.insert(1, f'{plan.one_on_one_sessions} Sessions per Month')
         else:
             features = ['Full Platform Access']
         

@@ -87,8 +87,8 @@ class Command(BaseCommand):
             
         # Check database connectivity
         try:
-            from subscriptions.models import SignalSubscription
-            count = SignalSubscription.objects.count()
+            from subscriptions.models import Subscription
+            count = Subscription.objects.count()
             self.stdout.write(f'✅ Database: Connected ({count} subscriptions)')
         except Exception as e:
             self.stdout.write(self.style.ERROR(f'❌ Database: Error - {e}'))

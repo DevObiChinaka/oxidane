@@ -1,43 +1,53 @@
 from rest_framework import serializers
-from .models import PricingPlan, Coupon
+from .models import SubscriptionPlan, Coupon, Subscription
 
 
 class PricingPlanSerializer(serializers.ModelSerializer):
     """
-    Serializer for pricing plans management
+    Serializer for subscription plans management (Phase 0.5)
     
-    Note: Telegram groups use simplified structure:
-    - 'signals_main' for all signal subscribers (weekly, monthly, yearly)
-    - 'vip_main' for all VIP subscribers
-    - 'mentorship_group' for mentorship subscribers
-    Bot tracks expiration based on payment data, not group separation.
+    Uses new SubscriptionPlan model with dynamic features and multi-currency support.
     """
-    current_price = serializers.SerializerMethodField()
+    price_display = serializers.SerializerMethodField()
+    monthly_equivalent = serializers.SerializerMethodField()
     subscription_count = serializers.SerializerMethodField()
     revenue_total = serializers.SerializerMethodField()
+    feature_count = serializers.SerializerMethodField()
+    has_trial = serializers.SerializerMethodField()
 
     class Meta:
-        model = PricingPlan
+        model = SubscriptionPlan
         fields = [
-            'id', 'plan_type', 'plan_category', 'billing_cycle',
-            'name', 'description', 'price', 'current_price', 'currency',
-            'telegram_groups', 'discount_percentage', 'promotional_price',
-            'promotion_start', 'promotion_end', 'is_active', 'is_featured',
-            'sort_order', 'features_list', 'call_to_action',
-            'subscription_count', 'revenue_total', 'created_at', 'updated_at'
+            'id', 'name', 'slug', 'description', 
+            'base_price', 'billing_period', 'price_display', 'monthly_equivalent',
+            'trial_days', 'has_trial', 'is_active', 'is_featured',
+            'sort_order', 'limits', 'stripe_price_id',
+            'feature_count', 'subscription_count', 'revenue_total', 
+            'created_at', 'updated_at'
         ]
 
-    def get_current_price(self, obj):
-        """Get the current effective price (considering promotions)"""
-        return obj.current_price
+    def get_price_display(self, obj):
+        """Get formatted price with period"""
+        return obj.get_price_display()
+    
+    def get_monthly_equivalent(self, obj):
+        """Get monthly equivalent price for comparison"""
+        return float(obj.get_monthly_equivalent())
+    
+    def get_has_trial(self, obj):
+        """Check if plan has trial"""
+        return obj.has_trial()
+    
+    def get_feature_count(self, obj):
+        """Get number of features in plan"""
+        return obj.get_feature_count()
 
     def get_subscription_count(self, obj):
         """Get number of active subscriptions for this plan"""
         try:
-            from .models import SignalSubscription
-            return SignalSubscription.objects.filter(
-                plan_type=obj.plan_type,
-                payment_status='verified'
+            return Subscription.objects.filter(
+                plan=obj,
+                status='active'
             ).count()
         except:
             return 0
@@ -45,13 +55,14 @@ class PricingPlanSerializer(serializers.ModelSerializer):
     def get_revenue_total(self, obj):
         """Get total revenue from this plan"""
         try:
-            from .models import SignalSubscription
             from django.db.models import Sum
-            result = SignalSubscription.objects.filter(
-                plan_type=obj.plan_type,
-                payment_status='verified'
-            ).aggregate(total=Sum('amount_paid'))
-            return float(result['total'] or 0)
+            # TODO: Calculate from actual payment transactions when PaymentTransaction model is recreated
+            # For now, estimate based on subscription count * base price
+            active_subs = Subscription.objects.filter(
+                plan=obj,
+                status='active'
+            ).count()
+            return float(active_subs * obj.base_price)
         except:
             return 0.0
 

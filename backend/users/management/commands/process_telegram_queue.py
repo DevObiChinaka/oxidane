@@ -6,7 +6,7 @@ Usage: python manage.py process_telegram_queue
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from datetime import timedelta
-from subscriptions.models import SignalSubscription, TelegramGroupManagement
+from subscriptions.models import Subscription, TelegramGroup
 import logging
 
 logger = logging.getLogger(__name__)
@@ -53,9 +53,9 @@ class Command(BaseCommand):
         
         target_date = timezone.now().date() + timedelta(days=days_ahead)
         
-        expiring_subscriptions = SignalSubscription.objects.filter(
-            subscription_end__date=target_date,
-            payment_status='verified',
+        expiring_subscriptions = Subscription.objects.filter(
+            end_date__date=target_date,
+            status='active',
             telegram_status__in=['added', 'verified']
         )
         
@@ -107,9 +107,9 @@ class Command(BaseCommand):
         self.stdout.write('\n🚫 Processing expired subscriptions...')
         
         today = timezone.now().date()
-        expired_subscriptions = SignalSubscription.objects.filter(
-            subscription_end__date=today,
-            payment_status='verified',
+        expired_subscriptions = Subscription.objects.filter(
+            end_date__date=today,
+            status='active',
             telegram_status__in=['added', 'verified']
         )
         
@@ -158,10 +158,10 @@ class Command(BaseCommand):
         self.stdout.write('\n✅ Processing new subscriptions...')
         
         # Find verified subscriptions not yet added to Telegram
-        new_subscriptions = SignalSubscription.objects.filter(
-            payment_status='verified',
+        new_subscriptions = Subscription.objects.filter(
+            status='active',
             telegram_status__in=['not_added', 'pending'],
-            subscription_end__gt=timezone.now(),  # Still active
+            end_date__gt=timezone.now(),  # Still active
             telegram_username__isnull=False
         ).exclude(telegram_username='')
         

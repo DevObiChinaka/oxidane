@@ -1,369 +1,125 @@
-""""""# ============================================================================
+# ============================================================================
+# DEPRECATED: This file contains Phase 0.4 admin views using old models
+# TODO: Rewrite for Phase 0.5+ using new Subscription/SubscriptionPlan models
+# Currently stubbed to prevent import errors
+# ============================================================================
 
-DEPRECATED: Phase 0.4 Admin Views - Replaced by Phase 0.5 Admin System
-
-DEPRECATED: Phase 0.4 Admin Views - Replaced by Phase 0.5 Admin System# DEPRECATED: This file contains Phase 0.4 admin views using old models
-
-This file contains stub functions to prevent URL resolution errors.
-
-These views use deprecated models and should be rewritten for Phase 0.5.# TODO: Rewrite for Phase 0.5+ using new Subscription/SubscriptionPlan models
-
-
-
-TODO Phase 0.6:This file contains stub functions to prevent URL resolution errors.# Currently stubbed to prevent import errors
-
-- Rewrite admin dashboard using new Subscription/SubscriptionPlan models
-
-- Update analytics to use proper billing/payment trackingThese views use deprecated models and should be rewritten for Phase 0.5.# ============================================================================
-
-- Remove dependency on deprecated SignalSubscription model
-
-"""
-
-
-
-from rest_framework.decorators import api_view, permission_classesTODO Phase 0.6:# Subscription and pricing management views
-
+# Subscription and pricing management views
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
-
-from rest_framework.response import Response- Rewrite admin dashboard using new Subscription/SubscriptionPlan modelsfrom rest_framework.decorators import api_view, permission_classes
-
+from rest_framework.response import Response
 from rest_framework import status
-
-from users.permissions import IsAdmin- Update analytics to use proper billing/payment trackingfrom rest_framework.permissions import IsAuthenticated
-
-
-
-- Remove dependency on deprecated SignalSubscription modelfrom rest_framework.response import Response
-
-def _deprecated_response(view_name):
-
-    """Return a deprecated response for old admin views.""""""from rest_framework import status
-
-    return Response({
-
-        'error': 'This endpoint is deprecated',from django.shortcuts import get_object_or_404
-
-        'message': f'{view_name} is part of Phase 0.4 and has been replaced by Phase 0.5 admin system',
-
-        'suggestion': 'Please use the new admin endpoints or wait for Phase 0.6 admin dashboard rewrite'from rest_framework.decorators import api_view, permission_classesfrom django.core.paginator import Paginator
-
-    }, status=status.HTTP_410_GONE)
-
-from rest_framework.permissions import IsAuthenticatedfrom django.db.models import Q, Sum, Count, Avg
-
-
-
-# Dashboard Viewsfrom rest_framework.response import Responsefrom django.utils import timezone
-
-@api_view(['GET'])
-
-@permission_classes([IsAuthenticated, IsAdmin])from rest_framework import statusfrom django.core.cache import cache
-
-def admin_pricing_dashboard(request):
-
-    return _deprecated_response('admin_pricing_dashboard')from users.permissions import IsAdminfrom decimal import Decimal
-
-
-
+from django.shortcuts import get_object_or_404
+from django.core.paginator import Paginator
+from django.db.models import Q, Sum, Count, Avg
+from django.utils import timezone
+from django.core.cache import cache
+from decimal import Decimal
 import logging
+import time
+from functools import wraps
+import json
+from datetime import datetime, timedelta
 
-@api_view(['GET'])
+logger = logging.getLogger(__name__)
 
-@permission_classes([IsAuthenticated, IsAdmin])import time
-
-def subscription_analytics(request):
-
-    return _deprecated_response('subscription_analytics')def _deprecated_response(view_name):from functools import wraps
-
-
-
-    """Return a deprecated response for old admin views."""import json
-
-@api_view(['GET'])
-
-@permission_classes([IsAuthenticated, IsAdmin])    return Response({from datetime import datetime, timedelta
-
-def subscription_analytics_dashboard(request):
-
-    return _deprecated_response('subscription_analytics_dashboard')        'error': 'This endpoint is deprecated',
-
-
-
-        'message': f'{view_name} is part of Phase 0.4 and has been replaced by Phase 0.5 admin system',logger = logging.getLogger(__name__)
-
-@api_view(['GET'])
-
-@permission_classes([IsAuthenticated, IsAdmin])        'suggestion': 'Please use the new admin endpoints or wait for Phase 0.6 admin dashboard rewrite'
-
-def performance_metrics_dashboard(request):
-
-    return _deprecated_response('performance_metrics_dashboard')    }, status=status.HTTP_410_GONE)# TODO: Update these imports for Phase 0.5 models
-
-
-
+# TODO: Update these imports for Phase 0.5 models
 from .models import SubscriptionPlan as PricingPlan, Subscription as SignalSubscription
+# PaymentTransaction and TelegramGroupManagement will be recreated in Phase 0.5.17+
+# from .serializers import PricingPlanSerializer, SignalSubscriptionSerializer, PaymentTransactionSerializer
+from .audit_models import AdminActionLog, SubscriptionChangeLog, DataAccessLog
+from .analytics_models import SubscriptionAnalytics, PerformanceMetrics
+from users.permissions import IsAdmin
 
-@api_view(['GET'])
+# Set up audit logging
+audit_logger = logging.getLogger('audit')
 
-@permission_classes([IsAuthenticated, IsAdmin])# PaymentTransaction and TelegramGroupManagement will be recreated in Phase 0.5.17+
-
-def revenue_analytics(request):
-
-    return _deprecated_response('revenue_analytics')# Dashboard Views# from .serializers import PricingPlanSerializer, SignalSubscriptionSerializer, PaymentTransactionSerializer
-
-
-
-@api_view(['GET'])from .audit_models import AdminActionLog, SubscriptionChangeLog, DataAccessLog
-
-@api_view(['GET'])
-
-@permission_classes([IsAuthenticated, IsAdmin])@permission_classes([IsAuthenticated, IsAdmin])from .analytics_models import SubscriptionAnalytics, PerformanceMetrics
-
-def export_revenue_report(request):
-
-    return _deprecated_response('export_revenue_report')def admin_pricing_dashboard(request):from users.permissions import IsAdmin
-
-
-
-    return _deprecated_response('admin_pricing_dashboard')
-
-# Subscription Management Views
-
-@api_view(['GET', 'POST'])# Set up audit logging
-
-@permission_classes([IsAuthenticated, IsAdmin])
-
-def subscriptions_list(request):audit_logger = logging.getLogger('audit')
-
-    return _deprecated_response('subscriptions_list')
-
-@api_view(['GET'])
-
-
-
-@api_view(['GET', 'PUT', 'DELETE'])@permission_classes([IsAuthenticated, IsAdmin])def audit_log(action, sensitivity='NORMAL'):
-
-@permission_classes([IsAuthenticated, IsAdmin])
-
-def subscription_detail(request, subscription_id):def subscription_analytics(request):    """Enhanced decorator for audit logging and performance monitoring"""
-
-    return _deprecated_response('subscription_detail')
-
-    return _deprecated_response('subscription_analytics')    def decorator(view_func):
-
-
-
-# Pricing Plan Views        @wraps(view_func)
-
-@api_view(['GET', 'POST'])
-
-@permission_classes([IsAuthenticated, IsAdmin])        def wrapper(request, *args, **kwargs):
-
-def admin_pricing_plans(request):
-
-    return _deprecated_response('admin_pricing_plans')@api_view(['GET'])            start_time = timezone.now()
-
-
-
-@permission_classes([IsAuthenticated, IsAdmin])            performance_start = time.time()
-
-@api_view(['GET', 'PUT', 'DELETE'])
-
-@permission_classes([IsAuthenticated, IsAdmin])def subscription_analytics_dashboard(request):            admin_user = request.user if hasattr(request, 'user') and request.user.is_authenticated else None
-
-def admin_pricing_plan_detail(request, plan_id):
-
-    return _deprecated_response('admin_pricing_plan_detail')    return _deprecated_response('subscription_analytics_dashboard')            
-
-
-
+def audit_log(action, sensitivity='NORMAL'):
+    """Enhanced decorator for audit logging and performance monitoring"""
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(request, *args, **kwargs):
+            start_time = timezone.now()
+            performance_start = time.time()
+            admin_user = request.user if hasattr(request, 'user') and request.user.is_authenticated else None
+            
             try:
-
-# Legacy Subscription Views
-
-@api_view(['GET'])                # Execute the view
-
-@permission_classes([IsAuthenticated, IsAdmin])
-
-def admin_subscriptions(request):@api_view(['GET'])                response = view_func(request, *args, **kwargs)
-
-    return _deprecated_response('admin_subscriptions')
-
-@permission_classes([IsAuthenticated, IsAdmin])                status_result = 'SUCCESS'
-
-
-
-@api_view(['POST'])def performance_metrics_dashboard(request):                error_msg = ''
-
-@permission_classes([IsAuthenticated, IsAdmin])
-
-def admin_verify_payment(request, subscription_id):    return _deprecated_response('performance_metrics_dashboard')                
-
-    return _deprecated_response('admin_verify_payment')
-
+                # Execute the view
+                response = view_func(request, *args, **kwargs)
+                status_result = 'SUCCESS'
+                error_msg = ''
+                
             except Exception as e:
-
-
-
-# Telegram Management Views                status_result = 'FAILED'
-
-@api_view(['GET'])
-
-@permission_classes([IsAuthenticated, IsAdmin])@api_view(['GET'])                error_msg = str(e)
-
-def admin_telegram_queue(request):
-
-    return _deprecated_response('admin_telegram_queue')@permission_classes([IsAuthenticated, IsAdmin])                response = None
-
-
-
-def revenue_analytics(request):                raise
-
-@api_view(['POST'])
-
-@permission_classes([IsAuthenticated, IsAdmin])    return _deprecated_response('revenue_analytics')                
-
-def admin_telegram_action(request, task_id):
-
-    return _deprecated_response('admin_telegram_action')            finally:
-
-
-
+                status_result = 'FAILED'
+                error_msg = str(e)
+                response = None
+                raise
+                
+            finally:
                 # Calculate performance metrics
-
-# Payment Transaction Views
-
-@api_view(['GET'])@api_view(['GET'])                performance_end = time.time()
-
-@permission_classes([IsAuthenticated, IsAdmin])
-
-def admin_payment_transactions(request):@permission_classes([IsAuthenticated, IsAdmin])                duration_ms = (performance_end - performance_start) * 1000
-
-    return _deprecated_response('admin_payment_transactions')
-
-def export_revenue_report(request):                
-
-    return _deprecated_response('export_revenue_report')                try:
-
+                performance_end = time.time()
+                duration_ms = (performance_end - performance_start) * 1000
+                
+                try:
                     # Create comprehensive audit log
-
                     if admin_user:
-
-# Subscription Management Views                        AdminActionLog.objects.create(
-
-@api_view(['GET', 'POST'])                            admin_user=admin_user,
-
-@permission_classes([IsAuthenticated, IsAdmin])                            action_type=action,
-
-def subscriptions_list(request):                            sensitivity=sensitivity,
-
-    return _deprecated_response('subscriptions_list')                            status=status_result,
-
+                        AdminActionLog.objects.create(
+                            admin_user=admin_user,
+                            action_type=action,
+                            sensitivity=sensitivity,
+                            status=status_result,
                             timestamp=start_time,
-
                             ip_address=request.META.get('REMOTE_ADDR'),
-
-@api_view(['GET', 'PUT', 'DELETE'])                            user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
-
-@permission_classes([IsAuthenticated, IsAdmin])                            request_method=request.method,
-
-def subscription_detail(request, subscription_id):                            request_path=request.path,
-
-    return _deprecated_response('subscription_detail')                            response_status_code=getattr(response, 'status_code', None),
-
+                            user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
+                            request_method=request.method,
+                            request_path=request.path,
+                            response_status_code=getattr(response, 'status_code', None),
                             duration_ms=duration_ms,
-
                             action_description=f"{action} by {admin_user.email}",
-
-# Pricing Plan Views                            error_message=error_msg,
-
-@api_view(['GET', 'POST'])                            request_params=dict(request.GET) if request.method == 'GET' else {},
-
-@permission_classes([IsAuthenticated, IsAdmin])                            resource_ids=[str(arg) for arg in args] if args else []
-
-def admin_pricing_plans(request):                        )
-
-    return _deprecated_response('admin_pricing_plans')                    
-
+                            error_message=error_msg,
+                            request_params=dict(request.GET) if request.method == 'GET' else {},
+                            resource_ids=[str(arg) for arg in args] if args else []
+                        )
+                    
                     # Record performance metrics for optimization
-
                     PerformanceMetrics.record_api_performance(
-
-@api_view(['GET', 'PUT', 'DELETE'])                        endpoint_path=request.path,
-
-@permission_classes([IsAuthenticated, IsAdmin])                        response_time_ms=duration_ms,
-
-def admin_pricing_plan_detail(request, plan_id):                        user_count=1,
-
-    return _deprecated_response('admin_pricing_plan_detail')                        additional_data={
-
+                        endpoint_path=request.path,
+                        response_time_ms=duration_ms,
+                        user_count=1,
+                        additional_data={
                             'method': request.method,
-
                             'status': status_result,
-
-# Legacy Subscription Views                            'admin_user': admin_user.email if admin_user else 'Anonymous',
-
-@api_view(['GET'])                            'sensitivity': sensitivity
-
-@permission_classes([IsAuthenticated, IsAdmin])                        }
-
-def admin_subscriptions(request):                    )
-
-    return _deprecated_response('admin_subscriptions')                    
-
+                            'admin_user': admin_user.email if admin_user else 'Anonymous',
+                            'sensitivity': sensitivity
+                        }
+                    )
+                    
                 except Exception as audit_error:
-
                     # Don't let audit logging break the main functionality
-
-@api_view(['POST'])                    logger.error(f"Audit/Performance logging failed: {audit_error}")
-
-@permission_classes([IsAuthenticated, IsAdmin])            
-
-def admin_verify_payment(request, subscription_id):            return response
-
-    return _deprecated_response('admin_verify_payment')        return wrapper
-
+                    logger.error(f"Audit/Performance logging failed: {audit_error}")
+            
+            return response
+        return wrapper
     return decorator
 
-
-
-# Telegram Management Views@api_view(['GET'])
-
-@api_view(['GET'])@permission_classes([IsAuthenticated, IsAdmin])
-
-@permission_classes([IsAuthenticated, IsAdmin])@audit_log(action="VIEW_SUBSCRIPTION_DASHBOARD", sensitivity="FINANCIAL")
-
-def admin_telegram_queue(request):def admin_pricing_dashboard(request):
-
-    return _deprecated_response('admin_telegram_queue')    """Get pricing and subscription overview"""
-
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdmin])
+@audit_log(action="VIEW_SUBSCRIPTION_DASHBOARD", sensitivity="FINANCIAL")
+def admin_pricing_dashboard(request):
+    """Get pricing and subscription overview"""
     
-
     cache_key = f"pricing_metrics_{timezone.now().date()}"
-
-@api_view(['POST'])    cached_metrics = cache.get(cache_key)
-
-@permission_classes([IsAuthenticated, IsAdmin])    
-
-def admin_telegram_action(request, task_id):    if cached_metrics:
-
-    return _deprecated_response('admin_telegram_action')        return Response(cached_metrics)
-
+    cached_metrics = cache.get(cache_key)
     
-
+    if cached_metrics:
+        return Response(cached_metrics)
+    
     # Active subscriptions
-
-# Payment Transaction Views    active_subs = SignalSubscription.objects.filter(
-
-@api_view(['GET'])        subscription_end__gt=timezone.now(),
-
-@permission_classes([IsAuthenticated, IsAdmin])        payment_status='verified'
-
-def admin_payment_transactions(request):    )
-
-    return _deprecated_response('admin_payment_transactions')    
-
+    active_subs = SignalSubscription.objects.filter(
+        subscription_end__gt=timezone.now(),
+        payment_status='verified'
+    )
+    
     # Revenue calculations
     today = timezone.now().date()
     this_month = timezone.now().replace(day=1).date()

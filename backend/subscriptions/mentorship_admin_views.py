@@ -10,11 +10,12 @@ from datetime import datetime, timedelta
 import json
 from decimal import Decimal
 
-from .models import SignalSubscription, PricingPlan
+from .models import Subscription, SubscriptionPlan
 from users.models import User
 from users.permissions import IsAdmin
 
-# Note: Mentorship is now handled through SignalSubscription with plan_type='mentorship'
+# Note: Mentorship is now handled through regular Subscription model (Phase 0.5)
+# with a SubscriptionPlan that has mentorship features
 # MentorshipPlan, MentorshipSubscription, and OneOnOneSession models have been deprecated
 
 @api_view(['GET'])
@@ -28,20 +29,20 @@ def mentorship_subscription_list(request):
         telegram_filter = request.GET.get('telegram_status', '')
         
         # Base queryset - all mentorship-related purchases
-        subscriptions = SignalSubscription.objects.filter(
-            plan_type__startswith='mentorship'
-        ).select_related('user', 'pricing_plan').all()
+        subscriptions = Subscription.objects.filter(
+            plan__slug__icontains='mentorship'
+        ).select_related('billing_profile__user', 'plan').all()
         
         # Apply filters
         if search:
             subscriptions = subscriptions.filter(
-                Q(user__email__icontains=search) |
-                Q(user__first_name__icontains=search) |
-                Q(user__last_name__icontains=search)
+                Q(billing_profile__user__email__icontains=search) |
+                Q(billing_profile__user__first_name__icontains=search) |
+                Q(billing_profile__user__last_name__icontains=search)
             )
         
         if status_filter:
-            subscriptions = subscriptions.filter(payment_status=status_filter)
+            subscriptions = subscriptions.filter(status=status_filter)
             
         if telegram_filter:
             subscriptions = subscriptions.filter(telegram_status=telegram_filter)
@@ -119,31 +120,33 @@ def mentorship_analytics(request):
     try:
         now = timezone.now()
         
-        # Total mentorship purchases (verified payments only)
-        total_purchases = SignalSubscription.objects.filter(
-            plan_type__startswith='mentorship',
-            payment_status='verified'
+        # Total mentorship purchases (active subscriptions)
+        total_purchases = Subscription.objects.filter(
+            plan__slug__icontains='mentorship',
+            status='active'
         ).count()
         
         # Monthly revenue (current month)
+        # TODO: Calculate from actual payment transactions when PaymentTransaction model is recreated
         current_month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        monthly_revenue = SignalSubscription.objects.filter(
-            plan_type__startswith='mentorship',
-            created_at__gte=current_month_start,
-            payment_status='verified'
-        ).aggregate(total=Sum('amount_paid'))['total'] or Decimal('0.00')
+        monthly_subs = Subscription.objects.filter(
+            plan__slug__icontains='mentorship',
+            start_date__gte=current_month_start,
+            status='active'
+        ).count()
+        avg_price = SubscriptionPlan.objects.filter(
+            slug__icontains='mentorship'
+        ).aggregate(avg=Avg('base_price'))['avg'] or Decimal('0.00')
+        monthly_revenue = Decimal(monthly_subs) * avg_price
         
-        # Total revenue (all time)
-        total_revenue = SignalSubscription.objects.filter(
-            plan_type__startswith='mentorship',
-            payment_status='verified'
-        ).aggregate(total=Sum('amount_paid'))['total'] or Decimal('0.00')
+        # Total revenue (all time estimate)
+        total_revenue = Decimal(total_purchases) * avg_price
         
         # Telegram status distribution
         telegram_stats = list(
-            SignalSubscription.objects.filter(
-                plan_type__startswith='mentorship',
-                payment_status='verified'
+            Subscription.objects.filter(
+                plan__slug__icontains='mentorship',
+                status='active'
             )
             .values('telegram_status')
             .annotate(count=Count('id'))
@@ -151,10 +154,10 @@ def mentorship_analytics(request):
         
         # Recent purchases (last 30 days)
         thirty_days_ago = now - timedelta(days=30)
-        recent_purchases = SignalSubscription.objects.filter(
-            plan_type__startswith='mentorship',
-            payment_status='verified',
-            created_at__gte=thirty_days_ago
+        recent_purchases = Subscription.objects.filter(
+            plan__slug__icontains='mentorship',
+            status='active',
+            start_date__gte=thirty_days_ago
         ).count()
         
         return Response({
@@ -190,7 +193,7 @@ def extend_subscription(request, subscription_id):
     This endpoint is kept for compatibility but returns appropriate message
     """
     try:
-        subscription = get_object_or_404(SignalSubscription, id=subscription_id, plan_type__startswith='mentorship')
+        subscription = get_object_or_404(Subscription, id=subscription_id, plan__slug__icontains='mentorship')
         
         return Response({
             'success': False,

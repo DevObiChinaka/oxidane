@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import admin_views
+# from . import admin_views  # DEPRECATED: Phase 0.4 admin views - will be rewritten for Phase 0.6
 from .pricing_views import PricingPlanViewSet, CouponViewSet
 from . import billing_views
 from .user_subscription_views import UserSubscriptionViewSet
@@ -37,37 +37,39 @@ urlpatterns = [
     path('billing/telegram/verify-callback/', billing_views.telegram_verify_callback, name='telegram_verify_callback'),
     
     # ============================================================================
-    # ADMIN ENDPOINTS
+    # ADMIN ENDPOINTS - DEPRECATED (Phase 0.4)
     # ============================================================================
+    # TODO Phase 0.6: Rewrite admin endpoints using Phase 0.5 models
+    # These endpoints are temporarily disabled during Phase 0.5 model migration
     
-    # Dashboard and Analytics
-    path('admin/dashboard/', admin_views.admin_pricing_dashboard, name='admin_dashboard'),
-    path('admin/analytics/', admin_views.subscription_analytics, name='subscription_analytics'),
-    
-    # Enhanced Analytics (Task 1.2)
-    path('admin/analytics/dashboard/', admin_views.subscription_analytics_dashboard, name='analytics_dashboard'),
-    path('admin/performance/metrics/', admin_views.performance_metrics_dashboard, name='performance_metrics'),
-    path('admin/revenue/analytics/', admin_views.revenue_analytics, name='revenue_analytics'),
-    path('admin/revenue/export/', admin_views.export_revenue_report, name='export_revenue_report'),
-    
-    # Subscription Management (Secure)
-    path('admin/subscriptions/', admin_views.subscriptions_list, name='subscriptions_list'),
-    path('admin/subscriptions/<uuid:subscription_id>/', admin_views.subscription_detail, name='subscription_detail'),
-    
-    # Pricing management
-    path('admin/pricing/plans/', admin_views.admin_pricing_plans, name='admin_pricing_plans'),
-    path('admin/pricing/plans/<uuid:plan_id>/', admin_views.admin_pricing_plan_detail, name='admin_pricing_plan_detail'),
-    
-    # Legacy endpoints (to be updated)
-    path('admin/subscriptions/legacy/', admin_views.admin_subscriptions, name='admin_subscriptions_legacy'),
-    path('admin/subscriptions/<uuid:subscription_id>/verify/', admin_views.admin_verify_payment, name='admin_verify_payment'),
-    
-    # Telegram management  
-    path('admin/telegram/queue/', admin_views.admin_telegram_queue, name='admin_telegram_queue'),
-    path('admin/telegram/tasks/<uuid:task_id>/action/', admin_views.admin_telegram_action, name='admin_telegram_action'),
-    
-    # Payment transactions
-    path('admin/transactions/', admin_views.admin_payment_transactions, name='admin_payment_transactions'),
+    # # Dashboard and Analytics
+    # path('admin/dashboard/', admin_views.admin_pricing_dashboard, name='admin_dashboard'),
+    # path('admin/analytics/', admin_views.subscription_analytics, name='subscription_analytics'),
+    # 
+    # # Enhanced Analytics (Task 1.2)
+    # path('admin/analytics/dashboard/', admin_views.subscription_analytics_dashboard, name='analytics_dashboard'),
+    # path('admin/performance/metrics/', admin_views.performance_metrics_dashboard, name='performance_metrics'),
+    # path('admin/revenue/analytics/', admin_views.revenue_analytics, name='revenue_analytics'),
+    # path('admin/revenue/export/', admin_views.export_revenue_report, name='export_revenue_report'),
+    # 
+    # # Subscription Management (Secure)
+    # path('admin/subscriptions/', admin_views.subscriptions_list, name='subscriptions_list'),
+    # path('admin/subscriptions/<uuid:subscription_id>/', admin_views.subscription_detail, name='subscription_detail'),
+    # 
+    # # Pricing management
+    # path('admin/pricing/plans/', admin_views.admin_pricing_plans, name='admin_pricing_plans'),
+    # path('admin/pricing/plans/<uuid:plan_id>/', admin_views.admin_pricing_plan_detail, name='admin_pricing_plan_detail'),
+    # 
+    # # Legacy endpoints (to be updated)
+    # path('admin/subscriptions/legacy/', admin_views.admin_subscriptions, name='admin_subscriptions_legacy'),
+    # path('admin/subscriptions/<uuid:subscription_id>/verify/', admin_views.admin_verify_payment, name='admin_verify_payment'),
+    # 
+    # # Telegram management  
+    # path('admin/telegram/queue/', admin_views.admin_telegram_queue, name='admin_telegram_queue'),
+    # path('admin/telegram/tasks/<uuid:task_id>/action/', admin_views.admin_telegram_action, name='admin_telegram_action'),
+    # 
+    # # Payment transactions
+    # path('admin/transactions/', admin_views.admin_payment_transactions, name='admin_payment_transactions'),
     
     # ============================================================================
     # MENTORSHIP ADMIN ENDPOINTS

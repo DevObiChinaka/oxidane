@@ -2,9 +2,8 @@ from rest_framework import serializers
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from .models import (
-    PricingPlan, SignalSubscription, PaymentTransaction, 
-    TelegramGroupManagement, Coupon,
-    BillingProfile, PaymentMethod, Subscription, Payment
+    SubscriptionPlan, Subscription, Coupon,
+    BillingProfile, PaymentMethod, Payment, TelegramGroup
 )
 
 User = get_user_model()
@@ -97,123 +96,155 @@ class PaymentSerializer(serializers.ModelSerializer):
         ]
 
 class PricingPlanSerializer(serializers.ModelSerializer):
-    current_price = serializers.ReadOnlyField()
-    is_on_promotion = serializers.ReadOnlyField()
-    savings_amount = serializers.ReadOnlyField()
-    active_subscriptions_count = serializers.SerializerMethodField()
-    access_level = serializers.ReadOnlyField(source='get_access_level')
+    """
+    Serializer for SubscriptionPlan model (Phase 0.5)
+    Replaces old PricingPlanSerializer for deprecated PricingPlan model
+    """
+    price_display = serializers.SerializerMethodField()
+    monthly_equivalent = serializers.SerializerMethodField()
+    has_trial = serializers.SerializerMethodField()
+    feature_count = serializers.SerializerMethodField()
+    subscription_count = serializers.SerializerMethodField()
+    revenue_total = serializers.SerializerMethodField()
     
     class Meta:
-        model = PricingPlan
+        model = SubscriptionPlan
         fields = [
-            'id', 'plan_type', 'plan_category', 'billing_cycle', 'name', 'description', 
-            'price', 'currency', 'telegram_groups', 'discount_percentage', 
-            'promotional_price', 'promotion_start', 'promotion_end', 'is_active', 
-            'is_featured', 'sort_order', 'features_list', 'call_to_action', 
-            'current_price', 'is_on_promotion', 'savings_amount', 'access_level',
-            'active_subscriptions_count', 'created_at', 'updated_at'
+            'id', 'name', 'slug', 'description', 'base_price', 'billing_period',
+            'trial_days', 'limits', 'stripe_price_id', 'paystack_plan_code',
+            'is_active', 'is_featured', 'sort_order',
+            'price_display', 'monthly_equivalent', 'has_trial', 'feature_count',
+            'subscription_count', 'revenue_total',
+            'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'slug']
     
-    def get_active_subscriptions_count(self, obj):
+    def get_price_display(self, obj):
+        """Get formatted price with currency"""
+        return f"${obj.base_price:.2f}"
+    
+    def get_monthly_equivalent(self, obj):
+        """Calculate monthly equivalent price for annual/quarterly plans"""
+        if obj.billing_period == 'monthly':
+            return obj.base_price
+        elif obj.billing_period == 'quarterly':
+            return obj.base_price / 3
+        elif obj.billing_period == 'annual':
+            return obj.base_price / 12
+        return obj.base_price
+    
+    def get_has_trial(self, obj):
+        """Check if plan has a trial period"""
+        return obj.trial_days > 0
+    
+    def get_feature_count(self, obj):
+        """Get count of features in this plan"""
+        return obj.features.count()
+    
+    def get_subscription_count(self, obj):
         """Get count of active subscriptions using this plan"""
-        return SignalSubscription.objects.filter(
-            pricing_plan=obj,
-            payment_status='verified',
-            subscription_end__gt=timezone.now()
+        return Subscription.objects.filter(
+            plan=obj,
+            status='active'
         ).count()
     
-    def validate(self, data):
-        """Validate promotion dates"""
-        promotion_start = data.get('promotion_start')
-        promotion_end = data.get('promotion_end')
-        promotional_price = data.get('promotional_price')
-        
-        # If promotional price is set, ensure dates are provided
-        if promotional_price and promotional_price > 0:
-            if not promotion_start or not promotion_end:
-                raise serializers.ValidationError(
-                    "Promotion start and end dates are required when setting promotional price"
-                )
-            
-            if promotion_start >= promotion_end:
-                raise serializers.ValidationError(
-                    "Promotion end date must be after start date"
-                )
-        
-        return data
+    def get_revenue_total(self, obj):
+        """
+        Estimate total revenue from this plan
+        TODO: Calculate from actual Payment transactions (Phase 0.5.17+)
+        """
+        active_subs = self.get_subscription_count(obj)
+        # Estimate: active_subs * base_price
+        return float(active_subs * obj.base_price)
 
-class SignalSubscriptionSerializer(serializers.ModelSerializer):
-    user_email = serializers.CharField(source='user.email', read_only=True)
+class SubscriptionSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Subscription model (Phase 0.5)
+    Replaces old SignalSubscriptionSerializer for deprecated SignalSubscription model
+    """
+    user_email = serializers.CharField(source='billing_profile.user.email', read_only=True)
     user_name = serializers.SerializerMethodField()
-    pricing_plan_name = serializers.CharField(source='pricing_plan.name', read_only=True)
-    is_active = serializers.ReadOnlyField()
-    days_remaining = serializers.ReadOnlyField()
+    plan_name = serializers.CharField(source='plan.name', read_only=True)
+    plan_slug = serializers.CharField(source='plan.slug', read_only=True)
+    telegram_username = serializers.CharField(source='billing_profile.telegram_username', read_only=True)
+    is_active = serializers.SerializerMethodField()
+    days_remaining = serializers.SerializerMethodField()
     
     class Meta:
-        model = SignalSubscription
+        model = Subscription
         fields = [
-            'id', 'user_email', 'user_name', 'plan_type', 'pricing_plan_name',
-            'paystack_reference', 'amount_paid', 'currency', 'payment_status',
-            'payment_verified_at', 'subscription_start', 'subscription_end',
-            'auto_renewal', 'telegram_username', 'telegram_group_name',
-            'telegram_status', 'telegram_added_at', 'admin_notes',
+            'id', 'user_email', 'user_name', 'plan_name', 'plan_slug',
+            'payment_reference', 'status', 'start_date', 'end_date',
+            'auto_renew', 'telegram_username', 'cancel_at_period_end',
             'is_active', 'days_remaining', 'created_at', 'updated_at'
         ]
         read_only_fields = [
-            'id', 'user_email', 'user_name', 'payment_verified_at',
-            'subscription_start', 'subscription_end', 'telegram_added_at',
+            'id', 'user_email', 'user_name', 'start_date', 'end_date',
             'is_active', 'days_remaining', 'created_at', 'updated_at'
         ]
     
     def get_user_name(self, obj):
         """Get user's full name or email"""
-        user = obj.user
+        user = obj.billing_profile.user
         if user.first_name or user.last_name:
             return f"{user.first_name} {user.last_name}".strip()
         return user.email
+    
+    def get_is_active(self, obj):
+        """Check if subscription is currently active"""
+        return (
+            obj.status == 'active' and
+            obj.end_date and
+            timezone.now() <= obj.end_date
+        )
+    
+    def get_days_remaining(self, obj):
+        """Calculate days remaining in subscription"""
+        if obj.end_date and self.get_is_active(obj):
+            return (obj.end_date - timezone.now()).days
+        return 0
 
-class PaymentTransactionSerializer(serializers.ModelSerializer):
-    user_email = serializers.CharField(source='user.email', read_only=True)
-    subscription_plan = serializers.SerializerMethodField()
+
+# DEPRECATED: SignalSubscriptionSerializer - use SubscriptionSerializer instead
+# Keeping as alias for backward compatibility during transition
+SignalSubscriptionSerializer = SubscriptionSerializer
+
+# DEPRECATED: PaymentTransactionSerializer
+# PaymentTransaction model will be recreated in Phase 0.5.17+
+# For now, use Payment model serializer (PaymentSerializer already exists above)
+# class PaymentTransactionSerializer(serializers.ModelSerializer):
+#     """
+#     DEPRECATED - PaymentTransaction model removed in Phase 0.5
+#     Will be recreated with proper structure in Phase 0.5.17+
+#     Use PaymentSerializer for Phase 0.5 Payment model instead
+#     """
+#     pass
+
+
+class TelegramGroupSerializer(serializers.ModelSerializer):
+    """
+    Serializer for TelegramGroup model (Phase 0.5)
+    Replaces old TelegramGroupManagementSerializer for deprecated TelegramGroupManagement model
+    """
+    subscription_count = serializers.SerializerMethodField()
     
     class Meta:
-        model = PaymentTransaction
+        model = TelegramGroup
         fields = [
-            'id', 'user_email', 'transaction_type', 'reference', 'amount',
-            'currency', 'payment_method', 'subscription_plan', 'status',
-            'processed_at', 'created_at'
+            'id', 'name', 'group_id', 'invite_link', 'is_active',
+            'subscription_count', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'user_email', 'created_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
     
-    def get_subscription_plan(self, obj):
-        """Get associated subscription plan details"""
-        if obj.signal_subscription:
-            return {
-                'plan_type': obj.signal_subscription.plan_type,
-                'telegram_username': obj.signal_subscription.telegram_username,
-                'subscription_end': obj.signal_subscription.subscription_end
-            }
-        return None
+    def get_subscription_count(self, obj):
+        """Get count of subscriptions using this telegram group"""
+        # TODO: Add M2M relationship between Subscription and TelegramGroup in Phase 0.5.15+
+        return 0
 
-class TelegramGroupManagementSerializer(serializers.ModelSerializer):
-    user_email = serializers.CharField(source='signal_subscription.user.email', read_only=True)
-    subscription_plan = serializers.CharField(source='signal_subscription.plan_type', read_only=True)
-    subscription_end = serializers.DateTimeField(source='signal_subscription.subscription_end', read_only=True)
-    processed_by_email = serializers.CharField(source='processed_by.email', read_only=True)
-    
-    class Meta:
-        model = TelegramGroupManagement
-        fields = [
-            'id', 'action_type', 'telegram_username', 'telegram_group',
-            'user_email', 'subscription_plan', 'subscription_end',
-            'status', 'admin_notes', 'created_at', 'processed_at',
-            'processed_by_email'
-        ]
-        read_only_fields = [
-            'id', 'user_email', 'subscription_plan', 'subscription_end',
-            'processed_by_email', 'created_at', 'processed_at'
-        ]
+
+# DEPRECATED: TelegramGroupManagementSerializer - use TelegramGroupSerializer instead
+# Keeping as alias for backward compatibility during transition
+TelegramGroupManagementSerializer = TelegramGroupSerializer
 
 # Simplified serializers for dashboard widgets
 class SubscriptionStatsSerializer(serializers.Serializer):
@@ -319,36 +350,54 @@ class CouponApplicationSerializer(serializers.Serializer):
     savings_percentage = serializers.DecimalField(max_digits=5, decimal_places=2, required=False)
 
 
-class EnhancedSignalSubscriptionSerializer(serializers.ModelSerializer):
-    """Enhanced subscription serializer with pricing and coupon info"""
-    user_email = serializers.CharField(source='user.email', read_only=True)
+class EnhancedSubscriptionSerializer(serializers.ModelSerializer):
+    """
+    Enhanced subscription serializer with plan and payment info (Phase 0.5)
+    Replaces old EnhancedSignalSubscriptionSerializer for deprecated SignalSubscription model
+    """
+    user_email = serializers.CharField(source='billing_profile.user.email', read_only=True)
     user_name = serializers.SerializerMethodField()
-    pricing_plan_info = PricingPlanSerializer(source='pricing_plan', read_only=True)
-    coupon_info = CouponSerializer(source='coupon_used', read_only=True)
-    plan_category = serializers.ReadOnlyField()
-    access_level = serializers.ReadOnlyField()
-    telegram_groups = serializers.ReadOnlyField()
-    savings_amount = serializers.ReadOnlyField(source='get_savings')
+    plan_info = PricingPlanSerializer(source='plan', read_only=True)
+    telegram_username = serializers.CharField(source='billing_profile.telegram_username', read_only=True)
+    is_active = serializers.SerializerMethodField()
+    days_remaining = serializers.SerializerMethodField()
     
     class Meta:
-        model = SignalSubscription
+        model = Subscription
         fields = [
-            'id', 'user_email', 'user_name', 'plan_type', 'pricing_plan_info',
-            'plan_category', 'access_level', 'telegram_groups', 'paystack_reference',
-            'amount_paid', 'original_amount', 'discount_amount', 'savings_amount',
-            'currency', 'payment_status', 'payment_verified_at', 'subscription_start',
-            'subscription_end', 'auto_renewal', 'telegram_username', 'telegram_status',
-            'telegram_added_at', 'coupon_info', 'admin_notes', 'is_active',
-            'days_remaining', 'created_at', 'updated_at'
+            'id', 'user_email', 'user_name', 'plan_info', 'payment_reference',
+            'status', 'start_date', 'end_date', 'auto_renew', 'telegram_username',
+            'cancel_at_period_end', 'is_active', 'days_remaining',
+            'created_at', 'updated_at'
         ]
         read_only_fields = [
-            'id', 'user_email', 'user_name', 'paystack_reference', 'payment_verified_at',
-            'telegram_added_at', 'is_active', 'days_remaining', 'created_at', 'updated_at'
+            'id', 'user_email', 'user_name', 'payment_reference',
+            'is_active', 'days_remaining', 'created_at', 'updated_at'
         ]
     
     def get_user_name(self, obj):
         """Get user full name"""
-        return f"{obj.user.first_name} {obj.user.last_name}".strip() or obj.user.email
+        user = obj.billing_profile.user
+        return f"{user.first_name} {user.last_name}".strip() or user.email
+    
+    def get_is_active(self, obj):
+        """Check if subscription is currently active"""
+        return (
+            obj.status == 'active' and
+            obj.end_date and
+            timezone.now() <= obj.end_date
+        )
+    
+    def get_days_remaining(self, obj):
+        """Calculate days remaining in subscription"""
+        if obj.end_date and self.get_is_active(obj):
+            return (obj.end_date - timezone.now()).days
+        return 0
+
+
+# DEPRECATED: EnhancedSignalSubscriptionSerializer - use EnhancedSubscriptionSerializer instead
+# Keeping as alias for backward compatibility during transition
+EnhancedSignalSubscriptionSerializer = EnhancedSubscriptionSerializer
 
 class PricingStructureSerializer(serializers.Serializer):
     """Serializer for complete pricing structure"""

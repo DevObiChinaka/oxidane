@@ -19,7 +19,6 @@ import logging
 from .models import EmailTemplate, EmailLog, User
 from .email_service import EmailTemplateService
 from .admin_auth import admin_required
-from subscriptions.models import SignalSubscription
 
 logger = logging.getLogger(__name__)
 

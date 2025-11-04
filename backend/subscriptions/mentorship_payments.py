@@ -12,11 +12,12 @@ import hmac
 from decimal import Decimal
 import uuid
 
-from .models import PricingPlan, SignalSubscription
+from .models import SubscriptionPlan, Subscription
 from users.models import User
 from django.conf import settings
 
-# Note: Mentorship is now handled through SignalSubscription with plan_type='mentorship'
+# Note: Mentorship is now handled through regular Subscription model (Phase 0.5)
+# with a SubscriptionPlan that has mentorship features
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -44,10 +45,17 @@ def initiate_mentorship_payment(request):
             }, status=404)
         
         # Check if user already purchased mentorship
-        existing_purchase = SignalSubscription.objects.filter(
+        # Get billing profile first
+        from .models import BillingProfile
+        billing_profile, _ = BillingProfile.objects.get_or_create(
             user=user,
-            plan_type='mentorship',
-            payment_status='verified'
+            defaults={'currency_preference': 'USD'}
+        )
+        
+        existing_purchase = Subscription.objects.filter(
+            billing_profile=billing_profile,
+            plan__slug__icontains='mentorship',
+            status='active'
         ).first()
         
         if existing_purchase:
@@ -58,8 +66,19 @@ def initiate_mentorship_payment(request):
         
         # Get mentorship pricing plan
         try:
-            plan = PricingPlan.objects.get(plan_type='mentorship', is_active=True)
-        except PricingPlan.DoesNotExist:
+            # Look for a mentorship plan (by slug or name containing "mentorship")
+            plan = SubscriptionPlan.objects.filter(
+                slug__icontains='mentorship',
+                is_active=True
+            ).first()
+            if not plan:
+                plan = SubscriptionPlan.objects.filter(
+                    name__icontains='mentorship',
+                    is_active=True
+                ).first()
+            if not plan:
+                raise SubscriptionPlan.DoesNotExist
+        except SubscriptionPlan.DoesNotExist:
             return JsonResponse({
                 'success': False,
                 'error': 'Mentorship program not available'
@@ -68,18 +87,20 @@ def initiate_mentorship_payment(request):
         # Generate unique payment reference
         reference = f"MENTOR_{uuid.uuid4().hex[:12].upper()}"
         
-        # Create subscription record (using SignalSubscription model)
-        subscription = SignalSubscription.objects.create(
-            user=user,
-            plan_type='mentorship',
-            pricing_plan=plan,
-            paystack_reference=reference,
-            amount_paid=plan.current_price,
-            currency=plan.currency,
+        # Create subscription record
+        # Calculate subscription end date (lifetime = 100 years from now)
+        from datetime import timedelta
+        subscription_end = timezone.now() + timedelta(days=36500)  # 100 years
+        
+        subscription = Subscription.objects.create(
+            billing_profile=billing_profile,
+            plan=plan,
+            payment_reference=reference,
+            start_date=timezone.now(),
+            end_date=subscription_end,
+            status='pending_payment',
             telegram_username=data['telegram_username'],
-            payment_status='pending',
-            subscription_start=timezone.now()
-            # No subscription_end - lifetime access
+            auto_renew=False  # Lifetime subscription doesn't renew
         )
         
         # Prepare Paystack payment data
@@ -180,17 +201,17 @@ def paystack_mentorship_webhook(request):
             payment_data = data['data']
             reference = payment_data['reference']
             
-            # Find mentorship purchase (in SignalSubscription with plan_type='mentorship')
+            # Find mentorship purchase
             try:
-                subscription = SignalSubscription.objects.get(
-                    paystack_reference=reference,
-                    plan_type='mentorship'
+                subscription = Subscription.objects.get(
+                    payment_reference=reference,
+                    plan__slug__icontains='mentorship'
                 )
-            except SignalSubscription.DoesNotExist:
+            except Subscription.DoesNotExist:
                 return JsonResponse({'error': 'Subscription not found'}, status=404)
             
             # Verify payment amount
-            expected_amount = int(subscription.amount_paid * 100)  # Convert to kobo/cents
+            expected_amount = int(subscription.plan.base_price * 100)  # Convert to kobo/cents
             paid_amount = payment_data['amount']
             
             if paid_amount != expected_amount:
@@ -240,11 +261,11 @@ def verify_mentorship_payment(request):
         
         # Find subscription
         try:
-            subscription = SignalSubscription.objects.get(
-                paystack_reference=reference,
-                plan_type='mentorship'
+            subscription = Subscription.objects.get(
+                payment_reference=reference,
+                plan__slug__icontains='mentorship'
             )
-        except SignalSubscription.DoesNotExist:
+        except Subscription.DoesNotExist:
             return JsonResponse({
                 'success': False,
                 'error': 'Subscription not found'
@@ -306,26 +327,29 @@ def get_mentorship_plans(request):
     """Get available mentorship plans"""
     try:
         # Get mentorship pricing plan (there should only be one)
-        plans = PricingPlan.objects.filter(
+        plans = SubscriptionPlan.objects.filter(
             is_active=True, 
-            plan_type='mentorship'
-        ).order_by('sort_order', 'price')
+            slug__icontains='mentorship'
+        ).order_by('sort_order', 'base_price')
         
         plan_data = []
         for plan in plans:
+            # Get features list
+            features_list = [
+                {'name': f.name, 'description': f.description}
+                for f in plan.features.filter(is_active=True)
+            ]
+            
             plan_data.append({
                 'id': str(plan.id),
-                'plan_type': plan.plan_type,
+                'slug': plan.slug,
                 'name': plan.name,
                 'description': plan.description,
-                'price': float(plan.price),
-                'currency': plan.currency,
-                'features_list': plan.features_list or [],
-                'gives_course_access': plan.gives_course_access,
-                'gives_signals_access': plan.gives_signals_access,
-                'telegram_group_key': plan.telegram_group_key or '',
-                'billing_cycle': plan.billing_cycle,
-                'duration_days': plan.duration_days,  # null for lifetime
+                'price': float(plan.base_price),
+                'currency': 'USD',  # Phase 0.5 uses USD with multi-currency conversion
+                'features_list': features_list,
+                'billing_period': plan.billing_period,
+                'trial_days': plan.trial_days,
                 'is_featured': plan.is_featured
             })
         
@@ -363,11 +387,17 @@ def get_user_mentorship_status(request):
             }, status=404)
         
         # Check for verified mentorship purchase (lifetime access)
-        active_subscription = SignalSubscription.objects.filter(
-            user=user,
-            plan_type='mentorship',
-            payment_status='verified'
-        ).first()
+        # Get billing profile first
+        from .models import BillingProfile
+        billing_profile = BillingProfile.objects.filter(user=user).first()
+        
+        active_subscription = None
+        if billing_profile:
+            active_subscription = Subscription.objects.filter(
+                billing_profile=billing_profile,
+                plan__slug__icontains='mentorship',
+                status='active'
+            ).first()
         
         if active_subscription:
             return JsonResponse({

@@ -9,7 +9,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
 from .models import Course, Lesson, CourseAccess, CourseProgress, LessonProgress
-from subscriptions.models import SignalSubscription
+from subscriptions.models import Subscription
 from users.models import User
 import json
 
@@ -17,13 +17,13 @@ import json
 def check_mentorship_access(user):
     """Check if user has active mentorship subscription"""
     try:
-        subscription = SignalSubscription.objects.filter(
-            user=user,
-            plan_type='mentorship_basic',
-            payment_status='verified'
+        subscription = Subscription.objects.filter(
+            billing_profile__user=user,
+            plan__plan_type='mentorship',
+            status='active'
         ).first()
         
-        if subscription and subscription.is_active:
+        if subscription and subscription.is_active():
             return True
         return False
     except Exception as e:

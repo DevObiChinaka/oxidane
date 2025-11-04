@@ -487,3 +487,126 @@ class TestTelegramConfigurationEdgeCases:
         
         assert new_config.bot_token != old_token
         assert TelegramConfiguration.objects.count() == 1
+
+
+# ============================================================================
+# TEST CLASS: Encryption Methods (Task 0.5.13)
+# ============================================================================
+
+@pytest.mark.django_db
+class TestTelegramConfigurationEncryption:
+    """Test encryption methods for sensitive fields."""
+
+    def test_encrypt_field_bot_token(self):
+        """Test encrypting bot token."""
+        config = TelegramConfiguration.get_instance()
+        config.bot_token = '123456789:ABCdefGHIjklMNOpqrsTUVwxyz'
+        config.save()
+        
+        # Encrypt the field
+        config.encrypt_field('bot_token')
+        
+        # Reload from database
+        config.refresh_from_db()
+        
+        # Field should be encrypted (starts with gAAAAA)
+        assert config.bot_token.startswith('gAAAAA')
+        assert 'ABCdefGHI' not in config.bot_token
+    
+    def test_decrypt_field_bot_token(self):
+        """Test decrypting bot token."""
+        config = TelegramConfiguration.get_instance()
+        original_token = '123456789:ABCdefGHIjklMNOpqrsTUVwxyz'
+        config.bot_token = original_token
+        config.save()
+        
+        # Encrypt then decrypt
+        config.encrypt_field('bot_token')
+        decrypted = config.decrypt_field('bot_token')
+        
+        assert decrypted == original_token
+    
+    def test_encrypt_field_invalid_field_raises_error(self):
+        """Test encrypting invalid field raises ValueError."""
+        config = TelegramConfiguration.get_instance()
+        
+        with pytest.raises(ValueError) as exc_info:
+            config.encrypt_field('bot_username')  # Not encryptable
+        
+        assert 'not encryptable' in str(exc_info.value)
+    
+    def test_decrypt_field_invalid_field_raises_error(self):
+        """Test decrypting invalid field raises ValueError."""
+        config = TelegramConfiguration.get_instance()
+        
+        with pytest.raises(ValueError) as exc_info:
+            config.decrypt_field('welcome_message')  # Not encryptable
+        
+        assert 'not encryptable' in str(exc_info.value)
+    
+    def test_encrypt_field_empty_value_does_nothing(self):
+        """Test encrypting empty field does nothing."""
+        config = TelegramConfiguration.get_instance()
+        config.bot_token = ''
+        config.save()
+        
+        # Should not raise error
+        config.encrypt_field('bot_token')
+        
+        assert config.bot_token == ''
+    
+    def test_decrypt_field_empty_value_returns_empty_string(self):
+        """Test decrypting empty field returns empty string."""
+        config = TelegramConfiguration.get_instance()
+        config.bot_token = ''
+        config.save()
+        
+        decrypted = config.decrypt_field('bot_token')
+        
+        assert decrypted == ""
+    
+    def test_encrypt_field_already_encrypted_skips(self):
+        """Test encrypting already encrypted field skips re-encryption."""
+        config = TelegramConfiguration.get_instance()
+        config.bot_token = '123456789:ABCdefGHI'
+        config.save()
+        
+        # Encrypt once
+        config.encrypt_field('bot_token')
+        encrypted_value = config.bot_token
+        
+        # Encrypt again (should skip)
+        config.encrypt_field('bot_token')
+        
+        # Value should not change
+        assert config.bot_token == encrypted_value
+    
+    def test_decrypt_field_plaintext_returns_as_is(self):
+        """Test decrypting plaintext field returns it as-is."""
+        config = TelegramConfiguration.get_instance()
+        plaintext = '123456789:ABCdefGHI'
+        config.bot_token = plaintext
+        config.save()
+        
+        # Decrypt without encrypting first
+        decrypted = config.decrypt_field('bot_token')
+        
+        # Should return plaintext as-is
+        assert decrypted == plaintext
+    
+    def test_encrypted_token_still_masks_correctly(self):
+        """Test that get_masked_token works with encrypted values."""
+        config = TelegramConfiguration.get_instance()
+        config.bot_token = '123456789:ABCdefGHI'
+        config.save()
+        
+        # Encrypt the token
+        config.encrypt_field('bot_token')
+        
+        # get_masked_token should handle encrypted value
+        # (it should decrypt internally or return a mask)
+        masked = config.get_masked_token()
+        
+        # Should return some masked value (not reveal plaintext)
+        assert masked != '123456789:ABCdefGHI'
+        assert '***' in masked or 'gAAAAA' in masked

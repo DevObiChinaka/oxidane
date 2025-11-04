@@ -12,7 +12,7 @@ from django.utils import timezone
 from datetime import timedelta
 import json
 
-from subscriptions.models import SignalSubscription
+from subscriptions.models import Subscription
 from courses.models import Course
 from .permissions import IsAdmin
 
@@ -359,9 +359,9 @@ def users_analytics(request):
         new_users_7d = User.objects.filter(created_at__gte=last_7_days).count()
         
         # Active subscriptions
-        active_signal_subs = SignalSubscription.objects.filter(
-            payment_status='verified',
-            subscription_end__gt=now
+        active_signal_subs = Subscription.objects.filter(
+            status='active',
+            end_date__gt=now
         ).count()
         
         # Recent activity

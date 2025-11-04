@@ -818,3 +818,109 @@ TOTAL: 50 TESTS
 ===============
 All categories comprehensive, following TDD best practices.
 """
+
+
+# ============================================================================
+# CATEGORY 8: ENCRYPTION METHODS (Task 0.5.13) (8 tests)
+# ============================================================================
+
+@pytest.mark.django_db
+class TestEmailConfigurationEncryption:
+    """Test encryption methods for sensitive fields."""
+
+    def test_encrypt_field_smtp_password(self):
+        """Test encrypting SMTP password."""
+        config = EmailConfiguration.get_instance()
+        config.smtp_password = 'mypassword123'
+        config.save()
+        
+        # Encrypt the field
+        config.encrypt_field('smtp_password')
+        
+        # Reload from database
+        config.refresh_from_db()
+        
+        # Field should be encrypted (starts with gAAAAA)
+        assert config.smtp_password.startswith('gAAAAA')
+        assert 'mypassword123' not in config.smtp_password
+    
+    def test_decrypt_field_smtp_password(self):
+        """Test decrypting SMTP password."""
+        config = EmailConfiguration.get_instance()
+        original_password = 'mypassword123'
+        config.smtp_password = original_password
+        config.save()
+        
+        # Encrypt then decrypt
+        config.encrypt_field('smtp_password')
+        decrypted = config.decrypt_field('smtp_password')
+        
+        assert decrypted == original_password
+    
+    def test_encrypt_field_invalid_field_raises_error(self):
+        """Test encrypting invalid field raises ValueError."""
+        config = EmailConfiguration.get_instance()
+        
+        with pytest.raises(ValueError) as exc_info:
+            config.encrypt_field('smtp_host')  # Not encryptable
+        
+        assert 'not encryptable' in str(exc_info.value)
+    
+    def test_decrypt_field_invalid_field_raises_error(self):
+        """Test decrypting invalid field raises ValueError."""
+        config = EmailConfiguration.get_instance()
+        
+        with pytest.raises(ValueError) as exc_info:
+            config.decrypt_field('from_email')  # Not encryptable
+        
+        assert 'not encryptable' in str(exc_info.value)
+    
+    def test_encrypt_field_empty_value_does_nothing(self):
+        """Test encrypting empty field does nothing."""
+        config = EmailConfiguration.get_instance()
+        config.smtp_password = ''
+        config.save()
+        
+        # Should not raise error
+        config.encrypt_field('smtp_password')
+        
+        assert config.smtp_password == ''
+    
+    def test_decrypt_field_empty_value_returns_empty_string(self):
+        """Test decrypting empty field returns empty string."""
+        config = EmailConfiguration.get_instance()
+        config.smtp_password = ''
+        config.save()
+        
+        decrypted = config.decrypt_field('smtp_password')
+        
+        assert decrypted == ""
+    
+    def test_encrypt_field_already_encrypted_skips(self):
+        """Test encrypting already encrypted field skips re-encryption."""
+        config = EmailConfiguration.get_instance()
+        config.smtp_password = 'mypassword123'
+        config.save()
+        
+        # Encrypt once
+        config.encrypt_field('smtp_password')
+        encrypted_value = config.smtp_password
+        
+        # Encrypt again (should skip)
+        config.encrypt_field('smtp_password')
+        
+        # Value should not change
+        assert config.smtp_password == encrypted_value
+    
+    def test_decrypt_field_plaintext_returns_as_is(self):
+        """Test decrypting plaintext field returns it as-is."""
+        config = EmailConfiguration.get_instance()
+        plaintext = 'mypassword123'
+        config.smtp_password = plaintext
+        config.save()
+        
+        # Decrypt without encrypting first
+        decrypted = config.decrypt_field('smtp_password')
+        
+        # Should return plaintext as-is
+        assert decrypted == plaintext
