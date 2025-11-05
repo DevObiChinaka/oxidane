@@ -3,7 +3,8 @@ from django.utils import timezone
 from django.contrib.auth import get_user_model
 from .models import (
     SubscriptionPlan, Subscription, Coupon, Feature, Referral, ReferralCode,
-    BillingProfile, PaymentMethod, Payment, TelegramGroup, TelegramConfiguration
+    BillingProfile, PaymentMethod, Payment, TelegramGroup, TelegramConfiguration,
+    PaymentConfiguration
 )
 
 User = get_user_model()
@@ -1290,3 +1291,354 @@ class TelegramGroupSerializer(serializers.ModelSerializer):
             instance.associated_plans.set(plans)
         
         return instance
+
+
+# ============================================================================
+# PAYMENT CONFIGURATION SERIALIZER (Task 0.5.29)
+# ============================================================================
+
+class PaymentConfigurationSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Payment Configuration singleton with Paystack/Stripe settings.
+    
+    Features:
+    - Write-only encrypted keys (never expose in responses)
+    - Masked key display for security
+    - Computed fields (is_configured, is_healthy, provider_status)
+    - Singleton pattern handling
+    - Multi-currency support
+    
+    Phase 0.5, Task 0.5.29
+    """
+    
+    # Write-only fields for setting keys (will be encrypted)
+    paystack_public_key_write = serializers.CharField(
+        write_only=True,
+        required=False,
+        allow_blank=True,
+        help_text='Paystack public key (pk_test_... or pk_live_...)'
+    )
+    paystack_secret_key_write = serializers.CharField(
+        write_only=True,
+        required=False,
+        allow_blank=True,
+        help_text='Paystack secret key (sk_test_... or sk_live_...)'
+    )
+    paystack_webhook_secret_write = serializers.CharField(
+        write_only=True,
+        required=False,
+        allow_blank=True,
+        help_text='Paystack webhook secret'
+    )
+    stripe_publishable_key_write = serializers.CharField(
+        write_only=True,
+        required=False,
+        allow_blank=True,
+        help_text='Stripe publishable key (pk_test_... or pk_live_...)'
+    )
+    stripe_secret_key_write = serializers.CharField(
+        write_only=True,
+        required=False,
+        allow_blank=True,
+        help_text='Stripe secret key (sk_test_... or sk_live_...)'
+    )
+    stripe_webhook_secret_write = serializers.CharField(
+        write_only=True,
+        required=False,
+        allow_blank=True,
+        help_text='Stripe webhook secret (whsec_...)'
+    )
+    
+    # Read-only masked keys (for display)
+    paystack_public_key_masked = serializers.SerializerMethodField()
+    paystack_secret_key_masked = serializers.SerializerMethodField()
+    paystack_webhook_secret_masked = serializers.SerializerMethodField()
+    stripe_publishable_key_masked = serializers.SerializerMethodField()
+    stripe_secret_key_masked = serializers.SerializerMethodField()
+    stripe_webhook_secret_masked = serializers.SerializerMethodField()
+    
+    # Computed fields
+    is_paystack_configured = serializers.SerializerMethodField()
+    is_stripe_configured = serializers.SerializerMethodField()
+    has_any_provider = serializers.SerializerMethodField()
+    provider_status = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = PaymentConfiguration
+        fields = [
+            # IDs and timestamps
+            'id', 'created_at', 'updated_at',
+            
+            # Write-only keys (for setting)
+            'paystack_public_key_write', 'paystack_secret_key_write', 'paystack_webhook_secret_write',
+            'stripe_publishable_key_write', 'stripe_secret_key_write', 'stripe_webhook_secret_write',
+            
+            # Read-only masked keys (for display)
+            'paystack_public_key_masked', 'paystack_secret_key_masked', 'paystack_webhook_secret_masked',
+            'stripe_publishable_key_masked', 'stripe_secret_key_masked', 'stripe_webhook_secret_masked',
+            
+            # Webhook URLs
+            'paystack_webhook_url', 'stripe_webhook_url',
+            
+            # Provider settings
+            'paystack_enabled', 'stripe_enabled', 'primary_provider', 'is_test_mode',
+            
+            # Currency settings
+            'supported_currencies',
+            
+            # Computed fields
+            'is_paystack_configured', 'is_stripe_configured', 'has_any_provider', 'provider_status',
+        ]
+        read_only_fields = [
+            'id', 'created_at', 'updated_at',
+            'paystack_public_key_masked', 'paystack_secret_key_masked', 'paystack_webhook_secret_masked',
+            'stripe_publishable_key_masked', 'stripe_secret_key_masked', 'stripe_webhook_secret_masked',
+            'is_paystack_configured', 'is_stripe_configured', 'has_any_provider', 'provider_status',
+        ]
+    
+    # ============================================================================
+    # MASKED KEY METHODS
+    # ============================================================================
+    
+    def get_paystack_public_key_masked(self, obj):
+        """Return masked Paystack public key."""
+        return obj.get_masked_paystack_public_key()
+    
+    def get_paystack_secret_key_masked(self, obj):
+        """Return masked Paystack secret key."""
+        return obj.get_masked_paystack_secret_key()
+    
+    def get_paystack_webhook_secret_masked(self, obj):
+        """Return masked Paystack webhook secret."""
+        return obj._mask_key(obj.paystack_webhook_secret)
+    
+    def get_stripe_publishable_key_masked(self, obj):
+        """Return masked Stripe publishable key."""
+        return obj.get_masked_stripe_publishable_key()
+    
+    def get_stripe_secret_key_masked(self, obj):
+        """Return masked Stripe secret key."""
+        return obj.get_masked_stripe_secret_key()
+    
+    def get_stripe_webhook_secret_masked(self, obj):
+        """Return masked Stripe webhook secret."""
+        return obj._mask_key(obj.stripe_webhook_secret)
+    
+    # ============================================================================
+    # COMPUTED FIELD METHODS
+    # ============================================================================
+    
+    def get_is_paystack_configured(self, obj):
+        """Check if Paystack is configured."""
+        return obj.is_paystack_configured()
+    
+    def get_is_stripe_configured(self, obj):
+        """Check if Stripe is configured."""
+        return obj.is_stripe_configured()
+    
+    def get_has_any_provider(self, obj):
+        """Check if any provider is configured."""
+        return obj.has_any_provider_configured()
+    
+    def get_provider_status(self, obj):
+        """Get status of all providers."""
+        return {
+            'paystack': {
+                'enabled': obj.paystack_enabled,
+                'configured': obj.is_paystack_configured(),
+                'is_primary': obj.primary_provider == 'paystack',
+            },
+            'stripe': {
+                'enabled': obj.stripe_enabled,
+                'configured': obj.is_stripe_configured(),
+                'is_primary': obj.primary_provider == 'stripe',
+            },
+            'has_active_provider': (
+                (obj.paystack_enabled and obj.is_paystack_configured()) or
+                (obj.stripe_enabled and obj.is_stripe_configured())
+            ),
+        }
+    
+    # ============================================================================
+    # VALIDATION METHODS
+    # ============================================================================
+    
+    def validate_paystack_public_key_write(self, value):
+        """Validate Paystack public key format."""
+        if value and not value.startswith('pk_'):
+            raise serializers.ValidationError(
+                'Paystack public key must start with "pk_"'
+            )
+        return value
+    
+    def validate_paystack_secret_key_write(self, value):
+        """Validate Paystack secret key format."""
+        if value and not value.startswith('sk_'):
+            raise serializers.ValidationError(
+                'Paystack secret key must start with "sk_"'
+            )
+        return value
+    
+    def validate_stripe_publishable_key_write(self, value):
+        """Validate Stripe publishable key format."""
+        if value and not value.startswith('pk_'):
+            raise serializers.ValidationError(
+                'Stripe publishable key must start with "pk_"'
+            )
+        return value
+    
+    def validate_stripe_secret_key_write(self, value):
+        """Validate Stripe secret key format."""
+        if value and not value.startswith('sk_'):
+            raise serializers.ValidationError(
+                'Stripe secret key must start with "sk_"'
+            )
+        return value
+    
+    def validate_stripe_webhook_secret_write(self, value):
+        """Validate Stripe webhook secret format."""
+        if value and not value.startswith('whsec_'):
+            raise serializers.ValidationError(
+                'Stripe webhook secret must start with "whsec_"'
+            )
+        return value
+    
+    def validate_supported_currencies(self, value):
+        """Validate currency codes."""
+        if value:
+            for currency in value:
+                if not isinstance(currency, str) or len(currency) != 3 or not currency.isupper():
+                    raise serializers.ValidationError(
+                        f'Invalid currency code: {currency}. Must be 3 uppercase letters (e.g., "NGN", "USD")'
+                    )
+        return value
+    
+    def validate(self, attrs):
+        """Cross-field validation."""
+        # If primary_provider is set, ensure that provider is enabled and configured
+        primary_provider = attrs.get('primary_provider', getattr(self.instance, 'primary_provider', 'paystack'))
+        
+        # Check if we're updating keys for the primary provider
+        if primary_provider == 'paystack':
+            paystack_public_key = attrs.get('paystack_public_key_write') or (
+                self.instance.paystack_public_key if self.instance else None
+            )
+            paystack_secret_key = attrs.get('paystack_secret_key_write') or (
+                self.instance.paystack_secret_key if self.instance else None
+            )
+            
+            if not (paystack_public_key and paystack_secret_key):
+                # Warn but don't fail - they might configure it later
+                pass
+        
+        elif primary_provider == 'stripe':
+            stripe_publishable_key = attrs.get('stripe_publishable_key_write') or (
+                self.instance.stripe_publishable_key if self.instance else None
+            )
+            stripe_secret_key = attrs.get('stripe_secret_key_write') or (
+                self.instance.stripe_secret_key if self.instance else None
+            )
+            
+            if not (stripe_publishable_key and stripe_secret_key):
+                # Warn but don't fail
+                pass
+        
+        return attrs
+    
+    # ============================================================================
+    # CREATE/UPDATE METHODS
+    # ============================================================================
+    
+    def create(self, validated_data):
+        """
+        Create or update the singleton instance.
+        Extract write-only key fields and encrypt them.
+        """
+        # Extract write-only fields
+        paystack_public_key = validated_data.pop('paystack_public_key_write', None)
+        paystack_secret_key = validated_data.pop('paystack_secret_key_write', None)
+        paystack_webhook_secret = validated_data.pop('paystack_webhook_secret_write', None)
+        stripe_publishable_key = validated_data.pop('stripe_publishable_key_write', None)
+        stripe_secret_key = validated_data.pop('stripe_secret_key_write', None)
+        stripe_webhook_secret = validated_data.pop('stripe_webhook_secret_write', None)
+        
+        # Get or create singleton instance
+        instance = PaymentConfiguration.get_instance()
+        
+        # Update non-key fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        
+        # Update keys if provided
+        if paystack_public_key is not None:
+            instance.paystack_public_key = paystack_public_key
+        if paystack_secret_key is not None:
+            instance.paystack_secret_key = paystack_secret_key
+        if paystack_webhook_secret is not None:
+            instance.paystack_webhook_secret = paystack_webhook_secret
+        if stripe_publishable_key is not None:
+            instance.stripe_publishable_key = stripe_publishable_key
+        if stripe_secret_key is not None:
+            instance.stripe_secret_key = stripe_secret_key
+        if stripe_webhook_secret is not None:
+            instance.stripe_webhook_secret = stripe_webhook_secret
+        
+        instance.save()
+        
+        # Encrypt sensitive fields
+        if paystack_secret_key:
+            instance.encrypt_field('paystack_secret_key')
+        if paystack_webhook_secret:
+            instance.encrypt_field('paystack_webhook_secret')
+        if stripe_secret_key:
+            instance.encrypt_field('stripe_secret_key')
+        if stripe_webhook_secret:
+            instance.encrypt_field('stripe_webhook_secret')
+        
+        return instance
+    
+    def update(self, instance, validated_data):
+        """
+        Update the singleton instance.
+        Extract write-only key fields and encrypt them.
+        """
+        # Extract write-only fields
+        paystack_public_key = validated_data.pop('paystack_public_key_write', None)
+        paystack_secret_key = validated_data.pop('paystack_secret_key_write', None)
+        paystack_webhook_secret = validated_data.pop('paystack_webhook_secret_write', None)
+        stripe_publishable_key = validated_data.pop('stripe_publishable_key_write', None)
+        stripe_secret_key = validated_data.pop('stripe_secret_key_write', None)
+        stripe_webhook_secret = validated_data.pop('stripe_webhook_secret_write', None)
+        
+        # Update non-key fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        
+        # Update keys if provided (set plaintext values)
+        if paystack_public_key is not None:
+            instance.paystack_public_key = paystack_public_key
+        if paystack_secret_key is not None:
+            instance.paystack_secret_key = paystack_secret_key
+        if paystack_webhook_secret is not None:
+            instance.paystack_webhook_secret = paystack_webhook_secret
+        if stripe_publishable_key is not None:
+            instance.stripe_publishable_key = stripe_publishable_key
+        if stripe_secret_key is not None:
+            instance.stripe_secret_key = stripe_secret_key
+        if stripe_webhook_secret is not None:
+            instance.stripe_webhook_secret = stripe_webhook_secret
+        
+        # Encrypt sensitive fields BEFORE saving to avoid validation errors
+        if paystack_secret_key:
+            instance.encrypt_field('paystack_secret_key')
+        if paystack_webhook_secret:
+            instance.encrypt_field('paystack_webhook_secret')
+        if stripe_secret_key:
+            instance.encrypt_field('stripe_secret_key')
+        if stripe_webhook_secret:
+            instance.encrypt_field('stripe_webhook_secret')
+        
+        instance.save()
+        
+        return instance
+

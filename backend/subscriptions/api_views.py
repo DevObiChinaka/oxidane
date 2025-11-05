@@ -19,8 +19,8 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
 from django.db.models import Q, Count, Sum
 
-from .models import Subscription, SubscriptionPlan, BillingProfile, Feature, Coupon, ReferralCode, Referral, ReferralCredit, TelegramConfiguration, TelegramGroup
-from .serializers import SubscriptionSerializer, PricingPlanSerializer, FeatureSerializer, CouponSerializer, ReferralCodeSerializer, TelegramConfigurationSerializer, TelegramGroupSerializer
+from .models import Subscription, SubscriptionPlan, BillingProfile, Feature, Coupon, ReferralCode, Referral, ReferralCredit, TelegramConfiguration, TelegramGroup, PaymentConfiguration
+from .serializers import SubscriptionSerializer, PricingPlanSerializer, FeatureSerializer, CouponSerializer, ReferralCodeSerializer, TelegramConfigurationSerializer, TelegramGroupSerializer, PaymentConfigurationSerializer
 from .permissions import CanManageSubscription, IsAdmin
 
 
@@ -1874,6 +1874,282 @@ class TelegramGroupViewSet(viewsets.ModelViewSet):
                 'message': 'Connection timeout. Please check your internet connection and try again.'
             }, status=status.HTTP_408_REQUEST_TIMEOUT)
         except requests.exceptions.RequestException as e:
+            return Response({
+                'success': False,
+                'message': f'Network error: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                'success': False,
+                'message': f'Unexpected error: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ============================================================================
+# PAYMENT CONFIGURATION API (Task 0.5.29)
+# ============================================================================
+
+class PaymentConfigurationViewSet(viewsets.ModelViewSet):
+    """
+    Admin-only API for managing Payment Configuration (singleton).
+    
+    Supports Paystack and Stripe payment providers with encrypted API keys.
+    
+    **Endpoints:**
+    - GET /api/admin/payment/config/ - List (returns singleton as list)
+    - GET /api/admin/payment/config/{id}/ - Retrieve config details
+    - POST /api/admin/payment/config/ - Create/update config
+    - PUT /api/admin/payment/config/{id}/ - Full update
+    - PATCH /api/admin/payment/config/{id}/ - Partial update
+    - POST /api/admin/payment/config/{id}/test-paystack/ - Test Paystack connection
+    - POST /api/admin/payment/config/{id}/test-stripe/ - Test Stripe connection
+    
+    **Permissions:** Admin only (IsAuthenticated + IsAdmin)
+    
+    **Features:**
+    - Singleton pattern (only one instance exists)
+    - Encrypted sensitive keys (secret keys, webhook secrets)
+    - Masked key display (never expose raw keys)
+    - Provider configuration (Paystack/Stripe)
+    - Multi-currency support
+    - Test connection actions for both providers
+    
+    Phase 0.5, Task 0.5.29
+    """
+    serializer_class = PaymentConfigurationSerializer
+    permission_classes = [IsAuthenticated, IsAdmin]
+    queryset = PaymentConfiguration.objects.all()
+    http_method_names = ['get', 'post', 'put', 'patch', 'head', 'options']  # No DELETE for singleton
+    
+    def get_queryset(self):
+        """Return singleton instance as queryset."""
+        # Always return the singleton instance
+        instance = PaymentConfiguration.get_instance()
+        return PaymentConfiguration.objects.filter(pk=instance.pk)
+    
+    def list(self, request, *args, **kwargs):
+        """List returns the singleton instance as a single-item list."""
+        instance = PaymentConfiguration.get_instance()
+        serializer = self.get_serializer(instance)
+        return Response([serializer.data])
+    
+    def retrieve(self, request, *args, **kwargs):
+        """Retrieve the singleton instance."""
+        instance = PaymentConfiguration.get_instance()
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+    
+    def create(self, request, *args, **kwargs):
+        """
+        Create/update the singleton instance.
+        Acts like update since only one instance can exist.
+        """
+        instance = PaymentConfiguration.get_instance()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    def update(self, request, *args, **kwargs):
+        """Full update of the singleton instance."""
+        instance = PaymentConfiguration.get_instance()
+        serializer = self.get_serializer(instance, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+    
+    def partial_update(self, request, *args, **kwargs):
+        """Partial update of the singleton instance."""
+        instance = PaymentConfiguration.get_instance()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    def test_paystack(self, request, pk=None):
+        """
+        Test Paystack API connection by verifying the secret key.
+        
+        **Request:** POST /api/admin/payment/config/{id}/test-paystack/
+        
+        **Response:**
+        ```json
+        {
+            "success": true,
+            "message": "Paystack connection successful",
+            "details": "API key is valid and working"
+        }
+        ```
+        
+        **Errors:**
+        - 400: No secret key configured or invalid key
+        - 401: Invalid secret key
+        - 408: Request timeout
+        - 500: Unexpected error
+        """
+        import requests
+        from requests.exceptions import Timeout, RequestException
+        
+        instance = self.get_object()
+        
+        # Check if Paystack is configured
+        if not instance.paystack_secret_key:
+            return Response({
+                'success': False,
+                'message': 'Paystack secret key not configured'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            # Decrypt the secret key
+            secret_key = instance.decrypt_field('paystack_secret_key')
+            
+            # Test API call to Paystack
+            url = 'https://api.paystack.co/transaction/initialize'
+            headers = {
+                'Authorization': f'Bearer {secret_key}',
+                'Content-Type': 'application/json'
+            }
+            
+            # Simple test: Try to initialize a transaction with minimal data
+            # This will fail but will tell us if the key is valid
+            test_data = {
+                'email': 'test@example.com',
+                'amount': '10000'  # 100 NGN in kobo
+            }
+            
+            response = requests.post(
+                url,
+                json=test_data,
+                headers=headers,
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                # Success - key is valid
+                return Response({
+                    'success': True,
+                    'message': 'Paystack connection successful',
+                    'details': 'API key is valid and working'
+                })
+            elif response.status_code == 401:
+                # Invalid key
+                return Response({
+                    'success': False,
+                    'message': 'Invalid Paystack secret key'
+                }, status=status.HTTP_401_UNAUTHORIZED)
+            else:
+                # Other error
+                error_data = response.json() if response.content else {}
+                return Response({
+                    'success': False,
+                    'message': f'Paystack API error: {error_data.get("message", "Unknown error")}'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        except Timeout:
+            return Response({
+                'success': False,
+                'message': 'Connection timeout - Paystack API not reachable'
+            }, status=status.HTTP_408_REQUEST_TIMEOUT)
+        except RequestException as e:
+            return Response({
+                'success': False,
+                'message': f'Network error: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                'success': False,
+                'message': f'Unexpected error: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @action(detail=True, methods=['post'])
+    def test_stripe(self, request, pk=None):
+        """
+        Test Stripe API connection by retrieving account info.
+        
+        **Request:** POST /api/admin/payment/config/{id}/test-stripe/
+        
+        **Response:**
+        ```json
+        {
+            "success": true,
+            "message": "Stripe connection successful",
+            "account_info": {
+                "id": "acct_123",
+                "email": "business@example.com",
+                "country": "US"
+            }
+        }
+        ```
+        
+        **Errors:**
+        - 400: No secret key configured or invalid key
+        - 401: Invalid secret key
+        - 408: Request timeout
+        - 500: Unexpected error
+        """
+        import requests
+        from requests.exceptions import Timeout, RequestException
+        
+        instance = self.get_object()
+        
+        # Check if Stripe is configured
+        if not instance.stripe_secret_key:
+            return Response({
+                'success': False,
+                'message': 'Stripe secret key not configured'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            # Decrypt the secret key
+            secret_key = instance.decrypt_field('stripe_secret_key')
+            
+            # Test API call to Stripe - get account info
+            url = 'https://api.stripe.com/v1/account'
+            headers = {
+                'Authorization': f'Bearer {secret_key}'
+            }
+            
+            response = requests.get(
+                url,
+                headers=headers,
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                # Success - key is valid
+                account_data = response.json()
+                return Response({
+                    'success': True,
+                    'message': 'Stripe connection successful',
+                    'account_info': {
+                        'id': account_data.get('id'),
+                        'email': account_data.get('email'),
+                        'country': account_data.get('country'),
+                        'charges_enabled': account_data.get('charges_enabled'),
+                        'payouts_enabled': account_data.get('payouts_enabled'),
+                    }
+                })
+            elif response.status_code == 401:
+                # Invalid key
+                return Response({
+                    'success': False,
+                    'message': 'Invalid Stripe secret key'
+                }, status=status.HTTP_401_UNAUTHORIZED)
+            else:
+                # Other error
+                error_data = response.json() if response.content else {}
+                return Response({
+                    'success': False,
+                    'message': f'Stripe API error: {error_data.get("error", {}).get("message", "Unknown error")}'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        except Timeout:
+            return Response({
+                'success': False,
+                'message': 'Connection timeout - Stripe API not reachable'
+            }, status=status.HTTP_408_REQUEST_TIMEOUT)
+        except RequestException as e:
             return Response({
                 'success': False,
                 'message': f'Network error: {str(e)}'

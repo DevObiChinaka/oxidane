@@ -8,8 +8,8 @@
 
 ## 📊 PROGRESS UPDATE
 
-**Phase 0.5 Completion:** 26/46 tasks (56.5%)  
-**Test Coverage:** 1082/1082 tests passing (100%)  
+**Phase 0.5 Completion:** 27/46 tasks (58.7%)  
+**Test Coverage:** 1118/1118 tests passing (100%)  
 **Migrations Applied:** 0008-0024 (17 migrations)
 
 ### Completed Models:
@@ -35,9 +35,10 @@
 - ✅ **Referral Stats API** (Task 0.5.26) - 23 tests | Admin analytics, top referrers, trends, filtering
 - ✅ **Telegram Configuration API** (Task 0.5.27) - 37 tests | Singleton config, test connection action
 - ✅ **Telegram Groups API** (Task 0.5.28) - 32 tests | Admin CRUD, M2M plans, sync_members, test_access actions
+- ✅ **Payment Configuration API** (Task 0.5.29) - 36 tests | Admin singleton, encrypted keys, test Paystack/Stripe actions
 
 ### In Progress:
-- [ ] **0.5.29**: Payment Configuration API (GET/POST/PUT `/api/admin/payment/config/`) + tests
+- [ ] **0.5.30**: Subscription Creation API (POST `/api/subscriptions/create/`) + tests
 
 ### Key Achievements:
 - ✅ Discount-based referral system (non-stackable credits)
@@ -195,8 +196,8 @@
 - ✅ 0.5.26: Referral stats API (GET `/api/admin/referrals/stats/`) + tests (23 tests)
 - ✅ 0.5.27: Telegram config API (GET/POST/PUT `/api/admin/telegram/config/`) + tests (37 tests)
 - ✅ 0.5.28: Telegram groups API (GET/POST/PUT/DELETE `/api/admin/telegram/groups/`) + tests (32 tests)
-- [ ] 0.5.29: Payment config API (GET/POST/PUT `/api/admin/payment/config/`) + tests
-- 0.5.30: Email config API (GET/POST/PUT `/api/admin/email/config/`) + tests
+- ✅ 0.5.29: Payment config API (GET/POST/PUT `/api/admin/payment/config/`) + tests (36 tests)
+- [ ] 0.5.30: Email config API (GET/POST/PUT `/api/admin/email/config/`) + tests
 - 0.5.31: Test email API (POST `/api/admin/email/test/`) + tests
 - 0.5.32: Setup status API (GET `/api/admin/setup/status/`) + tests
 

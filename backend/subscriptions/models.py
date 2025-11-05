@@ -2232,24 +2232,26 @@ class PaymentConfiguration(models.Model):
         """Validate model fields."""
         super().clean()
         
-        # Validate Paystack key formats
+        # Validate Paystack key formats (skip if encrypted)
         if self.paystack_public_key and not self.paystack_public_key.startswith('pk_'):
             raise ValidationError({
                 'paystack_public_key': 'Paystack public key must start with "pk_"'
             })
         
-        if self.paystack_secret_key and not self.paystack_secret_key.startswith('sk_'):
+        # Skip validation for encrypted paystack_secret_key (encrypted values start with "gAAAAA")
+        if self.paystack_secret_key and not self.paystack_secret_key.startswith('gAAAAA') and not self.paystack_secret_key.startswith('sk_'):
             raise ValidationError({
                 'paystack_secret_key': 'Paystack secret key must start with "sk_"'
             })
         
-        # Validate Stripe key formats
+        # Validate Stripe key formats (skip if encrypted)
         if self.stripe_publishable_key and not self.stripe_publishable_key.startswith('pk_'):
             raise ValidationError({
                 'stripe_publishable_key': 'Stripe publishable key must start with "pk_"'
             })
         
-        if self.stripe_secret_key and not self.stripe_secret_key.startswith('sk_'):
+        # Skip validation for encrypted stripe_secret_key (encrypted values start with "gAAAAA")
+        if self.stripe_secret_key and not self.stripe_secret_key.startswith('gAAAAA') and not self.stripe_secret_key.startswith('sk_'):
             raise ValidationError({
                 'stripe_secret_key': 'Stripe secret key must start with "sk_"'
             })
