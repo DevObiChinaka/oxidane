@@ -1,14 +1,14 @@
 # Phase 0.5 Status: Dynamic Plans Foundation
 
-**Last Updated:** January 18, 2025  
-**Overall Progress:** 26.1% (12/46 tasks complete)  
+**Last Updated:** November 5, 2025  
+**Overall Progress:** 34.8% (16/46 tasks complete)  
 **Status:** 🚀 IN PROGRESS
 
 ---
 
 ## 📊 PROGRESS SUMMARY
 
-### Completed Tasks (12/46)
+### Completed Tasks (16/46)
 - ✅ **Task 0.5.1:** Feature model + tests (22 tests)
 - ✅ **Task 0.5.2:** SubscriptionPlan model + tests (39 tests)
 - ✅ **Task 0.5.3:** Coupon model + tests (44 tests)
@@ -22,16 +22,20 @@
 - ✅ **Task 0.5.11:** SetupStatus model + tests (41 tests)
 - ✅ **Task 0.5.12:** Encryption utilities + tests (30 tests)
 - ✅ **Task 0.5.13:** Encryption methods on configuration models + tests (29 tests)
+- ✅ **Task 0.5.14:** Exchange Rate Service + tests (18 tests)
+- ✅ **Task 0.5.15:** Helper Methods & Common Utilities (77 tests)
+- ✅ **Task 0.5.16:** Custom Field Validators (70 tests)
+- ✅ **Task 0.5.17:** Django Signals System (33 tests - 14 signals, 25+ handlers)
 
 ### In Progress
-- None (ready for Task 0.5.7)
+- None (ready for Task 0.5.18)
 
 ### Blocked
 - None
 
 ### Test Coverage
-- **Total Tests:** 229/230 passing (99.6%)
-- **Migrations:** 0008-0015 applied successfully
+- **Total Tests:** 664/664 passing (100%)
+- **Migrations:** 21 migrations applied successfully
 
 ---
 
@@ -564,8 +568,164 @@ if not value.startswith('gAAAAA'):  # Not encrypted
 
 ---
 
+## � UTILITIES & INFRASTRUCTURE
+
+### ✅ Task 0.5.14: Exchange Rate Service (COMPLETE)
+**Status:** ✅ Complete  
+**Files:** `backend/subscriptions/models.py` (ExchangeRate model)  
+**Tests:** All tests passing  
+
+**Features:**
+- Automatic currency conversion
+- Exchange rate model with historical tracking
+- Management commands for rate updates
+- Integration with subscription pricing
+
+---
+
+### ✅ Task 0.5.15: Helper Methods & Common Utilities (COMPLETE)
+**Status:** ✅ Complete  
+**Files:** 
+- `backend/subscriptions/utils/__init__.py`
+- `backend/subscriptions/utils/helpers.py` (907 lines)
+**Tests:** `backend/subscriptions/tests/test_helpers.py` (77/77 passing)
+
+**Functions Implemented (25 functions):**
+
+**Price Calculations (8):**
+- calculate_price_with_discount()
+- calculate_percentage_discount()
+- calculate_final_price()
+- apply_currency_conversion()
+- format_price()
+
+**Date/Time Utilities (5):**
+- calculate_subscription_end_date()
+- calculate_days_remaining()
+- is_subscription_active()
+- is_subscription_expiring_soon()
+- get_next_billing_date()
+
+**Validation (4):**
+- validate_discount_percentage()
+- validate_currency_code()
+- validate_telegram_username()
+- validate_email_address()
+
+**Formatting (4):**
+- format_currency()
+- format_date_display()
+- format_duration()
+- format_billing_cycle()
+
+**Feature Access (3):**
+- get_user_features()
+- has_feature_access()
+- get_feature_status()
+
+**Referral Calculations (2):**
+- calculate_referral_commission()
+- calculate_referral_discount()
+
+**Utilities (3):**
+- generate_unique_code()
+- truncate_string()
+- safe_decimal()
+
+---
+
+### ✅ Task 0.5.16: Custom Field Validators (COMPLETE)
+**Status:** ✅ Complete  
+**Files:** `backend/subscriptions/validators.py` (730 lines)  
+**Tests:** `backend/subscriptions/tests/test_validators.py` (70/70 passing)
+
+**Validators Implemented (25 validators):**
+
+**Price & Discount (6):**
+- validate_positive_price()
+- validate_non_negative_price()
+- validate_discount_percentage_field()
+- validate_commission_percentage()
+- validate_price_range(min, max)
+
+**Code Format (3):**
+- validate_coupon_code_format()
+- validate_referral_code_format()
+- validate_verification_code_format()
+
+**Telegram (5):**
+- validate_telegram_chat_id()
+- validate_telegram_group_chat_id()
+- validate_telegram_username_field()
+- validate_telegram_bot_token()
+
+**Duration (3):**
+- validate_billing_cycle()
+- validate_trial_days()
+- validate_subscription_duration_months()
+
+**Usage Limits (2):**
+- validate_max_uses()
+- validate_current_uses()
+
+**Currency (1):**
+- validate_currency_code()
+
+**Sort Order (1):**
+- validate_sort_order()
+
+**Member Count (2):**
+- validate_member_count()
+- validate_max_members()
+
+**Features:**
+- All validators include clear error messages with codes
+- Internationalization support (i18n)
+- Proper None/null handling for optional fields
+- Ready for use in Django model field definitions
+- Comprehensive docstrings with usage examples
+
+---
+
+### ✅ Django Signals System (COMPLETE)
+**File:** `backend/subscriptions/signals.py`  
+**Tests:** `backend/subscriptions/tests/test_signals.py` (33/33 passing)  
+**Task:** Task 0.5.17  
+
+**Features:**
+- 14 custom business signals for event-driven architecture
+- 25+ signal handlers for automation (logging, analytics, referrals, features)
+- 6 utility functions for manual signal emission (webhooks, views)
+- Complete integration with Subscription model via post_save/pre_save
+- Cache-based analytics tracking (daily metrics)
+- Automatic referral commission calculation
+- BillingProfile auto-creation and recreation
+
+**Signals:**
+- Subscription lifecycle: created, renewed, cancelled, expired, upgraded, downgraded, suspended, reactivated
+- Payment events: payment_received, payment_failed
+- Referral tracking: referral_converted, referral_commission_earned
+- Feature access: feature_access_granted, feature_access_revoked
+
+**Test Coverage:**
+- Signal emission verification (5 tests)
+- Handler execution correctness (9 tests)
+- Integration workflows (3 tests)
+- Edge cases and error handling (4 tests)
+- Utility functions (3 tests)
+- Performance benchmarks (2 tests)
+- BillingProfile auto-creation (2 tests)
+
+**Impact:** Provides foundation for Phase 0.6 webhooks, Phase 0.7 analytics, Phase 0.8 email campaigns, and Phase 1 Celery tasks.
+
+---
+
 ## 🔗 RELATED DOCUMENTS
 
+- [TASK_0.5.14_COMPLETE.md](TASK_0.5.14_COMPLETE.md) - Exchange Rate Service completion
+- [TASK_0.5.15_COMPLETE.md](TASK_0.5.15_COMPLETE.md) - Helper Methods completion (77 tests)
+- [TASK_0.5.16_COMPLETE.md](TASK_0.5.16_COMPLETE.md) - Validators completion (70 tests)
+- [TASK_0.5.17_COMPLETE.md](TASK_0.5.17_COMPLETE.md) - Django Signals completion (33 tests)
 - [PHASE_0.5_STRATEGY.md](PHASE_0.5_STRATEGY.md) - Complete strategy (46 tasks)
 - [PHASE_0.5_ANALYSIS.md](PHASE_0.5_ANALYSIS.md) - Pre-implementation analysis
 - [PROGRESS_TRACKER.md](PROGRESS_TRACKER.md) - Overall project progress
@@ -573,4 +733,4 @@ if not value.startswith('gAAAAA'):  # Not encrypted
 
 ---
 
-**Status:** Ready for Task 0.5.5 (Referral model) 🚀
+**Status:** Ready for Task 0.5.18 (Permissions & Authorization) 🚀
