@@ -5,6 +5,11 @@ from .pricing_views import PricingPlanViewSet, CouponViewSet
 from . import billing_views
 from .user_subscription_views import UserSubscriptionViewSet
 from . import mentorship_admin_views
+from .api_views import (
+    SubscriptionViewSet, SubscriptionPlanViewSet, FeatureViewSet, 
+    CouponViewSet as APICouponViewSet, ReferralCodeViewSet, ReferralStatsViewSet,
+    TelegramConfigurationViewSet, TelegramGroupViewSet
+)  # Phase 0.5 - Tasks 0.5.20-0.5.28
 
 app_name = 'subscriptions'
 
@@ -17,12 +22,27 @@ router.register(r'pricing/coupons', CouponViewSet, basename='coupon-codes')
 user_router = DefaultRouter()
 user_router.register(r'subscriptions', UserSubscriptionViewSet, basename='user-subscriptions')
 
+# NEW: Phase 0.5 - Tasks 0.5.20-0.5.28 - Subscription, Plan, Feature, Coupon, Referral, Telegram Config/Groups API endpoints
+api_router = DefaultRouter()
+api_router.register(r'subscriptions', SubscriptionViewSet, basename='subscription')
+api_router.register(r'plans', SubscriptionPlanViewSet, basename='plan')
+api_router.register(r'features', FeatureViewSet, basename='feature')
+api_router.register(r'coupons', APICouponViewSet, basename='coupon')
+api_router.register(r'referrals/codes', ReferralCodeViewSet, basename='referral-code')
+api_router.register(r'admin/referrals/stats', ReferralStatsViewSet, basename='referral-stats')
+api_router.register(r'admin/telegram/config', TelegramConfigurationViewSet, basename='telegram-config')
+api_router.register(r'admin/telegram/groups', TelegramGroupViewSet, basename='telegram-group')
+
 urlpatterns = [
     # Admin API endpoints for pricing management
     path('admin/', include(router.urls)),
     
-    # User subscription management API
-    path('', include(user_router.urls)),
+    # NEW: Phase 0.5 - Task 0.5.20 - Comprehensive subscription API
+    # Note: Already prefixed with 'api/' in main urls.py, so this becomes /api/subscriptions/
+    path('', include(api_router.urls)),
+    
+    # User subscription management API (legacy, will be deprecated)
+    # path('', include(user_router.urls)),  # Temporarily disabled to avoid conflicts
     
     # ============================================================================
     # BILLING & TELEGRAM VERIFICATION ENDPOINTS

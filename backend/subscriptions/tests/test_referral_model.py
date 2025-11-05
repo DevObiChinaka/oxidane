@@ -71,28 +71,40 @@ def billing_profile(db, referee_user):
     return profile
 
 
+# DEPRECATED: PricingPlan removed in Phase 0.5, replaced by SubscriptionPlan
+# @pytest.fixture
+# def pricing_plan_old(db):
+#     """Create an old PricingPlan for Subscription."""
+#     from subscriptions.models import PricingPlan
+#     return PricingPlan.objects.create(
+#         name='Basic Plan',
+#         description='Basic subscription plan',
+#         duration_days=30,
+#         price=Decimal('100.00'),
+#         is_active=True
+#     )
+
+
 @pytest.fixture
-def pricing_plan_old(db):
-    """Create an old PricingPlan for Subscription."""
-    from subscriptions.models import PricingPlan
-    return PricingPlan.objects.create(
+def subscription_plan(db):
+    """Create a SubscriptionPlan for Phase 0.5"""
+    return SubscriptionPlan.objects.create(
         name='Basic Plan',
-        description='Basic subscription plan',
-        duration_days=30,
-        price=Decimal('100.00'),
+        base_price=Decimal('100.00'),
+        billing_period='monthly',
         is_active=True
     )
 
 
 @pytest.fixture
-def subscription(db, referee_user, billing_profile, pricing_plan_old):
-    """Create a subscription for a referee using NEW Subscription model."""
+def subscription(db, referee_user, billing_profile, subscription_plan):
+    """Create a subscription for a referee using Phase 0.5 Subscription model."""
     from django.utils import timezone
     from datetime import timedelta
     
     return Subscription.objects.create(
         billing_profile=billing_profile,
-        pricing_plan=pricing_plan_old,
+        plan=subscription_plan,
         status='active',
         start_date=timezone.now(),
         end_date=timezone.now() + timedelta(days=30),
@@ -967,7 +979,6 @@ class TestReferralCreditAvailability:
                 )
             elif i == 1:
                 # Used credit - need subscription fixture
-                from subscriptions.models import Subscription, PricingPlan, BillingProfile
                 from datetime import timedelta
                 
                 # Create billing profile
@@ -975,19 +986,18 @@ class TestReferralCreditAvailability:
                     user=referrer_user
                 )
                 
-                # Create pricing plan
-                pricing_plan = PricingPlan.objects.create(
+                # Create subscription plan (Phase 0.5)
+                subscription_plan = SubscriptionPlan.objects.create(
                     name='Test Plan',
-                    description='Test',
-                    duration_days=30,
-                    price=Decimal('100.00'),
+                    base_price=Decimal('100.00'),
+                    billing_period='monthly',
                     is_active=True
                 )
                 
                 # Create subscription
                 subscription = Subscription.objects.create(
                     billing_profile=billing_prof,
-                    pricing_plan=pricing_plan,
+                    plan=subscription_plan,
                     status='active',
                     start_date=timezone.now(),
                     end_date=timezone.now() + timedelta(days=30),

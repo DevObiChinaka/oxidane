@@ -11,6 +11,7 @@ Tests cover:
 - Key format validation
 """
 
+import time
 import pytest
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
@@ -179,6 +180,9 @@ class TestFeatureModel:
         )
         
         original_updated_at = feature.updated_at
+        
+        # Wait a small amount to ensure updated_at timestamp changes
+        time.sleep(0.001)
         
         # Update feature
         feature.name = 'Updated Feature'

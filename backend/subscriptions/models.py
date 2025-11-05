@@ -529,12 +529,12 @@ class SubscriptionPlan(models.Model):
         help_text='Plan limits (e.g., {"max_signals": 100, "max_courses": 5})'
     )
     
-    # Stripe integration (for future use)
-    stripe_price_id = models.CharField(
+    # Paystack integration
+    paystack_plan_code = models.CharField(
         max_length=255,
         blank=True,
         null=True,
-        help_text='Stripe Price ID for this plan'
+        help_text='Paystack Plan Code for this plan'
     )
     
     # Timestamps

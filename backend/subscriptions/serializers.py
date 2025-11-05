@@ -2,8 +2,8 @@ from rest_framework import serializers
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from .models import (
-    SubscriptionPlan, Subscription, Coupon,
-    BillingProfile, PaymentMethod, Payment, TelegramGroup
+    SubscriptionPlan, Subscription, Coupon, Feature, Referral, ReferralCode,
+    BillingProfile, PaymentMethod, Payment, TelegramGroup, TelegramConfiguration
 )
 
 User = get_user_model()
@@ -111,13 +111,25 @@ class PricingPlanSerializer(serializers.ModelSerializer):
         model = SubscriptionPlan
         fields = [
             'id', 'name', 'slug', 'description', 'base_price', 'billing_period',
-            'trial_days', 'limits', 'stripe_price_id', 'paystack_plan_code',
+            'trial_days', 'limits', 'paystack_plan_code',
             'is_active', 'is_featured', 'sort_order',
             'price_display', 'monthly_equivalent', 'has_trial', 'feature_count',
             'subscription_count', 'revenue_total',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'slug']
+    
+    def validate_base_price(self, value):
+        """Validate base_price is positive"""
+        if value < 0:
+            raise serializers.ValidationError("Base price must be positive.")
+        return value
+    
+    def validate_trial_days(self, value):
+        """Validate trial_days is non-negative"""
+        if value < 0:
+            raise serializers.ValidationError("Trial days cannot be negative.")
+        return value
     
     def get_price_display(self, obj):
         """Get formatted price with currency"""
@@ -157,30 +169,188 @@ class PricingPlanSerializer(serializers.ModelSerializer):
         # Estimate: active_subs * base_price
         return float(active_subs * obj.base_price)
 
+class FeatureSerializer(serializers.ModelSerializer):
+    """
+    Comprehensive serializer for Feature model (Phase 0.5 - Task 0.5.22)
+    
+    Supports full CRUD operations with validation for key format and category choices.
+    Includes computed field for plan_count (how many plans use this feature).
+    """
+    plan_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Feature
+        fields = [
+            'id', 'key', 'name', 'description', 'category', 'icon', 
+            'sort_order', 'is_active', 'plan_count', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at', 'plan_count']
+    
+    def get_plan_count(self, obj):
+        """Get count of subscription plans using this feature"""
+        return obj.plans.count()
+    
+    def validate_key(self, value):
+        """Validate feature key format (lowercase, underscores, alphanumeric)"""
+        if not value:
+            raise serializers.ValidationError("Feature key is required.")
+        
+        # Check alphanumeric with underscores/hyphens only
+        if not value.replace('_', '').replace('-', '').isalnum():
+            raise serializers.ValidationError(
+                "Feature key must contain only letters, numbers, underscores, and hyphens."
+            )
+        
+        # Auto-convert to lowercase with underscores
+        normalized_key = value.lower().replace('-', '_')
+        
+        # Check uniqueness on create (not on update since key is read-only after create)
+        if not self.instance:  # Creating new feature
+            if Feature.objects.filter(key=normalized_key).exists():
+                raise serializers.ValidationError(
+                    f"Feature with key '{normalized_key}' already exists."
+                )
+        
+        return normalized_key
+    
+    def validate_name(self, value):
+        """Validate feature name is not empty"""
+        if not value or not value.strip():
+            raise serializers.ValidationError("Feature name cannot be empty.")
+        return value.strip()
+    
+    def validate_icon(self, value):
+        """Validate icon field (allow emoji or short text)"""
+        if len(value) > 10:
+            raise serializers.ValidationError("Icon must be 10 characters or less.")
+        return value
+    
+    def validate_sort_order(self, value):
+        """Validate sort_order is non-negative"""
+        if value < 0:
+            raise serializers.ValidationError("Sort order cannot be negative.")
+        return value
+    
+    def update(self, instance, validated_data):
+        """Override update to prevent key modification"""
+        # Remove 'key' from validated_data if present (make it immutable after creation)
+        validated_data.pop('key', None)
+        return super().update(instance, validated_data)
+
+
+class NestedSubscriptionPlanSerializer(serializers.ModelSerializer):
+    """
+    Nested serializer for SubscriptionPlan (for use in SubscriptionSerializer)
+    Includes features for complete plan information
+    """
+    features = FeatureSerializer(many=True, read_only=True)
+    feature_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = SubscriptionPlan
+        fields = [
+            'id', 'name', 'slug', 'description', 'base_price', 'billing_period',
+            'trial_days', 'is_active', 'is_featured', 'features', 'feature_count'
+        ]
+        read_only_fields = ['id', 'slug']
+    
+    def get_feature_count(self, obj):
+        """Get count of features in this plan"""
+        return obj.features.count()
+
+
+class ReferralDetailsSerializer(serializers.ModelSerializer):
+    """Nested serializer for Referral details (for use in SubscriptionSerializer)"""
+    referrer_email = serializers.CharField(source='referrer.email', read_only=True)
+    referrer_name = serializers.SerializerMethodField()
+    code = serializers.CharField(source='referral_code.code', read_only=True)
+    
+    class Meta:
+        model = Referral
+        fields = ['id', 'referrer_email', 'referrer_name', 'code', 'status', 'created_at']
+        read_only_fields = ['id', 'status', 'created_at']
+    
+    def get_referrer_name(self, obj):
+        """Get referrer's full name or email"""
+        user = obj.referrer
+        if user.first_name or user.last_name:
+            return f"{user.first_name} {user.last_name}".strip()
+        return user.email
+
+
 class SubscriptionSerializer(serializers.ModelSerializer):
     """
-    Serializer for Subscription model (Phase 0.5)
-    Replaces old SignalSubscriptionSerializer for deprecated SignalSubscription model
+    Comprehensive serializer for Subscription model (Phase 0.5 - Task 0.5.20)
+    
+    Features:
+    - Full CRUD support with validation
+    - Nested plan details with features
+    - Referral information if applicable
+    - Computed fields (is_active, days_remaining)
+    - Read-only user information
+    - Support for metadata storage
     """
+    # Read-only user information
     user_email = serializers.CharField(source='billing_profile.user.email', read_only=True)
     user_name = serializers.SerializerMethodField()
+    telegram_username = serializers.CharField(source='billing_profile.telegram_username', read_only=True)
+    
+    # Nested plan details with features
+    plan_details = NestedSubscriptionPlanSerializer(source='plan', read_only=True)
+    
+    # Basic plan info (for list views)
     plan_name = serializers.CharField(source='plan.name', read_only=True)
     plan_slug = serializers.CharField(source='plan.slug', read_only=True)
-    telegram_username = serializers.CharField(source='billing_profile.telegram_username', read_only=True)
+    
+    # Referral information (if subscription was from referral)
+    referral_details = ReferralDetailsSerializer(source='referral', read_only=True)
+    
+    # Computed properties
     is_active = serializers.SerializerMethodField()
     days_remaining = serializers.SerializerMethodField()
+    
+    # Writable fields (for create/update)
+    plan = serializers.PrimaryKeyRelatedField(
+        queryset=SubscriptionPlan.objects.filter(is_active=True),
+        required=True,
+        help_text='Active subscription plan ID'
+    )
+    billing_profile = serializers.PrimaryKeyRelatedField(
+        queryset=BillingProfile.objects.all(),
+        required=True,
+        help_text='Billing profile ID'
+    )
     
     class Meta:
         model = Subscription
         fields = [
-            'id', 'user_email', 'user_name', 'plan_name', 'plan_slug',
-            'payment_reference', 'status', 'start_date', 'end_date',
-            'auto_renew', 'telegram_username', 'cancel_at_period_end',
-            'is_active', 'days_remaining', 'created_at', 'updated_at'
+            # IDs and relationships
+            'id', 'billing_profile', 'plan', 'referral',
+            # Read-only user info
+            'user_email', 'user_name', 'telegram_username',
+            # Nested details
+            'plan_details', 'plan_name', 'plan_slug', 'referral_details',
+            # Subscription status
+            'status', 'start_date', 'end_date',
+            # Payment info
+            'payment_method', 'amount_paid', 'currency',
+            # Auto-renewal
+            'auto_renew', 'next_billing_date',
+            # Cancellation
+            'cancelled_at', 'cancellation_reason',
+            # Computed fields
+            'is_active', 'days_remaining',
+            # Metadata
+            'metadata',
+            # Timestamps
+            'created_at', 'updated_at'
         ]
         read_only_fields = [
-            'id', 'user_email', 'user_name', 'start_date', 'end_date',
-            'is_active', 'days_remaining', 'created_at', 'updated_at'
+            'id', 'user_email', 'user_name', 'telegram_username',
+            'plan_details', 'plan_name', 'plan_slug', 'referral_details',
+            'status', 'start_date', 'end_date', 'amount_paid', 'currency',
+            'cancelled_at', 'is_active', 'days_remaining',
+            'created_at', 'updated_at'
         ]
     
     def get_user_name(self, obj):
@@ -191,18 +361,93 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         return user.email
     
     def get_is_active(self, obj):
-        """Check if subscription is currently active"""
-        return (
-            obj.status == 'active' and
-            obj.end_date and
-            timezone.now() <= obj.end_date
-        )
+        """Check if subscription is currently active (uses model property)"""
+        return obj.is_active
     
     def get_days_remaining(self, obj):
-        """Calculate days remaining in subscription"""
-        if obj.end_date and self.get_is_active(obj):
-            return (obj.end_date - timezone.now()).days
-        return 0
+        """Calculate days remaining in subscription (uses model property)"""
+        return obj.days_remaining
+    
+    def validate_plan(self, value):
+        """Validate plan is active and available"""
+        if not value.is_active:
+            raise serializers.ValidationError("Selected plan is not currently available")
+        return value
+    
+    def validate_billing_profile(self, value):
+        """Validate billing profile exists and user has permission"""
+        request = self.context.get('request')
+        if request and hasattr(request, 'user'):
+            user = request.user
+            # Users can only create subscriptions for their own billing profile
+            # Admins can create for any billing profile
+            if not user.is_staff and value.user != user:
+                raise serializers.ValidationError(
+                    "You can only create subscriptions for your own billing profile"
+                )
+        return value
+    
+    def validate(self, data):
+        """Cross-field validation"""
+        # Check for duplicate active subscriptions
+        if self.instance is None:  # Creating new subscription
+            billing_profile = data.get('billing_profile')
+            plan = data.get('plan')
+            
+            # Check if user already has an active subscription to this plan
+            existing = Subscription.objects.filter(
+                billing_profile=billing_profile,
+                plan=plan,
+                status='active'
+            ).exists()
+            
+            if existing:
+                raise serializers.ValidationError(
+                    "An active subscription to this plan already exists for this billing profile"
+                )
+        
+        return data
+    
+    def create(self, validated_data):
+        """
+        Create subscription with calculated dates and default values
+        Note: Start/end dates should be calculated by signal handlers or service layer
+        This is a basic implementation - production should use subscription service
+        """
+        from datetime import timedelta
+        
+        # Extract plan for calculations
+        plan = validated_data.get('plan')
+        
+        # Set start_date to now if not provided
+        if 'start_date' not in validated_data:
+            validated_data['start_date'] = timezone.now()
+        
+        # Calculate end_date based on billing period
+        if 'end_date' not in validated_data:
+            start = validated_data['start_date']
+            if plan.billing_period == 'monthly':
+                validated_data['end_date'] = start + timedelta(days=30)
+            elif plan.billing_period == 'quarterly':
+                validated_data['end_date'] = start + timedelta(days=90)
+            elif plan.billing_period == 'annual':
+                validated_data['end_date'] = start + timedelta(days=365)
+            else:
+                validated_data['end_date'] = start + timedelta(days=30)  # Default to monthly
+        
+        # Set amount_paid to plan base_price if not provided
+        if 'amount_paid' not in validated_data:
+            validated_data['amount_paid'] = plan.base_price
+        
+        # Set currency to USD if not provided
+        if 'currency' not in validated_data:
+            validated_data['currency'] = 'USD'
+        
+        # Set default status to pending (will be activated by payment/signal)
+        if 'status' not in validated_data:
+            validated_data['status'] = 'pending'
+        
+        return super().create(validated_data)
 
 
 # DEPRECATED: SignalSubscriptionSerializer - use SubscriptionSerializer instead
@@ -273,55 +518,142 @@ class PendingActionsSerializer(serializers.Serializer):
 # New serializers for enhanced pricing system
 
 class CouponSerializer(serializers.ModelSerializer):
-    """Serializer for coupon code management"""
-    status = serializers.ReadOnlyField()
-    is_valid = serializers.ReadOnlyField()
+    """
+    Comprehensive serializer for coupon management (Phase 0.5 - Task 0.5.23).
+    Includes validation, computed fields, and plan relationship management.
+    """
+    # Computed fields
     discount_display = serializers.ReadOnlyField(source='get_discount_display')
+    is_valid_now = serializers.SerializerMethodField()
+    usage_available = serializers.SerializerMethodField()
+    can_be_used_now = serializers.SerializerMethodField()
     usage_percentage = serializers.SerializerMethodField()
+    remaining_uses = serializers.SerializerMethodField()
+    plan_count = serializers.SerializerMethodField()
+    
+    # Creator info
+    created_by_email = serializers.EmailField(source='created_by.email', read_only=True)
     
     class Meta:
         model = Coupon
         fields = [
-            'id', 'code', 'name', 'description', 'discount_type', 'discount_value',
-            'minimum_amount', 'maximum_discount', 'usage_limit', 'usage_count',
-            'usage_limit_per_user', 'valid_from', 'valid_until', 'applicable_categories',
-            'is_active', 'first_time_users_only', 'status', 'is_valid', 
-            'discount_display', 'usage_percentage', 'created_at', 'updated_at'
+            'id', 'code', 'discount_type', 'discount_value', 'description',
+            'valid_from', 'valid_until', 'max_uses', 'max_uses_per_user',
+            'current_uses', 'is_active', 'plans',
+            # Computed fields
+            'discount_display', 'is_valid_now', 'usage_available', 'can_be_used_now',
+            'usage_percentage', 'remaining_uses', 'plan_count',
+            # Creator & timestamps
+            'created_by', 'created_by_email', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'usage_count', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'current_uses', 'created_by', 'created_at', 'updated_at']
+    
+    def get_is_valid_now(self, obj):
+        """Check if coupon is currently valid (time-based only)"""
+        return obj.is_valid()
+    
+    def get_usage_available(self, obj):
+        """Check if coupon has usage remaining"""
+        return obj.is_usage_available()
+    
+    def get_can_be_used_now(self, obj):
+        """Check if coupon can be used (combines validity and usage)"""
+        return obj.can_be_used()
     
     def get_usage_percentage(self, obj):
-        """Get usage percentage"""
-        if not obj.usage_limit:
+        """Get usage percentage (0-100)"""
+        if obj.max_uses is None or obj.max_uses == 0:
             return 0
-        return min(100, (obj.usage_count / obj.usage_limit) * 100)
+        return min(100, (obj.current_uses / obj.max_uses) * 100)
+    
+    def get_remaining_uses(self, obj):
+        """Get number of remaining uses (None if unlimited)"""
+        return obj.get_remaining_uses()
+    
+    def get_plan_count(self, obj):
+        """Get count of plans this coupon applies to (0 = all plans)"""
+        return obj.plans.count()
     
     def validate_code(self, value):
-        """Validate coupon code format"""
-        if not value.isalnum():
-            raise serializers.ValidationError("Coupon code must be alphanumeric")
-        return value.upper()
+        """Validate and normalize coupon code"""
+        if not value:
+            raise serializers.ValidationError("Coupon code cannot be empty.")
+        
+        # Normalize to uppercase
+        normalized_code = value.upper().strip()
+        
+        # Validate format: alphanumeric + underscore/hyphen
+        import re
+        if not re.match(r'^[A-Z0-9_-]+$', normalized_code):
+            raise serializers.ValidationError(
+                "Coupon code must contain only uppercase letters, numbers, underscores, and hyphens."
+            )
+        
+        # Check minimum length
+        if len(normalized_code) < 3:
+            raise serializers.ValidationError("Coupon code must be at least 3 characters long.")
+        
+        # Check uniqueness (only on create)
+        if not self.instance:
+            if Coupon.objects.filter(code=normalized_code).exists():
+                raise serializers.ValidationError(f"Coupon with code '{normalized_code}' already exists.")
+        
+        return normalized_code
+    
+    def validate_discount_value(self, value):
+        """Validate discount value is non-negative"""
+        if value < 0:
+            raise serializers.ValidationError("Discount value cannot be negative.")
+        return value
+    
+    def validate_max_uses(self, value):
+        """Validate max_uses is positive if specified"""
+        if value is not None and value < 0:
+            raise serializers.ValidationError("Maximum uses cannot be negative.")
+        return value
+    
+    def validate_max_uses_per_user(self, value):
+        """Validate max_uses_per_user is positive"""
+        if value < 0:
+            raise serializers.ValidationError("Maximum uses per user cannot be negative.")
+        if value == 0:
+            raise serializers.ValidationError("Maximum uses per user must be at least 1.")
+        return value
     
     def validate(self, data):
         """Cross-field validation"""
-        valid_from = data.get('valid_from')
-        valid_until = data.get('valid_until')
-        discount_type = data.get('discount_type')
-        discount_value = data.get('discount_value')
-        
-        # Validate dates
-        if valid_from and valid_until and valid_from >= valid_until:
-            raise serializers.ValidationError("Valid until date must be after valid from date")
+        discount_type = data.get('discount_type', getattr(self.instance, 'discount_type', None))
+        discount_value = data.get('discount_value', getattr(self.instance, 'discount_value', None))
+        valid_from = data.get('valid_from', getattr(self.instance, 'valid_from', None))
+        valid_until = data.get('valid_until', getattr(self.instance, 'valid_until', None))
         
         # Validate discount value based on type
-        if discount_type == 'percentage':
-            if not (0 < discount_value <= 100):
-                raise serializers.ValidationError("Percentage discount must be between 0 and 100")
-        elif discount_type == 'fixed_amount':
-            if discount_value <= 0:
-                raise serializers.ValidationError("Fixed amount discount must be positive")
+        if discount_type and discount_value is not None:
+            if discount_type == 'percentage':
+                if not (0 <= discount_value <= 100):
+                    raise serializers.ValidationError({
+                        'discount_value': 'Percentage discount must be between 0 and 100.'
+                    })
+            elif discount_type == 'fixed':
+                if discount_value <= 0:
+                    raise serializers.ValidationError({
+                        'discount_value': 'Fixed discount amount must be positive.'
+                    })
+        
+        # Validate date range
+        if valid_from and valid_until:
+            if valid_until <= valid_from:
+                raise serializers.ValidationError({
+                    'valid_until': 'Expiration date must be after start date.'
+                })
         
         return data
+    
+    def update(self, instance, validated_data):
+        """Override update to prevent code modification"""
+        # Remove code from validated_data if present (code is immutable)
+        validated_data.pop('code', None)
+        return super().update(instance, validated_data)
 
 class CouponValidationSerializer(serializers.Serializer):
     """Serializer for coupon validation requests"""
@@ -348,6 +680,176 @@ class CouponApplicationSerializer(serializers.Serializer):
     final_amount = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
     coupon_code = serializers.CharField(required=False)
     savings_percentage = serializers.DecimalField(max_digits=5, decimal_places=2, required=False)
+
+
+class ReferralCodeSerializer(serializers.ModelSerializer):
+    """
+    Comprehensive serializer for ReferralCode management (Phase 0.5 - Task 0.5.25)
+    
+    Features:
+    - Full CRUD support with validation
+    - Code normalization (uppercase, format validation)
+    - Dual discount validation (referrer + referee)
+    - Computed fields for API efficiency
+    - User ownership tracking
+    """
+    
+    # Computed fields
+    referrer_discount_display = serializers.ReadOnlyField(source='get_referrer_discount_display')
+    referee_discount_display = serializers.ReadOnlyField(source='get_referee_discount_display')
+    is_valid_now = serializers.SerializerMethodField()
+    usage_available = serializers.SerializerMethodField()
+    can_be_used_now = serializers.SerializerMethodField()
+    usage_percentage = serializers.SerializerMethodField()
+    remaining_uses = serializers.SerializerMethodField()
+    referrer_email = serializers.EmailField(source='referrer.email', read_only=True)
+    referrer_username = serializers.CharField(source='referrer.username', read_only=True)
+    
+    class Meta:
+        model = ReferralCode
+        fields = [
+            'id', 'code', 'referrer', 'referrer_email', 'referrer_username',
+            'referrer_discount_type', 'referrer_discount_value', 'referrer_discount_display',
+            'referee_discount_type', 'referee_discount_value', 'referee_discount_display',
+            'max_uses', 'current_uses', 'valid_from', 'valid_until',
+            'is_active', 'description',
+            'is_valid_now', 'usage_available', 'can_be_used_now',
+            'usage_percentage', 'remaining_uses',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'referrer', 'current_uses', 'created_at', 'updated_at']
+    
+    def get_is_valid_now(self, obj):
+        """Check if referral code is currently valid (time-based)"""
+        return obj.is_valid()
+    
+    def get_usage_available(self, obj):
+        """Check if usage is still available"""
+        return obj.is_usage_available()
+    
+    def get_can_be_used_now(self, obj):
+        """Check if code can be used right now (combines time + usage checks)"""
+        return obj.can_be_used()
+    
+    def get_usage_percentage(self, obj):
+        """Calculate usage percentage (0-100)"""
+        if obj.max_uses is None or obj.max_uses == 0:
+            return 0.0
+        return round((obj.current_uses / obj.max_uses) * 100, 2)
+    
+    def get_remaining_uses(self, obj):
+        """Get remaining uses (None if unlimited)"""
+        return obj.get_remaining_uses()
+    
+    def validate_code(self, value):
+        """
+        Validate and normalize referral code format.
+        - Convert to uppercase
+        - Check format (alphanumeric + underscore)
+        - Minimum 3 characters
+        - Check uniqueness on create
+        """
+        if not value:
+            raise serializers.ValidationError("Referral code is required.")
+        
+        # Normalize to uppercase
+        normalized_code = value.upper().strip()
+        
+        # Validate format (alphanumeric + underscore)
+        import re
+        if not re.match(r'^[A-Z0-9_]+$', normalized_code):
+            raise serializers.ValidationError(
+                "Referral code must contain only uppercase letters, numbers, and underscores."
+            )
+        
+        # Minimum length
+        if len(normalized_code) < 3:
+            raise serializers.ValidationError("Referral code must be at least 3 characters long.")
+        
+        # Check uniqueness on create (not on update)
+        if not self.instance:  # Creating new object
+            if ReferralCode.objects.filter(code=normalized_code).exists():
+                raise serializers.ValidationError(f"Referral code '{normalized_code}' already exists.")
+        
+        return normalized_code
+    
+    def validate_referrer_discount_value(self, value):
+        """Validate referrer discount value is non-negative"""
+        if value < 0:
+            raise serializers.ValidationError("Referrer discount value cannot be negative.")
+        return value
+    
+    def validate_referee_discount_value(self, value):
+        """Validate referee discount value is non-negative"""
+        if value < 0:
+            raise serializers.ValidationError("Referee discount value cannot be negative.")
+        return value
+    
+    def validate_max_uses(self, value):
+        """Validate max_uses is positive if specified"""
+        if value is not None and value < 0:
+            raise serializers.ValidationError("Maximum uses must be a positive number or null for unlimited.")
+        return value
+    
+    def validate(self, data):
+        """
+        Cross-field validation:
+        - Referrer discount type/value matching
+        - Referee discount type/value matching
+        - Date range validation
+        """
+        # Validate referrer discount
+        referrer_type = data.get('referrer_discount_type', getattr(self.instance, 'referrer_discount_type', None))
+        referrer_value = data.get('referrer_discount_value', getattr(self.instance, 'referrer_discount_value', None))
+        
+        if referrer_type and referrer_value is not None:
+            if referrer_type == 'percentage':
+                if referrer_value < 0 or referrer_value > 100:
+                    raise serializers.ValidationError({
+                        'referrer_discount_value': 'Percentage discount must be between 0 and 100.'
+                    })
+            elif referrer_type == 'fixed':
+                if referrer_value < 0:
+                    raise serializers.ValidationError({
+                        'referrer_discount_value': 'Fixed discount must be a positive amount.'
+                    })
+        
+        # Validate referee discount
+        referee_type = data.get('referee_discount_type', getattr(self.instance, 'referee_discount_type', None))
+        referee_value = data.get('referee_discount_value', getattr(self.instance, 'referee_discount_value', None))
+        
+        if referee_type and referee_value is not None:
+            if referee_type == 'percentage':
+                if referee_value < 0 or referee_value > 100:
+                    raise serializers.ValidationError({
+                        'referee_discount_value': 'Percentage discount must be between 0 and 100.'
+                    })
+            elif referee_type == 'fixed':
+                if referee_value < 0:
+                    raise serializers.ValidationError({
+                        'referee_discount_value': 'Fixed discount must be a positive amount.'
+                    })
+        
+        # Validate date range
+        valid_from = data.get('valid_from', getattr(self.instance, 'valid_from', None))
+        valid_until = data.get('valid_until', getattr(self.instance, 'valid_until', None))
+        
+        if valid_from and valid_until:
+            if valid_until <= valid_from:
+                raise serializers.ValidationError({
+                    'valid_until': 'Expiration date must be after start date.'
+                })
+        
+        return data
+    
+    def update(self, instance, validated_data):
+        """
+        Override update to prevent code modification after creation.
+        Referral codes should be immutable once created to maintain referral tracking integrity.
+        """
+        # Remove code from validated_data if present (code is immutable)
+        validated_data.pop('code', None)
+        return super().update(instance, validated_data)
 
 
 class EnhancedSubscriptionSerializer(serializers.ModelSerializer):
@@ -413,3 +915,378 @@ class DynamicPricingResponseSerializer(serializers.Serializer):
     pricing_structure = PricingStructureSerializer(required=False)
     total_plans = serializers.IntegerField(required=False)
     active_promotions = serializers.IntegerField(required=False)
+
+
+# ============================================================================
+# TELEGRAM CONFIGURATION SERIALIZER (Task 0.5.27)
+# ============================================================================
+
+class TelegramConfigurationSerializer(serializers.ModelSerializer):
+    """
+    Serializer for TelegramConfiguration (singleton model).
+    
+    Features:
+    - Write-only bot_token field (never expose in responses)
+    - Masked token display for security
+    - Settings bulk update support
+    - Comprehensive validation
+    """
+    
+    # Write-only field for setting bot token
+    bot_token = serializers.CharField(
+        write_only=True,
+        required=False,
+        allow_blank=True,
+        style={'input_type': 'password'},
+        help_text='Telegram bot API token from @BotFather'
+    )
+    
+    # Read-only masked token display
+    masked_token = serializers.SerializerMethodField(
+        help_text='Masked version of bot token for display'
+    )
+    
+    # Read-only computed fields
+    is_healthy = serializers.SerializerMethodField(
+        help_text='Whether bot is enabled and connected'
+    )
+    has_valid_token_format = serializers.SerializerMethodField(
+        help_text='Whether bot token has valid format'
+    )
+    
+    class Meta:
+        model = TelegramConfiguration
+        fields = [
+            'id',
+            'bot_token',  # write-only
+            'masked_token',  # read-only
+            'bot_username',
+            'is_enabled',
+            'is_connected',
+            'connection_error',
+            'last_health_check',
+            'auto_add_enabled',
+            'auto_remove_enabled',
+            'welcome_message',
+            'removal_message',
+            'max_retries',
+            'retry_delay_seconds',
+            'rate_limit_per_minute',
+            'is_healthy',  # read-only computed
+            'has_valid_token_format',  # read-only computed
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = [
+            'id', 'masked_token', 'is_connected', 'connection_error',
+            'last_health_check', 'is_healthy', 'has_valid_token_format',
+            'created_at', 'updated_at'
+        ]
+    
+    def get_masked_token(self, obj):
+        """Return masked version of bot token"""
+        return obj.get_masked_token()
+    
+    def get_is_healthy(self, obj):
+        """Return health status"""
+        return obj.is_healthy()
+    
+    def get_has_valid_token_format(self, obj):
+        """Check if token has valid format"""
+        return obj.has_valid_token()
+    
+    def validate_bot_username(self, value):
+        """Validate bot username format"""
+        if value and not value.startswith('@'):
+            raise serializers.ValidationError(
+                'Bot username must start with @ (e.g., @OxidaneBot)'
+            )
+        return value
+    
+    def validate_max_retries(self, value):
+        """Validate max retries is non-negative"""
+        if value < 0:
+            raise serializers.ValidationError('Max retries must be 0 or greater.')
+        return value
+    
+    def validate_retry_delay_seconds(self, value):
+        """Validate retry delay is positive"""
+        if value <= 0:
+            raise serializers.ValidationError('Retry delay must be greater than 0.')
+        return value
+    
+    def validate_rate_limit_per_minute(self, value):
+        """Validate rate limit is positive"""
+        if value <= 0:
+            raise serializers.ValidationError('Rate limit must be greater than 0.')
+        return value
+    
+    def validate_bot_token(self, value):
+        """Validate bot token format (basic check)"""
+        if not value:
+            return value
+        
+        # Telegram bot token format: numbers:alphanumeric+dash+underscore
+        # Example: 123456789:ABCdefGHI-jklMNO_pqr
+        parts = value.split(':')
+        if len(parts) != 2:
+            raise serializers.ValidationError(
+                'Invalid bot token format. Expected format: numbers:characters'
+            )
+        
+        if not parts[0].isdigit():
+            raise serializers.ValidationError(
+                'Invalid bot token format. First part must be numeric.'
+            )
+        
+        if len(parts[0]) < 8 or len(parts[0]) > 10:
+            raise serializers.ValidationError(
+                'Invalid bot token format. Bot ID should be 8-10 digits.'
+            )
+        
+        if len(parts[1]) < 30:
+            raise serializers.ValidationError(
+                'Invalid bot token format. Token part seems too short.'
+            )
+        
+        return value
+    
+    def create(self, validated_data):
+        """
+        Create or update singleton instance.
+        Since TelegramConfiguration is a singleton, this always updates the existing instance.
+        """
+        # Extract bot_token if provided
+        bot_token = validated_data.pop('bot_token', None)
+        
+        # Get singleton instance
+        instance = TelegramConfiguration.get_instance()
+        
+        # Update fields
+        for key, value in validated_data.items():
+            setattr(instance, key, value)
+        
+        # Set bot token if provided (marks as disconnected)
+        if bot_token is not None:
+            instance.set_bot_token(bot_token)
+        else:
+            instance.save()
+        
+        return instance
+    
+    def update(self, instance, validated_data):
+        """Update singleton instance"""
+        # Extract bot_token if provided
+        bot_token = validated_data.pop('bot_token', None)
+        
+        # Update regular fields
+        for key, value in validated_data.items():
+            setattr(instance, key, value)
+        
+        # Set bot token if provided (marks as disconnected)
+        if bot_token is not None:
+            instance.set_bot_token(bot_token)
+        else:
+            instance.save()
+        
+        return instance
+
+
+class TelegramGroupSerializer(serializers.ModelSerializer):
+    """
+    Serializer for TelegramGroup model with plan associations.
+    
+    Handles:
+    - M2M relationships with SubscriptionPlan
+    - Member count tracking and capacity checks
+    - Bot permission flags
+    - Computed fields for group health status
+    
+    Phase 0.5, Task 0.5.28
+    """
+    # M2M relationship - writable with plan IDs
+    associated_plan_ids = serializers.PrimaryKeyRelatedField(
+        queryset=SubscriptionPlan.objects.all(),
+        many=True,
+        write_only=True,
+        required=False,
+        source='associated_plans',
+        help_text="List of subscription plan IDs that grant access to this group"
+    )
+    
+    # Read-only plan details for response
+    associated_plans = serializers.SerializerMethodField(
+        help_text="Full details of associated subscription plans"
+    )
+    
+    # Computed fields
+    has_capacity = serializers.SerializerMethodField(
+        help_text="Whether group can accept new members (based on max_members)"
+    )
+    is_healthy = serializers.SerializerMethodField(
+        help_text="Whether group is active and bot has required permissions"
+    )
+    capacity_percentage = serializers.SerializerMethodField(
+        help_text="Current capacity utilization (0-100, null if unlimited)"
+    )
+    days_since_sync = serializers.SerializerMethodField(
+        help_text="Days since last member count sync (null if never synced)"
+    )
+    
+    class Meta:
+        model = TelegramGroup
+        fields = [
+            # Identity
+            'id', 'name', 'chat_id', 'group_key',
+            
+            # Metadata
+            'description', 'invite_link',
+            
+            # Status
+            'is_active', 'is_private',
+            
+            # Member tracking
+            'member_count', 'max_members', 'last_sync_at',
+            
+            # Settings
+            'auto_add_enabled', 'auto_remove_enabled',
+            'welcome_message', 'removal_message', 'notification_enabled',
+            
+            # Bot permissions
+            'can_send_messages', 'can_add_users', 'can_remove_users',
+            'can_pin_messages', 'can_delete_messages', 'is_admin',
+            
+            # Relationships
+            'associated_plan_ids', 'associated_plans',
+            
+            # Display
+            'sort_order',
+            
+            # Computed fields
+            'has_capacity', 'is_healthy', 'capacity_percentage', 'days_since_sync',
+            
+            # Timestamps
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'member_count', 'last_sync_at', 'created_at', 'updated_at',
+            'has_capacity', 'is_healthy', 'capacity_percentage', 'days_since_sync'
+        ]
+    
+    def get_associated_plans(self, obj):
+        """Return minimal plan details for associated plans."""
+        plans = obj.associated_plans.all()
+        return [
+            {
+                'id': str(plan.id),
+                'name': plan.name,
+                'billing_period': plan.billing_period,
+                'is_active': plan.is_active
+            }
+            for plan in plans
+        ]
+    
+    def get_has_capacity(self, obj):
+        """Check if group has capacity for new members."""
+        return obj.has_capacity()
+    
+    def get_is_healthy(self, obj):
+        """
+        Check if group is healthy (active + has required permissions).
+        """
+        return (
+            obj.is_active and
+            obj.can_add_users and
+            obj.can_remove_users
+        )
+    
+    def get_capacity_percentage(self, obj):
+        """Calculate capacity utilization percentage."""
+        if obj.max_members is None:
+            return None  # Unlimited capacity
+        if obj.max_members == 0:
+            return 100.0
+        return round((obj.member_count / obj.max_members) * 100, 2)
+    
+    def get_days_since_sync(self, obj):
+        """Calculate days since last sync."""
+        if obj.last_sync_at is None:
+            return None
+        delta = timezone.now() - obj.last_sync_at
+        return delta.days
+    
+    def validate_chat_id(self, value):
+        """Validate chat_id format (must start with '-' for groups)."""
+        if value and not value.startswith('-'):
+            raise serializers.ValidationError(
+                "Telegram group chat ID must start with '-' (negative number)"
+            )
+        return value
+    
+    def validate_member_count(self, value):
+        """Validate member_count is non-negative."""
+        if value < 0:
+            raise serializers.ValidationError(
+                "Member count cannot be negative"
+            )
+        return value
+    
+    def validate_max_members(self, value):
+        """Validate max_members is positive or null."""
+        if value is not None and value < 0:
+            raise serializers.ValidationError(
+                "Maximum members cannot be negative"
+            )
+        return value
+    
+    def validate_sort_order(self, value):
+        """Validate sort_order is non-negative."""
+        if value < 0:
+            raise serializers.ValidationError(
+                "Sort order cannot be negative"
+            )
+        return value
+    
+    def validate(self, data):
+        """Cross-field validation."""
+        # Check if member_count exceeds max_members
+        member_count = data.get('member_count', getattr(self.instance, 'member_count', 0) if self.instance else 0)
+        max_members = data.get('max_members', getattr(self.instance, 'max_members', None) if self.instance else None)
+        
+        if max_members is not None and member_count > max_members:
+            raise serializers.ValidationError({
+                'member_count': f'Member count ({member_count}) cannot exceed max_members ({max_members})'
+            })
+        
+        return data
+    
+    def create(self, validated_data):
+        """Create a new TelegramGroup with plan associations."""
+        # Extract M2M data
+        plans = validated_data.pop('associated_plans', [])
+        
+        # Create the group
+        group = TelegramGroup.objects.create(**validated_data)
+        
+        # Set plan associations
+        if plans:
+            group.associated_plans.set(plans)
+        
+        return group
+    
+    def update(self, instance, validated_data):
+        """Update TelegramGroup including plan associations."""
+        # Extract M2M data
+        plans = validated_data.pop('associated_plans', None)
+        
+        # Update regular fields
+        for key, value in validated_data.items():
+            setattr(instance, key, value)
+        
+        instance.save()
+        
+        # Update plan associations if provided
+        if plans is not None:
+            instance.associated_plans.set(plans)
+        
+        return instance

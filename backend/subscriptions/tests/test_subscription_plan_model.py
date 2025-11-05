@@ -570,16 +570,16 @@ class TestSubscriptionPlanEdgeCases:
         
         assert SubscriptionPlan.objects.count() == 5
     
-    def test_plan_stripe_price_id(self):
-        """Test plan with Stripe price ID"""
+    def test_plan_paystack_plan_code(self):
+        """Test plan with Paystack plan code"""
         plan = SubscriptionPlan.objects.create(
-            name='Stripe Plan',
+            name='Paystack Plan',
             base_price=Decimal('29.99'),
             billing_period='monthly',
-            stripe_price_id='price_1234567890abcdef'
+            paystack_plan_code='PLN_1234567890abcdef'
         )
         
-        assert plan.stripe_price_id == 'price_1234567890abcdef'
+        assert plan.paystack_plan_code == 'PLN_1234567890abcdef'
     
     def test_plan_unicode_in_description(self):
         """Test plan with Unicode characters in description"""

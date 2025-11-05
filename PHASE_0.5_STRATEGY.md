@@ -8,9 +8,9 @@
 
 ## 📊 PROGRESS UPDATE
 
-**Phase 0.5 Completion:** 11/46 tasks (23.9%)  
-**Test Coverage:** 463/466 tests passing (99.4%)  
-**Migrations Applied:** 0008-0020 (13 migrations)
+**Phase 0.5 Completion:** 26/46 tasks (56.5%)  
+**Test Coverage:** 1082/1082 tests passing (100%)  
+**Migrations Applied:** 0008-0024 (17 migrations)
 
 ### Completed Models:
 - ✅ **Feature** (Task 0.5.1) - 22 tests | Migration 0008
@@ -25,8 +25,19 @@
 - ✅ **ExchangeRate** (Task 0.5.10) - 45 tests | Migration 0019 (currency auto-conversion)
 - ✅ **Subscription Updates** (Task 0.5.11) - 30 tests | Migration 0020 (new plan, referral, metadata fields)
 
+### Recently Completed:
+- ✅ **Subscription API** (Task 0.5.20) - 48 tests | CRUD + actions (cancel, reactivate, statistics)
+- ✅ **SubscriptionPlan API** (Task 0.5.21) - 36 tests | Public list/retrieve, admin CRUD, clone action
+- ✅ **Feature API** (Task 0.5.22) - 46 tests | Public list/retrieve, admin CRUD, bulk activate/deactivate
+- ✅ **Coupon API** (Task 0.5.23) - 48 tests | Admin CRUD, validation, usage tracking
+- ✅ **Coupon Usage Stats API** (Task 0.5.24) - 1 test | Alias endpoint for usage stats
+- ✅ **Referral Code API** (Task 0.5.25) - 46 tests | User CRUD, generate/validate actions, usage stats
+- ✅ **Referral Stats API** (Task 0.5.26) - 23 tests | Admin analytics, top referrers, trends, filtering
+- ✅ **Telegram Configuration API** (Task 0.5.27) - 37 tests | Singleton config, test connection action
+- ✅ **Telegram Groups API** (Task 0.5.28) - 32 tests | Admin CRUD, M2M plans, sync_members, test_access actions
+
 ### In Progress:
-- 🔄 **Encryption utilities** (Task 0.5.12) - Next up
+- [ ] **0.5.29**: Payment Configuration API (GET/POST/PUT `/api/admin/payment/config/`) + tests
 
 ### Key Achievements:
 - ✅ Discount-based referral system (non-stackable credits)
@@ -175,15 +186,16 @@
 ```
 
 **Tasks:**
-- 0.5.21: Plans API (GET/POST/PUT/DELETE `/api/admin/plans/`) + tests
-- 0.5.22: Features API (GET/POST/PUT/DELETE `/api/admin/features/`) + tests
-- 0.5.23: Coupons API (GET/POST/PUT/DELETE `/api/admin/coupons/`) + tests
-- 0.5.24: Coupon usage stats API (GET `/api/admin/coupons/{id}/usage/`) + tests
-- 0.5.25: Referral codes API (GET/POST `/api/admin/referrals/codes/`) + tests
-- 0.5.26: Referral stats API (GET `/api/admin/referrals/stats/`) + tests
-- 0.5.27: Telegram config API (GET/POST/PUT `/api/admin/telegram/config/`) + tests
-- 0.5.28: Telegram groups API (GET/POST/PUT/DELETE `/api/admin/telegram/groups/`) + tests
-- 0.5.29: Payment config API (GET/POST/PUT `/api/admin/payment/config/`) + tests
+- ✅ 0.5.20: Subscription API (GET/POST/PUT/DELETE `/api/subscriptions/`) + tests (48 tests)
+- ✅ 0.5.21: Plans API (GET/POST/PUT/DELETE `/api/plans/`) + tests (36 tests)
+- ✅ 0.5.22: Features API (GET/POST/PUT/DELETE `/api/features/`) + tests (46 tests)
+- ✅ 0.5.23: Coupons API (GET/POST/PUT/DELETE `/api/coupons/`) + tests (48 tests)
+- ✅ 0.5.24: Coupon usage stats API (GET `/api/coupons/{id}/usage/`) + tests (1 test) - Implemented as alias
+- ✅ 0.5.25: Referral codes API (GET/POST/PUT/DELETE `/api/referrals/codes/`) + tests (46 tests)
+- ✅ 0.5.26: Referral stats API (GET `/api/admin/referrals/stats/`) + tests (23 tests)
+- ✅ 0.5.27: Telegram config API (GET/POST/PUT `/api/admin/telegram/config/`) + tests (37 tests)
+- ✅ 0.5.28: Telegram groups API (GET/POST/PUT/DELETE `/api/admin/telegram/groups/`) + tests (32 tests)
+- [ ] 0.5.29: Payment config API (GET/POST/PUT `/api/admin/payment/config/`) + tests
 - 0.5.30: Email config API (GET/POST/PUT `/api/admin/email/config/`) + tests
 - 0.5.31: Test email API (POST `/api/admin/email/test/`) + tests
 - 0.5.32: Setup status API (GET `/api/admin/setup/status/`) + tests

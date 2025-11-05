@@ -1,0 +1,1885 @@
+"""
+Subscription API ViewSets (Phase 0.5 - Tasks 0.5.20-0.5.21)
+
+RESTful API endpoints for subscription management with:
+- Full CRUD operations (list, retrieve, create, update, delete)
+- Row-level permissions (users see own, admins see all)
+- Filtering by status, plan, date ranges
+- Pagination (10 per page for subscriptions, 20 for plans)
+- Custom actions (cancel, reactivate, activate, deactivate, clone)
+- Signal integration for automation
+"""
+
+from rest_framework import viewsets, status, filters
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.pagination import PageNumberPagination
+from django_filters.rest_framework import DjangoFilterBackend
+from django.utils import timezone
+from django.db.models import Q, Count, Sum
+
+from .models import Subscription, SubscriptionPlan, BillingProfile, Feature, Coupon, ReferralCode, Referral, ReferralCredit, TelegramConfiguration, TelegramGroup
+from .serializers import SubscriptionSerializer, PricingPlanSerializer, FeatureSerializer, CouponSerializer, ReferralCodeSerializer, TelegramConfigurationSerializer, TelegramGroupSerializer
+from .permissions import CanManageSubscription, IsAdmin
+
+
+class SubscriptionPagination(PageNumberPagination):
+    """Custom pagination for subscriptions (10 per page)"""
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
+class SubscriptionViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for subscription management (Phase 0.5 - Task 0.5.20)
+    
+    Provides:
+    - list: GET /subscriptions/ - List subscriptions (users see own, admins see all)
+    - retrieve: GET /subscriptions/{id}/ - Get subscription details
+    - create: POST /subscriptions/ - Create new subscription
+    - update: PUT/PATCH /subscriptions/{id}/ - Update subscription (admin only)
+    - destroy: DELETE /subscriptions/{id}/ - Delete subscription (admin only)
+    - cancel: POST /subscriptions/{id}/cancel/ - Cancel subscription
+    - reactivate: POST /subscriptions/{id}/reactivate/ - Reactivate cancelled subscription
+    
+    Permissions:
+    - IsAuthenticated: All users must be logged in
+    - CanManageSubscription: Row-level permissions (users read own, admins full CRUD)
+    
+    Filtering:
+    - status: Filter by subscription status (active, cancelled, expired, etc.)
+    - plan: Filter by subscription plan ID
+    - start_date__gte: Filter by start date (greater than or equal)
+    - end_date__lte: Filter by end date (less than or equal)
+    
+    Search:
+    - Search by user email, plan name
+    
+    Pagination:
+    - 10 subscriptions per page (configurable via page_size parameter)
+    """
+    serializer_class = SubscriptionSerializer
+    permission_classes = [IsAuthenticated, CanManageSubscription]
+    pagination_class = SubscriptionPagination
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['status', 'plan', 'billing_profile']
+    search_fields = ['billing_profile__user__email', 'plan__name']
+    ordering_fields = ['created_at', 'start_date', 'end_date', 'status']
+    ordering = ['-created_at']
+    
+    def get_queryset(self):
+        """
+        Return subscriptions based on user permissions:
+        - Regular users: Only their own subscriptions
+        - Admin/staff: All subscriptions
+        """
+        user = self.request.user
+        
+        if user.is_staff or user.is_superuser:
+            # Admins see all subscriptions
+            queryset = Subscription.objects.all()
+        else:
+            # Users see only their own subscriptions
+            queryset = Subscription.objects.filter(
+                billing_profile__user=user
+            )
+        
+        # Select related to optimize queries
+        queryset = queryset.select_related(
+            'billing_profile',
+            'billing_profile__user',
+            'plan',
+            'referral',
+            'referral__referrer',
+            'referral__referral_code',
+            'payment_method'
+        ).prefetch_related(
+            'plan__features'
+        )
+        
+        return queryset
+    
+    def perform_create(self, serializer):
+        """
+        Create subscription with proper user context.
+        Users can only create subscriptions for their own billing profile.
+        Admins can create for any billing profile.
+        """
+        serializer.save()
+    
+    @action(detail=True, methods=['post'])
+    def cancel(self, request, pk=None):
+        """
+        Cancel a subscription (POST /subscriptions/{id}/cancel/)
+        
+        Request body:
+        {
+            "reason": "Optional cancellation reason"
+        }
+        
+        Response:
+        {
+            "success": true,
+            "message": "Subscription cancelled successfully",
+            "subscription": {...subscription data...}
+        }
+        
+        Notes:
+        - Sets auto_renew to False
+        - Sets status to 'cancelled'
+        - Records cancellation timestamp and reason
+        - Access continues until end_date
+        - Triggers subscription_cancelled signal
+        """
+        subscription = self.get_object()
+        
+        # Check if already cancelled
+        if subscription.status == 'cancelled':
+            return Response(
+                {
+                    'success': False,
+                    'message': 'Subscription is already cancelled',
+                    'subscription': self.get_serializer(subscription).data
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if already expired
+        if subscription.status == 'expired':
+            return Response(
+                {
+                    'success': False,
+                    'message': 'Cannot cancel an expired subscription',
+                    'subscription': self.get_serializer(subscription).data
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Get cancellation reason from request
+        reason = request.data.get('reason', '')
+        
+        # Cancel subscription using model method (triggers signal)
+        subscription.cancel(reason=reason)
+        
+        return Response(
+            {
+                'success': True,
+                'message': 'Subscription cancelled successfully. Access continues until end date.',
+                'subscription': self.get_serializer(subscription).data
+            },
+            status=status.HTTP_200_OK
+        )
+    
+    @action(detail=True, methods=['post'])
+    def reactivate(self, request, pk=None):
+        """
+        Reactivate a cancelled subscription (POST /subscriptions/{id}/reactivate/)
+        
+        Response:
+        {
+            "success": true,
+            "message": "Subscription reactivated successfully",
+            "subscription": {...subscription data...}
+        }
+        
+        Notes:
+        - Only works for cancelled subscriptions
+        - Re-enables auto_renew
+        - Sets status back to 'active'
+        - Clears cancellation timestamp and reason
+        - Subscription must not be expired (end_date > now)
+        """
+        subscription = self.get_object()
+        
+        # Check if subscription is cancelled
+        if subscription.status != 'cancelled':
+            return Response(
+                {
+                    'success': False,
+                    'message': 'Only cancelled subscriptions can be reactivated',
+                    'subscription': self.get_serializer(subscription).data
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if subscription is expired
+        if timezone.now() > subscription.end_date:
+            return Response(
+                {
+                    'success': False,
+                    'message': 'Cannot reactivate an expired subscription. Please create a new subscription.',
+                    'subscription': self.get_serializer(subscription).data
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Reactivate subscription
+        subscription.status = 'active'
+        subscription.auto_renew = True
+        subscription.cancelled_at = None
+        subscription.cancellation_reason = ''
+        subscription.save()
+        
+        return Response(
+            {
+                'success': True,
+                'message': 'Subscription reactivated successfully',
+                'subscription': self.get_serializer(subscription).data
+            },
+            status=status.HTTP_200_OK
+        )
+    
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def expiring_soon(self, request):
+        """
+        Get subscriptions expiring within specified days (GET /subscriptions/expiring_soon/?days=7)
+        
+        Query params:
+        - days: Number of days to look ahead (default: 7)
+        
+        Returns list of subscriptions expiring within the specified timeframe.
+        Users see only their own, admins see all.
+        """
+        days = int(request.query_params.get('days', 7))
+        
+        from datetime import timedelta
+        expiry_threshold = timezone.now() + timedelta(days=days)
+        
+        queryset = self.get_queryset().filter(
+            status='active',
+            end_date__lte=expiry_threshold,
+            end_date__gte=timezone.now()
+        )
+        
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated, IsAdmin])
+    def statistics(self, request):
+        """
+        Get subscription statistics (GET /subscriptions/statistics/) - Admin only
+        
+        Returns:
+        {
+            "total_subscriptions": 150,
+            "active_subscriptions": 120,
+            "cancelled_subscriptions": 20,
+            "expired_subscriptions": 10,
+            "pending_subscriptions": 5,
+            "subscriptions_this_month": 15,
+            "expiring_this_week": 8
+        }
+        """
+        from datetime import timedelta
+        from django.db.models import Count
+        
+        now = timezone.now()
+        week_from_now = now + timedelta(days=7)
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        
+        queryset = Subscription.objects.all()
+        
+        stats = {
+            'total_subscriptions': queryset.count(),
+            'active_subscriptions': queryset.filter(status='active').count(),
+            'cancelled_subscriptions': queryset.filter(status='cancelled').count(),
+            'expired_subscriptions': queryset.filter(status='expired').count(),
+            'pending_subscriptions': queryset.filter(status='pending').count(),
+            'suspended_subscriptions': queryset.filter(status='suspended').count(),
+            'subscriptions_this_month': queryset.filter(created_at__gte=month_start).count(),
+            'expiring_this_week': queryset.filter(
+                status='active',
+                end_date__gte=now,
+                end_date__lte=week_from_now
+            ).count()
+        }
+        
+        return Response(stats, status=status.HTTP_200_OK)
+
+
+# ============================================================================
+# Phase 0.5 - Task 0.5.21: SubscriptionPlan API Endpoints
+# ============================================================================
+
+
+class SubscriptionPlanPagination(PageNumberPagination):
+    """Custom pagination for subscription plans (20 per page)"""
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
+class SubscriptionPlanViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for subscription plan management (Phase 0.5 - Task 0.5.21)
+    
+    Provides:
+    - list: GET /plans/ - List all active plans (public access)
+    - retrieve: GET /plans/{id}/ - Get plan details (public access)
+    - create: POST /plans/ - Create new plan (admin only)
+    - update: PUT/PATCH /plans/{id}/ - Update plan (admin only)
+    - destroy: DELETE /plans/{id}/ - Delete plan (admin only)
+    - activate: POST /plans/{id}/activate/ - Activate plan (admin only)
+    - deactivate: POST /plans/{id}/deactivate/ - Deactivate plan (admin only)
+    - clone: POST /plans/{id}/clone/ - Clone plan (admin only)
+    
+    Permissions:
+    - AllowAny: List and retrieve (public endpoints)
+    - IsAdmin: Create, update, delete, and custom actions
+    
+    Filtering: billing_period, is_active, is_featured
+    Search: name, description
+    Ordering: base_price, name, created_at, -base_price, -created_at
+    """
+    
+    serializer_class = PricingPlanSerializer
+    pagination_class = SubscriptionPlanPagination
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['billing_period', 'is_active', 'is_featured']
+    search_fields = ['name', 'description']
+    ordering_fields = ['base_price', 'name', 'created_at']
+    ordering = ['sort_order', 'base_price']  # Default ordering
+    
+    def get_permissions(self):
+        """
+        Set permissions based on action:
+        - list, retrieve: AllowAny (public access)
+        - All others: IsAdmin (write operations)
+        """
+        if self.action in ['list', 'retrieve']:
+            return [AllowAny()]
+        return [IsAdmin()]
+    
+    def get_queryset(self):
+        """
+        Return subscription plans with optimized queries.
+        Public users see only active plans.
+        Admins see all plans.
+        """
+        queryset = SubscriptionPlan.objects.prefetch_related('features')
+        
+        # Public users only see active plans
+        if not self.request.user.is_authenticated or not self.request.user.is_staff:
+            queryset = queryset.filter(is_active=True)
+        
+        return queryset
+    
+    @action(detail=True, methods=['post'], permission_classes=[IsAdmin])
+    def activate(self, request, pk=None):
+        """
+        Activate a subscription plan (admin only)
+        POST /api/plans/{id}/activate/
+        """
+        plan = self.get_object()
+        
+        if plan.is_active:
+            return Response(
+                {'error': 'Plan is already active'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        plan.is_active = True
+        plan.save(update_fields=['is_active', 'updated_at'])
+        
+        serializer = self.get_serializer(plan)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    @action(detail=True, methods=['post'], permission_classes=[IsAdmin])
+    def deactivate(self, request, pk=None):
+        """
+        Deactivate a subscription plan (admin only)
+        POST /api/plans/{id}/deactivate/
+        """
+        plan = self.get_object()
+        
+        if not plan.is_active:
+            return Response(
+                {'error': 'Plan is already inactive'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        plan.is_active = False
+        plan.save(update_fields=['is_active', 'updated_at'])
+        
+        serializer = self.get_serializer(plan)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    @action(detail=True, methods=['post'], permission_classes=[IsAdmin])
+    def clone(self, request, pk=None):
+        """
+        Clone a subscription plan with a new name (admin only)
+        POST /api/plans/{id}/clone/
+        Body: {
+            "name": "New Plan Name",
+            "slug": "new-plan-slug" (optional, will auto-generate if not provided)
+        }
+        """
+        source_plan = self.get_object()
+        new_name = request.data.get('name')
+        new_slug = request.data.get('slug', None)
+        
+        if not new_name:
+            return Response(
+                {'error': 'Name is required for cloned plan'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Create new plan as a copy
+        cloned_plan = SubscriptionPlan.objects.create(
+            name=new_name,
+            slug=new_slug if new_slug else None,  # Will auto-generate from name
+            description=f"{source_plan.description} (Cloned)",
+            base_price=source_plan.base_price,
+            billing_period=source_plan.billing_period,
+            trial_days=source_plan.trial_days,
+            limits=source_plan.limits.copy() if source_plan.limits else {},
+            paystack_plan_code='',  # Clear Paystack integration (must be set manually)
+            is_active=False,  # Cloned plans start inactive
+            is_featured=False,  # Not featured by default
+            sort_order=source_plan.sort_order + 1
+        )
+        
+        # Copy features M2M relationship
+        cloned_plan.features.set(source_plan.features.all())
+        
+        serializer = self.get_serializer(cloned_plan)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+# Phase 0.5 - Task 0.5.22: Feature API Endpoints
+# ==================================================
+
+class FeaturePagination(PageNumberPagination):
+    """Pagination for Feature list endpoint"""
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
+class FeatureViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for feature management (Phase 0.5 - Task 0.5.22)
+    
+    Public endpoints (AllowAny):
+    - list: GET /api/features/ - List all active features (non-admins see only active)
+    - retrieve: GET /api/features/{id}/ - Get feature details
+    
+    Admin-only endpoints (IsAdmin):
+    - create: POST /api/features/ - Create new feature
+    - update: PUT/PATCH /api/features/{id}/ - Update feature (key is immutable)
+    - destroy: DELETE /api/features/{id}/ - Delete feature
+    - bulk_activate: POST /api/features/bulk_activate/ - Activate multiple features
+    - bulk_deactivate: POST /api/features/bulk_deactivate/ - Deactivate multiple features
+    
+    Filtering:
+    - ?category=signals - Filter by category
+    - ?is_active=true - Filter by active status
+    
+    Search:
+    - ?search=premium - Search in name, description, key
+    
+    Ordering:
+    - ?ordering=sort_order - Order by sort_order (default)
+    - ?ordering=name - Order by name
+    - ?ordering=category - Order by category
+    - ?ordering=-created_at - Order by creation date (newest first)
+    
+    Pagination:
+    - Default: 20 per page
+    - Custom: ?page_size=50 (max 100)
+    """
+    queryset = Feature.objects.all()
+    serializer_class = FeatureSerializer
+    pagination_class = FeaturePagination
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['category', 'is_active']
+    search_fields = ['name', 'description', 'key']
+    ordering_fields = ['sort_order', 'name', 'category', 'created_at']
+    ordering = ['sort_order', 'name']  # Default ordering
+    
+    def get_permissions(self):
+        """
+        Public access for list/retrieve.
+        Admin-only for create/update/delete/custom actions.
+        """
+        if self.action in ['list', 'retrieve']:
+            return [AllowAny()]
+        return [IsAdmin()]
+    
+    def get_queryset(self):
+        """
+        Filter features based on user permissions.
+        Public/non-staff users: only active features
+        Admins: all features (active + inactive)
+        """
+        queryset = super().get_queryset()
+        
+        # Non-admin users only see active features
+        if not (self.request.user and self.request.user.is_authenticated and self.request.user.is_staff):
+            queryset = queryset.filter(is_active=True)
+        
+        return queryset
+    
+    @action(detail=False, methods=['post'], permission_classes=[IsAdmin])
+    def bulk_activate(self, request):
+        """
+        Bulk activate features by IDs
+        
+        POST /api/features/bulk_activate/
+        Body: {"ids": ["uuid1", "uuid2", ...]}
+        """
+        ids = request.data.get('ids', [])
+        
+        if not ids:
+            return Response(
+                {'error': 'No feature IDs provided'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if not isinstance(ids, list):
+            return Response(
+                {'error': 'IDs must be a list'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Update features
+        updated_count = Feature.objects.filter(id__in=ids).update(is_active=True)
+        
+        return Response({
+            'message': f'Successfully activated {updated_count} feature(s)',
+            'count': updated_count
+        }, status=status.HTTP_200_OK)
+    
+    @action(detail=False, methods=['post'], permission_classes=[IsAdmin])
+    def bulk_deactivate(self, request):
+        """
+        Bulk deactivate features by IDs
+        
+        POST /api/features/bulk_deactivate/
+        Body: {"ids": ["uuid1", "uuid2", ...]}
+        """
+        ids = request.data.get('ids', [])
+        
+        if not ids:
+            return Response(
+                {'error': 'No feature IDs provided'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if not isinstance(ids, list):
+            return Response(
+                {'error': 'IDs must be a list'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Update features
+        updated_count = Feature.objects.filter(id__in=ids).update(is_active=False)
+        
+        return Response({
+            'message': f'Successfully deactivated {updated_count} feature(s)',
+            'count': updated_count
+        }, status=status.HTTP_200_OK)
+
+
+class CouponPagination(PageNumberPagination):
+    """Custom pagination for coupons (20 per page)"""
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
+class CouponViewSet(viewsets.ModelViewSet):
+    """
+    Coupon management API (Phase 0.5 - Task 0.5.23)
+    
+    Endpoints:
+    - GET /api/coupons/ - List all coupons (admin-only)
+    - GET /api/coupons/{id}/ - Retrieve coupon details (admin-only)
+    - POST /api/coupons/ - Create coupon (admin-only)
+    - PUT/PATCH /api/coupons/{id}/ - Update coupon (admin-only)
+    - DELETE /api/coupons/{id}/ - Delete coupon (admin-only)
+    - POST /api/coupons/validate/ - Validate coupon code (admin-only)
+    - GET /api/coupons/{id}/usage_stats/ - Get usage statistics (admin-only)
+    - POST /api/coupons/bulk_activate/ - Bulk activate coupons (admin-only)
+    - POST /api/coupons/bulk_deactivate/ - Bulk deactivate coupons (admin-only)
+    
+    Permissions:
+    - Admin-only access (IsAdmin permission)
+    
+    Features:
+    - Filtering: discount_type, is_active, valid_from, valid_until
+    - Search: code, description
+    - Ordering: created_at, current_uses, discount_value
+    - Pagination: 20 per page (configurable to 100)
+    - Code immutability (cannot change after creation)
+    """
+    queryset = Coupon.objects.all()
+    serializer_class = CouponSerializer
+    permission_classes = [IsAdmin]
+    pagination_class = CouponPagination
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['discount_type', 'is_active']
+    search_fields = ['code', 'description']
+    ordering_fields = ['created_at', 'current_uses', 'discount_value', 'valid_from', 'valid_until']
+    ordering = ['-created_at']
+    
+    def perform_create(self, serializer):
+        """Set created_by to current user"""
+        serializer.save(created_by=self.request.user)
+    
+    @action(detail=False, methods=['post'])
+    def validate(self, request):
+        """
+        Validate a coupon code without applying it.
+        
+        POST /api/coupons/validate/
+        Body: {
+            "code": "SAVE20",
+            "plan_id": "uuid",  # optional
+            "amount": 100.00    # optional, for fixed discounts
+        }
+        
+        Returns: {
+            "valid": true/false,
+            "message": "...",
+            "coupon": {...},         # if valid
+            "discount_details": {...} # if valid and amount provided
+        }
+        """
+        code = request.data.get('code', '').upper().strip()
+        plan_id = request.data.get('plan_id')
+        amount = request.data.get('amount')
+        
+        if not code:
+            return Response({
+                'valid': False,
+                'message': 'Coupon code is required.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            coupon = Coupon.objects.get(code=code)
+        except Coupon.DoesNotExist:
+            return Response({
+                'valid': False,
+                'message': f'Coupon "{code}" does not exist.'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Check if coupon can be used
+        if not coupon.can_be_used():
+            reasons = []
+            if not coupon.is_active:
+                reasons.append("inactive")
+            if not coupon.is_valid():
+                reasons.append("expired or not yet valid")
+            if not coupon.is_usage_available():
+                reasons.append("usage limit reached")
+            
+            return Response({
+                'valid': False,
+                'message': f'Coupon "{code}" cannot be used: {", ".join(reasons)}.',
+                'coupon': CouponSerializer(coupon).data
+            }, status=status.HTTP_200_OK)
+        
+        # Check plan applicability if plan_id provided
+        if plan_id:
+            try:
+                from django.core.exceptions import ValidationError as DjangoValidationError
+                from uuid import UUID
+                try:
+                    plan_uuid = UUID(plan_id)
+                    plan = SubscriptionPlan.objects.get(id=plan_uuid)
+                except (ValueError, DjangoValidationError):
+                    return Response({
+                        'valid': False,
+                        'message': 'Invalid plan ID format.'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                except SubscriptionPlan.DoesNotExist:
+                    return Response({
+                        'valid': False,
+                        'message': f'Plan with ID {plan_id} does not exist.'
+                    }, status=status.HTTP_404_NOT_FOUND)
+                
+                if not coupon.applies_to_plan(plan):
+                    return Response({
+                        'valid': False,
+                        'message': f'Coupon "{code}" does not apply to the selected plan.',
+                        'coupon': CouponSerializer(coupon).data
+                    }, status=status.HTTP_200_OK)
+            except Exception as e:
+                return Response({
+                    'valid': False,
+                    'message': f'Error validating plan: {str(e)}'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        response_data = {
+            'valid': True,
+            'message': f'Coupon "{code}" is valid.',
+            'coupon': CouponSerializer(coupon).data
+        }
+        
+        # Calculate discount if amount provided
+        if amount is not None:
+            try:
+                from decimal import Decimal
+                amount_decimal = Decimal(str(amount))
+                discount_details = coupon.calculate_discount(amount_decimal)
+                response_data['discount_details'] = {
+                    'original_price': float(discount_details['original_price']),
+                    'discount_amount': float(discount_details['discount_amount']),
+                    'final_price': float(discount_details['final_price']),
+                    'savings_percentage': float(discount_details['savings_percentage'])
+                }
+            except Exception as e:
+                response_data['discount_details_error'] = str(e)
+        
+        return Response(response_data, status=status.HTTP_200_OK)
+    
+    @action(detail=True, methods=['get'])
+    def usage_stats(self, request, pk=None):
+        """
+        Get detailed usage statistics for a coupon.
+        
+        GET /api/coupons/{id}/usage_stats/
+        
+        Returns: {
+            "coupon": {...},
+            "stats": {
+                "total_uses": 10,
+                "remaining_uses": 40,
+                "usage_percentage": 20.0,
+                "is_exhausted": false,
+                "is_expired": false,
+                "is_valid": true,
+                "plans_count": 3
+            }
+        }
+        """
+        coupon = self.get_object()
+        
+        stats = {
+            'total_uses': coupon.current_uses,
+            'remaining_uses': coupon.get_remaining_uses(),
+            'usage_percentage': float(
+                (coupon.current_uses / coupon.max_uses * 100) if coupon.max_uses else 0
+            ),
+            'is_exhausted': not coupon.is_usage_available(),
+            'is_expired': not coupon.is_valid(),
+            'is_valid': coupon.is_valid(),
+            'can_be_used': coupon.can_be_used(),
+            'plans_count': coupon.plans.count()
+        }
+        
+        return Response({
+            'coupon': CouponSerializer(coupon).data,
+            'stats': stats
+        }, status=status.HTTP_200_OK)
+    
+    @action(detail=True, methods=['get'], url_path='usage', url_name='usage-alias')
+    def usage(self, request, pk=None):
+        """
+        Alias for usage_stats to match Task 0.5.24 endpoint specification.
+        
+        GET /api/coupons/{id}/usage/
+        
+        This is an alias that returns the same data as usage_stats.
+        """
+        return self.usage_stats(request, pk)
+    
+    @action(detail=False, methods=['post'])
+    def bulk_activate(self, request):
+        """
+        Bulk activate coupons by IDs.
+        
+        POST /api/coupons/bulk_activate/
+        Body: {"ids": ["uuid1", "uuid2", ...]}
+        
+        Returns: {"message": "...", "count": N}
+        """
+        ids = request.data.get('ids', [])
+        
+        if not ids:
+            return Response({
+                'error': 'No coupon IDs provided.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not isinstance(ids, list):
+            return Response({
+                'error': 'IDs must be a list.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Update coupons
+        updated_count = Coupon.objects.filter(id__in=ids).update(is_active=True)
+        
+        return Response({
+            'message': f'Successfully activated {updated_count} coupon(s)',
+            'count': updated_count
+        }, status=status.HTTP_200_OK)
+    
+    @action(detail=False, methods=['post'])
+    def bulk_deactivate(self, request):
+        """
+        Bulk deactivate coupons by IDs.
+        
+        POST /api/coupons/bulk_deactivate/
+        Body: {"ids": ["uuid1", "uuid2", ...]}
+        
+        Returns: {"message": "...", "count": N}
+        """
+        ids = request.data.get('ids', [])
+        
+        if not ids:
+            return Response({
+                'error': 'No coupon IDs provided.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not isinstance(ids, list):
+            return Response({
+                'error': 'IDs must be a list.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Update coupons
+        updated_count = Coupon.objects.filter(id__in=ids).update(is_active=False)
+        
+        return Response({
+            'message': f'Successfully deactivated {updated_count} coupon(s)',
+            'count': updated_count
+        }, status=status.HTTP_200_OK)
+
+
+# ============================================================================
+# REFERRAL CODE API (Phase 0.5 - Task 0.5.25)
+# ============================================================================
+
+class ReferralCodePagination(PageNumberPagination):
+    """Pagination for referral code list (20 per page)"""
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
+class ReferralCodeViewSet(viewsets.ModelViewSet):
+    """
+    API endpoints for referral code management (Phase 0.5 - Task 0.5.25)
+    
+    Features:
+    - Full CRUD operations for referral codes
+    - Users can view/manage their own codes
+    - Admins can manage all codes
+    - Filtering by is_active, referrer
+    - Search by code, referrer username
+    - Ordering by created_at, current_uses
+    - Pagination (20 per page)
+    - Custom actions: validate, usage_stats, generate
+    
+    Permissions:
+    - List/Retrieve: Authenticated users (see own codes, admins see all)
+    - Create/Update/Delete: Code owners or admins
+    - Custom actions: Varies by action
+    
+    Endpoints:
+    - GET    /api/referrals/codes/              - List referral codes
+    - POST   /api/referrals/codes/              - Create new referral code
+    - GET    /api/referrals/codes/{id}/         - Retrieve referral code details
+    - PUT    /api/referrals/codes/{id}/         - Update referral code
+    - PATCH  /api/referrals/codes/{id}/         - Partial update
+    - DELETE /api/referrals/codes/{id}/         - Delete referral code
+    - POST   /api/referrals/codes/validate/     - Validate referral code
+    - GET    /api/referrals/codes/{id}/usage_stats/ - Get usage statistics
+    - GET    /api/referrals/codes/{id}/usage/   - Alias for usage_stats
+    - POST   /api/referrals/codes/generate/     - Generate new referral code (authenticated users)
+    """
+    queryset = ReferralCode.objects.all()
+    serializer_class = ReferralCodeSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = ReferralCodePagination
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['is_active', 'referrer']
+    search_fields = ['code', 'referrer__username', 'referrer__email']
+    ordering_fields = ['created_at', 'current_uses', 'valid_from', 'valid_until']
+    ordering = ['-created_at']
+    
+    def get_queryset(self):
+        """
+        Return referral codes based on user permissions:
+        - Regular users see only their own codes
+        - Admins see all codes
+        """
+        user = self.request.user
+        if user.is_staff or user.is_superuser:
+            return ReferralCode.objects.all()
+        return ReferralCode.objects.filter(referrer=user)
+    
+    def perform_create(self, serializer):
+        """Set referrer to current user on creation"""
+        serializer.save(referrer=self.request.user)
+    
+    def check_object_permissions(self, request, obj):
+        """
+        Check if user can access this referral code:
+        - Code owner can access
+        - Admins can access all
+        """
+        super().check_object_permissions(request, obj)
+        
+        user = request.user
+        # Admin can access all
+        if user.is_staff or user.is_superuser:
+            return
+        
+        # Owner can access
+        if obj.referrer == user:
+            return
+        
+        # Otherwise deny
+        from rest_framework.exceptions import PermissionDenied
+        raise PermissionDenied("You don't have permission to access this referral code.")
+    
+    @action(detail=False, methods=['post'])
+    def validate(self, request):
+        """
+        Validate a referral code by code string.
+        
+        POST /api/referrals/codes/validate/
+        Body: {
+            "code": "JOHN2024",
+            "amount": 100.00  (optional - for discount calculation)
+        }
+        
+        Returns: {
+            "valid": true/false,
+            "message": "...",
+            "referral_code": {...},
+            "referrer_discount_details": {...},  (if amount provided)
+            "referee_discount_details": {...}    (if amount provided)
+        }
+        """
+        code = request.data.get('code', '').upper().strip()
+        amount = request.data.get('amount')
+        
+        if not code:
+            return Response({
+                'valid': False,
+                'message': 'Referral code is required.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            referral_code = ReferralCode.objects.get(code=code)
+        except ReferralCode.DoesNotExist:
+            return Response({
+                'valid': False,
+                'message': f'Referral code "{code}" does not exist.'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Check if active
+        if not referral_code.is_active:
+            return Response({
+                'valid': False,
+                'message': f'Referral code "{code}" is not active.',
+                'referral_code': ReferralCodeSerializer(referral_code).data
+            }, status=status.HTTP_200_OK)
+        
+        # Check if valid (time-based)
+        if not referral_code.is_valid():
+            if referral_code.valid_from and timezone.now() < referral_code.valid_from:
+                message = f'Referral code "{code}" is not yet valid. Valid from {referral_code.valid_from}.'
+            elif referral_code.valid_until and timezone.now() > referral_code.valid_until:
+                message = f'Referral code "{code}" has expired on {referral_code.valid_until}.'
+            else:
+                message = f'Referral code "{code}" is not valid.'
+            
+            return Response({
+                'valid': False,
+                'message': message,
+                'referral_code': ReferralCodeSerializer(referral_code).data
+            }, status=status.HTTP_200_OK)
+        
+        # Check usage limits
+        if not referral_code.is_usage_available():
+            return Response({
+                'valid': False,
+                'message': f'Referral code "{code}" has reached its usage limit.',
+                'referral_code': ReferralCodeSerializer(referral_code).data
+            }, status=status.HTTP_200_OK)
+        
+        # Valid!
+        response_data = {
+            'valid': True,
+            'message': f'Referral code "{code}" is valid.',
+            'referral_code': ReferralCodeSerializer(referral_code).data
+        }
+        
+        # Calculate discount if amount provided
+        if amount:
+            try:
+                from decimal import Decimal
+                amount_decimal = Decimal(str(amount))
+                
+                referrer_discount = referral_code.calculate_referrer_discount(amount_decimal)
+                referee_discount = referral_code.calculate_referee_discount(amount_decimal)
+                
+                response_data['referrer_discount_details'] = {
+                    'original_price': float(referrer_discount['original_price']),
+                    'discount_amount': float(referrer_discount['discount_amount']),
+                    'final_price': float(referrer_discount['final_price']),
+                    'savings_percentage': float(referrer_discount['savings_percentage'])
+                }
+                response_data['referee_discount_details'] = {
+                    'original_price': float(referee_discount['original_price']),
+                    'discount_amount': float(referee_discount['discount_amount']),
+                    'final_price': float(referee_discount['final_price']),
+                    'savings_percentage': float(referee_discount['savings_percentage'])
+                }
+            except Exception as e:
+                response_data['discount_calculation_error'] = str(e)
+        
+        return Response(response_data, status=status.HTTP_200_OK)
+    
+    @action(detail=True, methods=['get'])
+    def usage_stats(self, request, pk=None):
+        """
+        Get detailed usage statistics for a referral code.
+        
+        GET /api/referrals/codes/{id}/usage_stats/
+        
+        Returns: {
+            "referral_code": {...},
+            "stats": {
+                "total_uses": 10,
+                "remaining_uses": 40,
+                "usage_percentage": 20.0,
+                "is_exhausted": false,
+                "is_expired": false,
+                "is_valid": true,
+                "can_be_used": true
+            }
+        }
+        """
+        referral_code = self.get_object()
+        
+        stats = {
+            'total_uses': referral_code.current_uses,
+            'remaining_uses': referral_code.get_remaining_uses(),
+            'usage_percentage': float(
+                (referral_code.current_uses / referral_code.max_uses * 100) if referral_code.max_uses else 0
+            ),
+            'is_exhausted': not referral_code.is_usage_available(),
+            'is_expired': not referral_code.is_valid(),
+            'is_valid': referral_code.is_valid(),
+            'can_be_used': referral_code.can_be_used()
+        }
+        
+        return Response({
+            'referral_code': ReferralCodeSerializer(referral_code).data,
+            'stats': stats
+        }, status=status.HTTP_200_OK)
+    
+    @action(detail=True, methods=['get'], url_path='usage', url_name='usage-alias')
+    def usage(self, request, pk=None):
+        """
+        Alias for usage_stats to match Task 0.5.26 endpoint specification.
+        
+        GET /api/referrals/codes/{id}/usage/
+        
+        This is an alias that returns the same data as usage_stats.
+        """
+        return self.usage_stats(request, pk)
+    
+    @action(detail=False, methods=['post'])
+    def generate(self, request):
+        """
+        Generate a new referral code for the authenticated user.
+        
+        POST /api/referrals/codes/generate/
+        Body: {
+            "referrer_discount_type": "percentage",
+            "referrer_discount_value": 10.00,
+            "referee_discount_type": "percentage",
+            "referee_discount_value": 10.00,
+            "max_uses": null,  (optional - null for unlimited)
+            "valid_until": null,  (optional - null for never expires)
+            "description": "My referral code"  (optional)
+        }
+        
+        Returns: {
+            "referral_code": {...},
+            "message": "Referral code generated successfully"
+        }
+        
+        Note: Code is auto-generated based on username + timestamp
+        """
+        import random
+        import string
+        from datetime import datetime
+        
+        user = request.user
+        
+        # Generate unique code
+        timestamp = datetime.now().strftime('%Y%m')
+        base_code = f"{user.username.upper()}_{timestamp}"
+        
+        # Ensure uniqueness by adding random suffix if needed
+        code = base_code
+        attempts = 0
+        while ReferralCode.objects.filter(code=code).exists() and attempts < 10:
+            suffix = ''.join(random.choices(string.digits, k=3))
+            code = f"{base_code}_{suffix}"
+            attempts += 1
+        
+        if ReferralCode.objects.filter(code=code).exists():
+            return Response({
+                'error': 'Could not generate unique referral code. Please try again.'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        # Create referral code with provided data
+        data = request.data.copy()
+        data['code'] = code
+        data['referrer'] = user.id
+        
+        serializer = ReferralCodeSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save(referrer=user)
+            return Response({
+                'referral_code': serializer.data,
+                'message': 'Referral code generated successfully.'
+            }, status=status.HTTP_201_CREATED)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ReferralStatsViewSet(viewsets.ViewSet):
+    """
+    ViewSet for admin referral statistics (Phase 0.5 - Task 0.5.26)
+    
+    Provides:
+    - list: GET /api/admin/referrals/stats/ - Get comprehensive referral statistics
+    
+    Permissions:
+    - IsAdmin: Only admins can access referral statistics
+    
+    Statistics include:
+    - Total referrals (completed vs cancelled)
+    - Total revenue generated from referrals
+    - Top referrers by conversion count
+    - Average discount given to referees
+    - Total credits awarded to referrers
+    - Conversion trends over time
+    
+    Query Parameters:
+    - start_date: Filter referrals from this date (YYYY-MM-DD)
+    - end_date: Filter referrals until this date (YYYY-MM-DD)
+    - referrer_id: Filter by specific referrer user ID
+    - status: Filter by referral status (completed/cancelled)
+    """
+    
+    permission_classes = [IsAuthenticated, IsAdmin]
+    
+    def list(self, request):
+        """
+        Get comprehensive referral statistics for admin dashboard.
+        
+        GET /api/admin/referrals/stats/
+        
+        Query Parameters:
+        - start_date (optional): Filter from date (YYYY-MM-DD)
+        - end_date (optional): Filter to date (YYYY-MM-DD)
+        - referrer_id (optional): Filter by specific referrer
+        - status (optional): Filter by status (completed/cancelled)
+        
+        Returns:
+        {
+            "overview": {
+                "total_referrals": 150,
+                "completed_referrals": 135,
+                "cancelled_referrals": 15,
+                "conversion_rate": 90.0,
+                "total_revenue_generated": "45000.00",
+                "average_discount_given": "15.50",
+                "total_credits_awarded": 13,
+                "total_credits_used": 8
+            },
+            "top_referrers": [
+                {
+                    "user_id": 123,
+                    "username": "john_doe",
+                    "email": "john@example.com",
+                    "total_referrals": 25,
+                    "completed_referrals": 23,
+                    "total_revenue": "7500.00",
+                    "credits_earned": 2,
+                    "credits_used": 1
+                },
+                ...
+            ],
+            "trends": {
+                "last_7_days": 12,
+                "last_30_days": 45,
+                "last_90_days": 120,
+                "this_month": 18,
+                "this_year": 150
+            },
+            "by_status": {
+                "completed": 135,
+                "cancelled": 15
+            },
+            "filters_applied": {
+                "start_date": "2025-01-01",
+                "end_date": "2025-11-05",
+                "referrer_id": null,
+                "status": null
+            }
+        }
+        """
+        from datetime import datetime, timedelta
+        from django.db.models import Avg, Count, Sum, Q, F
+        from django.contrib.auth import get_user_model
+        
+        User = get_user_model()
+        
+        # Parse query parameters
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        referrer_id = request.query_params.get('referrer_id')
+        status_filter = request.query_params.get('status')
+        
+        # Build base queryset
+        referrals = Referral.objects.all()
+        
+        # Apply filters
+        if start_date:
+            try:
+                from django.utils.timezone import make_aware
+                start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+                start_dt = make_aware(start_dt)
+                referrals = referrals.filter(conversion_date__gte=start_dt)
+            except ValueError:
+                return Response({
+                    'error': 'Invalid start_date format. Use YYYY-MM-DD.'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if end_date:
+            try:
+                from django.utils.timezone import make_aware
+                end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+                # Include entire end date
+                end_dt = end_dt.replace(hour=23, minute=59, second=59)
+                end_dt = make_aware(end_dt)
+                referrals = referrals.filter(conversion_date__lte=end_dt)
+            except ValueError:
+                return Response({
+                    'error': 'Invalid end_date format. Use YYYY-MM-DD.'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if referrer_id:
+            try:
+                # Support both integer and UUID primary keys
+                referrals = referrals.filter(referrer_id=referrer_id)
+            except (ValueError, TypeError):
+                return Response({
+                    'error': 'Invalid referrer_id.'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if status_filter:
+            if status_filter not in ['completed', 'cancelled']:
+                return Response({
+                    'error': 'Invalid status. Must be "completed" or "cancelled".'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            referrals = referrals.filter(status=status_filter)
+        
+        # Calculate overview statistics
+        total_referrals = referrals.count()
+        completed_referrals = referrals.filter(status='completed').count()
+        cancelled_referrals = referrals.filter(status='cancelled').count()
+        
+        conversion_rate = 0.0
+        if total_referrals > 0:
+            conversion_rate = round((completed_referrals / total_referrals) * 100, 2)
+        
+        # Revenue and discount statistics
+        revenue_data = referrals.filter(status='completed').aggregate(
+            total_revenue=Sum('final_amount'),
+            avg_discount=Avg('referee_discount_amount')
+        )
+        
+        total_revenue = revenue_data['total_revenue'] or 0
+        avg_discount = revenue_data['avg_discount'] or 0
+        
+        # Credit statistics
+        if referrer_id:
+            credits_awarded = ReferralCredit.objects.filter(
+                user_id=referrer_id
+            ).count()
+            credits_used = ReferralCredit.objects.filter(
+                user_id=referrer_id,
+                is_used=True
+            ).count()
+        else:
+            credits_awarded = ReferralCredit.objects.count()
+            credits_used = ReferralCredit.objects.filter(is_used=True).count()
+        
+        # Top referrers
+        top_referrers_data = []
+        if not referrer_id:  # Only show top referrers if not filtering by specific user
+            referrer_stats = referrals.values(
+                'referrer__id',
+                'referrer__username',
+                'referrer__email'
+            ).annotate(
+                total_referrals=Count('id'),
+                completed_referrals=Count('id', filter=Q(status='completed')),
+                total_revenue=Sum('final_amount', filter=Q(status='completed'))
+            ).order_by('-completed_referrals')[:10]
+            
+            for stat in referrer_stats:
+                referrer_id_val = stat['referrer__id']
+                credits_earned = ReferralCredit.objects.filter(user_id=referrer_id_val).count()
+                credits_used_count = ReferralCredit.objects.filter(
+                    user_id=referrer_id_val,
+                    is_used=True
+                ).count()
+                
+                top_referrers_data.append({
+                    'user_id': referrer_id_val,
+                    'username': stat['referrer__username'],
+                    'email': stat['referrer__email'],
+                    'total_referrals': stat['total_referrals'],
+                    'completed_referrals': stat['completed_referrals'],
+                    'total_revenue': str(stat['total_revenue'] or 0),
+                    'credits_earned': credits_earned,
+                    'credits_used': credits_used_count
+                })
+        
+        # Trend analysis
+        now = timezone.now()
+        trends = {
+            'last_7_days': referrals.filter(
+                conversion_date__gte=now - timedelta(days=7)
+            ).count(),
+            'last_30_days': referrals.filter(
+                conversion_date__gte=now - timedelta(days=30)
+            ).count(),
+            'last_90_days': referrals.filter(
+                conversion_date__gte=now - timedelta(days=90)
+            ).count(),
+            'this_month': referrals.filter(
+                conversion_date__year=now.year,
+                conversion_date__month=now.month
+            ).count(),
+            'this_year': referrals.filter(
+                conversion_date__year=now.year
+            ).count()
+        }
+        
+        # Status breakdown
+        by_status = {
+            'completed': completed_referrals,
+            'cancelled': cancelled_referrals
+        }
+        
+        return Response({
+            'overview': {
+                'total_referrals': total_referrals,
+                'completed_referrals': completed_referrals,
+                'cancelled_referrals': cancelled_referrals,
+                'conversion_rate': conversion_rate,
+                'total_revenue_generated': str(total_revenue),
+                'average_discount_given': str(round(avg_discount, 2)),
+                'total_credits_awarded': credits_awarded,
+                'total_credits_used': credits_used
+            },
+            'top_referrers': top_referrers_data,
+            'trends': trends,
+            'by_status': by_status,
+            'filters_applied': {
+                'start_date': start_date,
+                'end_date': end_date,
+                'referrer_id': referrer_id,
+                'status': status_filter
+            }
+        }, status=status.HTTP_200_OK)
+
+
+# ============================================================================
+# TELEGRAM CONFIGURATION API (Task 0.5.27)
+# ============================================================================
+
+class TelegramConfigurationViewSet(viewsets.ViewSet):
+    """
+    ViewSet for Telegram bot configuration (Phase 0.5 - Task 0.5.27)
+    
+    Singleton model - only one configuration exists.
+    
+    Endpoints:
+    - GET /api/admin/telegram/config/ - Get current configuration
+    - POST /api/admin/telegram/config/ - Update configuration (creates if doesn't exist)
+    - PUT/PATCH /api/admin/telegram/config/<id>/ - Update specific fields
+    - POST /api/admin/telegram/config/test_connection/ - Test bot connection
+    
+    Permissions:
+    - IsAuthenticated + IsAdmin: Admin-only access
+    
+    Features:
+    - Singleton pattern (always returns one instance)
+    - Encrypted bot_token storage
+    - Masked token display (never expose raw token)
+    - Connection health testing
+    - Settings bulk update
+    """
+    
+    permission_classes = [IsAuthenticated, IsAdmin]
+    serializer_class = TelegramConfigurationSerializer
+    
+    def list(self, request):
+        """
+        GET /api/admin/telegram/config/
+        
+        Returns the singleton TelegramConfiguration instance.
+        Always returns a list with one item for DRF consistency.
+        """
+        instance = TelegramConfiguration.get_instance()
+        serializer = TelegramConfigurationSerializer(instance)
+        return Response([serializer.data], status=status.HTTP_200_OK)
+    
+    def retrieve(self, request, pk=None):
+        """
+        GET /api/admin/telegram/config/<id>/
+        
+        Get configuration details. ID is ignored (singleton).
+        """
+        instance = TelegramConfiguration.get_instance()
+        serializer = TelegramConfigurationSerializer(instance)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    def create(self, request):
+        """
+        POST /api/admin/telegram/config/
+        
+        Create or update configuration (singleton pattern).
+        """
+        instance = TelegramConfiguration.get_instance()
+        serializer = TelegramConfigurationSerializer(
+            instance,
+            data=request.data,
+            partial=True
+        )
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def update(self, request, pk=None):
+        """
+        PUT /api/admin/telegram/config/<id>/
+        
+        Full update of configuration. ID is ignored (singleton).
+        """
+        instance = TelegramConfiguration.get_instance()
+        serializer = TelegramConfigurationSerializer(
+            instance,
+            data=request.data,
+            partial=False
+        )
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def partial_update(self, request, pk=None):
+        """
+        PATCH /api/admin/telegram/config/<id>/
+        
+        Partial update of configuration. ID is ignored (singleton).
+        """
+        instance = TelegramConfiguration.get_instance()
+        serializer = TelegramConfigurationSerializer(
+            instance,
+            data=request.data,
+            partial=True
+        )
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=False, methods=['post'], url_path='test-connection')
+    def test_connection(self, request):
+        """
+        POST /api/admin/telegram/config/test-connection/
+        
+        Test Telegram bot connection by calling the Telegram API.
+        
+        Returns:
+        - 200: Connection successful (updates is_connected=True)
+        - 400: Connection failed (updates is_connected=False with error)
+        
+        Response format:
+        {
+            "success": true/false,
+            "message": "Connection successful" or error message,
+            "bot_info": {
+                "id": 123456789,
+                "username": "OxidaneBot",
+                "first_name": "Oxidane",
+                "can_join_groups": true,
+                "can_read_all_group_messages": false
+            }
+        }
+        """
+        instance = TelegramConfiguration.get_instance()
+        
+        # Check if bot token is set
+        if not instance.bot_token:
+            return Response({
+                'success': False,
+                'message': 'Bot token is not configured. Please set a bot token first.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if token has valid format
+        if not instance.has_valid_token():
+            return Response({
+                'success': False,
+                'message': 'Bot token has invalid format. Expected: numbers:characters'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Test connection to Telegram API
+        try:
+            import requests
+            
+            # Call Telegram getMe API
+            api_url = f'https://api.telegram.org/bot{instance.bot_token}/getMe'
+            response = requests.get(api_url, timeout=10)
+            data = response.json()
+            
+            if response.status_code == 200 and data.get('ok'):
+                # Connection successful
+                bot_info = data.get('result', {})
+                bot_username = f"@{bot_info.get('username', '')}"
+                
+                # Update configuration
+                instance.mark_as_connected(bot_username=bot_username)
+                
+                return Response({
+                    'success': True,
+                    'message': 'Connection successful! Bot is configured and ready to use.',
+                    'bot_info': {
+                        'id': bot_info.get('id'),
+                        'username': bot_info.get('username'),
+                        'first_name': bot_info.get('first_name'),
+                        'can_join_groups': bot_info.get('can_join_groups', False),
+                        'can_read_all_group_messages': bot_info.get('can_read_all_group_messages', False),
+                    }
+                }, status=status.HTTP_200_OK)
+            else:
+                # Connection failed
+                error_message = data.get('description', 'Unknown error')
+                instance.mark_as_disconnected(error_message=error_message)
+                
+                return Response({
+                    'success': False,
+                    'message': f'Connection failed: {error_message}'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        except requests.exceptions.Timeout:
+            error_message = 'Connection timeout. Please check your internet connection.'
+            instance.mark_as_disconnected(error_message=error_message)
+            
+            return Response({
+                'success': False,
+                'message': error_message
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        except requests.exceptions.RequestException as e:
+            error_message = f'Network error: {str(e)}'
+            instance.mark_as_disconnected(error_message=error_message)
+            
+            return Response({
+                'success': False,
+                'message': error_message
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        except Exception as e:
+            error_message = f'Unexpected error: {str(e)}'
+            instance.mark_as_disconnected(error_message=error_message)
+            
+            return Response({
+                'success': False,
+                'message': error_message
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class TelegramGroupViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for Telegram Group management (Phase 0.5 - Task 0.5.28)
+    
+    Provides:
+    - list: GET /admin/telegram/groups/ - List all groups
+    - retrieve: GET /admin/telegram/groups/{id}/ - Get group details
+    - create: POST /admin/telegram/groups/ - Create new group
+    - update: PUT/PATCH /admin/telegram/groups/{id}/ - Update group
+    - destroy: DELETE /admin/telegram/groups/{id}/ - Delete group
+    - sync_members: POST /admin/telegram/groups/{id}/sync-members/ - Sync member count from Telegram
+    - test_access: POST /admin/telegram/groups/{id}/test-access/ - Test bot access and permissions
+    
+    Permissions:
+    - IsAuthenticated + IsAdmin: Admin-only access
+    
+    Features:
+    - M2M relationship with SubscriptionPlan
+    - Member count tracking via Telegram API
+    - Bot permission verification
+    - Capacity management
+    - Computed health status
+    """
+    queryset = TelegramGroup.objects.all()
+    serializer_class = TelegramGroupSerializer
+    permission_classes = [IsAuthenticated, IsAdmin]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['is_active', 'is_private', 'auto_add_enabled', 'auto_remove_enabled']
+    search_fields = ['name', 'description', 'group_key']
+    ordering_fields = ['sort_order', 'name', 'member_count', 'created_at']
+    ordering = ['sort_order', 'name']
+    pagination_class = PageNumberPagination
+    
+    @action(detail=True, methods=['post'], url_path='sync-members')
+    def sync_members(self, request, pk=None):
+        """
+        Sync member count from Telegram API.
+        
+        Calls Telegram Bot API getChatMemberCount endpoint to get current member count,
+        then updates the group's member_count and last_sync_at fields.
+        
+        Returns:
+            200: Success with old/new counts
+            400: Bot token not configured, invalid chat_id, or Telegram API error
+            408: Connection timeout
+            500: Unexpected error
+        """
+        group = self.get_object()
+        config = TelegramConfiguration.get_instance()
+        
+        # Validation
+        if not config.bot_token:
+            return Response({
+                'success': False,
+                'message': 'Bot token not configured. Please configure the Telegram bot first.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not group.chat_id:
+            return Response({
+                'success': False,
+                'message': 'Group chat ID not set'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            import requests
+            
+            # Get decrypted bot token
+            bot_token = config.decrypt_field('bot_token')
+            
+            # Call Telegram API
+            url = f"https://api.telegram.org/bot{bot_token}/getChatMemberCount"
+            response = requests.post(
+                url,
+                json={'chat_id': group.chat_id},
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get('ok'):
+                    new_count = data['result']
+                    old_count = group.member_count
+                    
+                    # Update group
+                    group.update_member_count(new_count)
+                    
+                    return Response({
+                        'success': True,
+                        'message': 'Member count synced successfully',
+                        'old_count': old_count,
+                        'new_count': new_count,
+                        'difference': new_count - old_count,
+                        'last_sync_at': group.last_sync_at.isoformat()
+                    }, status=status.HTTP_200_OK)
+                else:
+                    error_msg = data.get('description', 'Unknown error')
+                    return Response({
+                        'success': False,
+                        'message': f'Telegram API error: {error_msg}'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            elif response.status_code == 401:
+                return Response({
+                    'success': False,
+                    'message': 'Unauthorized: Invalid bot token'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            elif response.status_code == 403:
+                return Response({
+                    'success': False,
+                    'message': 'Forbidden: Bot may have been removed from group or lacks permissions'
+                }, status=status.HTTP_403_FORBIDDEN)
+            else:
+                return Response({
+                    'success': False,
+                    'message': f'Failed to connect to Telegram: HTTP {response.status_code}'
+                }, status=status.HTTP_400_BAD_REQUEST)
+                
+        except requests.exceptions.Timeout:
+            return Response({
+                'success': False,
+                'message': 'Connection timeout. Please check your internet connection and try again.'
+            }, status=status.HTTP_408_REQUEST_TIMEOUT)
+        except requests.exceptions.RequestException as e:
+            return Response({
+                'success': False,
+                'message': f'Network error: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                'success': False,
+                'message': f'Unexpected error: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @action(detail=True, methods=['post'], url_path='test-access')
+    def test_access(self, request, pk=None):
+        """
+        Test bot access and permissions in the group.
+        
+        Calls Telegram Bot API getChat endpoint to verify bot can access the group
+        and retrieve its permissions.
+        
+        Returns:
+            200: Success with group info and bot permissions
+            400: Bot token not configured, invalid chat_id, or Telegram API error
+            403: Bot doesn't have access to group
+            408: Connection timeout
+            500: Unexpected error
+        """
+        group = self.get_object()
+        config = TelegramConfiguration.get_instance()
+        
+        # Validation
+        if not config.bot_token:
+            return Response({
+                'success': False,
+                'message': 'Bot token not configured. Please configure the Telegram bot first.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not group.chat_id:
+            return Response({
+                'success': False,
+                'message': 'Group chat ID not set'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            import requests
+            
+            # Get decrypted bot token
+            bot_token = config.decrypt_field('bot_token')
+            
+            # Call Telegram API to get chat info
+            url = f"https://api.telegram.org/bot{bot_token}/getChat"
+            response = requests.post(
+                url,
+                json={'chat_id': group.chat_id},
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get('ok'):
+                    chat_info = data['result']
+                    
+                    # Get bot's member info to check permissions
+                    bot_url = f"https://api.telegram.org/bot{bot_token}/getChatMember"
+                    bot_response = requests.post(
+                        bot_url,
+                        json={
+                            'chat_id': group.chat_id,
+                            'user_id': config.bot_token.split(':')[0]  # Bot ID is before the colon
+                        },
+                        timeout=10
+                    )
+                    
+                    permissions = {}
+                    is_admin = False
+                    
+                    if bot_response.status_code == 200:
+                        bot_data = bot_response.json()
+                        if bot_data.get('ok'):
+                            member = bot_data['result']
+                            is_admin = member.get('status') in ['creator', 'administrator']
+                            
+                            if is_admin:
+                                # Extract permissions
+                                permissions = {
+                                    'can_send_messages': member.get('can_send_messages', True),
+                                    'can_invite_users': member.get('can_invite_users', False),
+                                    'can_restrict_members': member.get('can_restrict_members', False),
+                                    'can_pin_messages': member.get('can_pin_messages', False),
+                                    'can_delete_messages': member.get('can_delete_messages', False),
+                                    'can_manage_chat': member.get('can_manage_chat', False)
+                                }
+                    
+                    return Response({
+                        'success': True,
+                        'message': 'Bot has access to the group',
+                        'group_info': {
+                            'title': chat_info.get('title'),
+                            'type': chat_info.get('type'),
+                            'username': chat_info.get('username'),
+                            'description': chat_info.get('description')
+                        },
+                        'bot_status': {
+                            'is_admin': is_admin,
+                            'permissions': permissions
+                        }
+                    }, status=status.HTTP_200_OK)
+                else:
+                    error_msg = data.get('description', 'Unknown error')
+                    return Response({
+                        'success': False,
+                        'message': f'Telegram API error: {error_msg}'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            elif response.status_code == 401:
+                return Response({
+                    'success': False,
+                    'message': 'Unauthorized: Invalid bot token'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            elif response.status_code == 403:
+                return Response({
+                    'success': False,
+                    'message': 'Forbidden: Bot doesn\'t have access to this group'
+                }, status=status.HTTP_403_FORBIDDEN)
+            else:
+                return Response({
+                    'success': False,
+                    'message': f'Failed to connect to Telegram: HTTP {response.status_code}'
+                }, status=status.HTTP_400_BAD_REQUEST)
+                
+        except requests.exceptions.Timeout:
+            return Response({
+                'success': False,
+                'message': 'Connection timeout. Please check your internet connection and try again.'
+            }, status=status.HTTP_408_REQUEST_TIMEOUT)
+        except requests.exceptions.RequestException as e:
+            return Response({
+                'success': False,
+                'message': f'Network error: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                'success': False,
+                'message': f'Unexpected error: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
