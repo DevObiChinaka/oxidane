@@ -2315,5 +2315,144 @@ class EmailConfigurationViewSet(viewsets.ModelViewSet):
                 'success': False,
                 'message': f'Unexpected error during connection test: {str(e)}'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @action(detail=True, methods=['post'], url_path='send-test')
+    def send_test_email(self, request, pk=None):
+        """
+        Send a test email to verify SMTP configuration.
+        
+        POST /api/admin/email/config/{id}/send-test/
+        
+        Request Body:
+        {
+            "recipient": "test@example.com"  // Required
+        }
+        
+        Returns:
+            200: Email sent successfully
+            400: Missing recipient or configuration incomplete
+            401: Authentication failed
+            408: Connection timeout
+            500: Unexpected error
+        """
+        instance = self.get_object()
+        
+        # Get recipient from request
+        recipient = request.data.get('recipient')
+        
+        if not recipient:
+            return Response({
+                'success': False,
+                'message': 'Recipient email address is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Validate recipient email format
+        from django.core.validators import EmailValidator
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        
+        validator = EmailValidator()
+        try:
+            validator(recipient)
+        except DjangoValidationError:
+            return Response({
+                'success': False,
+                'message': f'Invalid email address: {recipient}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if SMTP is configured
+        if not instance.is_configured():
+            return Response({
+                'success': False,
+                'message': 'Email configuration is incomplete. Please configure SMTP settings first.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            # Send test email using Django's email backend
+            from django.core.mail import send_mail
+            from django.conf import settings
+            import smtplib
+            from email.mime.text import MIMEText
+            from email.mime.multipart import MIMEMultipart
+            
+            # Create connection with current settings
+            from django.core.mail import get_connection
+            
+            # Build connection kwargs
+            connection_kwargs = {
+                'host': instance.smtp_host,
+                'port': instance.smtp_port,
+                'username': instance.smtp_username,
+                'password': instance.smtp_password,
+                'use_tls': instance.use_tls,
+                'use_ssl': instance.use_ssl,
+                'timeout': 10,
+            }
+            
+            connection = get_connection(
+                backend='django.core.mail.backends.smtp.EmailBackend',
+                **connection_kwargs
+            )
+            
+            # Prepare test email
+            subject = 'Test Email from Oxidane Platform'
+            from_email = f'{instance.from_name} <{instance.from_email}>' if instance.from_name else instance.from_email
+            
+            message_body = f"""
+Hello,
+
+This is a test email from the Oxidane Platform to verify your SMTP configuration.
+
+Configuration Details:
+- SMTP Host: {instance.smtp_host}
+- SMTP Port: {instance.smtp_port}
+- Encryption: {'TLS' if instance.use_tls else 'SSL' if instance.use_ssl else 'None'}
+- From: {from_email}
+
+If you received this email, your email configuration is working correctly!
+
+Best regards,
+Oxidane Platform
+            """.strip()
+            
+            # Send the email
+            send_mail(
+                subject=subject,
+                message=message_body,
+                from_email=from_email,
+                recipient_list=[recipient],
+                connection=connection,
+                fail_silently=False,
+            )
+            
+            return Response({
+                'success': True,
+                'message': f'Test email sent successfully to {recipient}',
+                'recipient': recipient,
+                'from_email': from_email
+            }, status=status.HTTP_200_OK)
+            
+        except smtplib.SMTPAuthenticationError as e:
+            return Response({
+                'success': False,
+                'message': f'Authentication failed: {str(e)}'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+            
+        except smtplib.SMTPException as e:
+            return Response({
+                'success': False,
+                'message': f'SMTP error: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+        except TimeoutError:
+            return Response({
+                'success': False,
+                'message': 'Connection timeout. Please check your SMTP host and port.'
+            }, status=status.HTTP_408_REQUEST_TIMEOUT)
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'message': f'Failed to send test email: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
