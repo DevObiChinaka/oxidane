@@ -3016,3 +3016,198 @@ class ValidateCouponViewSet(viewsets.ViewSet):
         }
         
         return Response(response_data, status=status.HTTP_200_OK)
+
+
+class ValidateReferralViewSet(viewsets.ViewSet):
+    """
+    ViewSet for validating referral codes (Phase 0.5 - Task 0.5.35)
+    
+    Public endpoint for checking if referral codes are valid before applying them.
+    
+    Endpoints:
+    - POST /api/v1/subscriptions/validate-referral/validate/
+    
+    Request Body:
+    - code (required): Referral code to validate
+    - amount (optional): Subscription amount to calculate discount
+    - user_id (optional): User ID attempting to use the code (for self-referral check)
+    
+    Returns:
+    - valid: Boolean indicating if code is valid
+    - discount info for both referrer and referee
+    - error messages with specific error codes
+    
+    Error Codes:
+    - MISSING_CODE: No code provided
+    - REFERRAL_NOT_FOUND: Code doesn't exist
+    - REFERRAL_INACTIVE: Code is not active
+    - NOT_STARTED: Code hasn't become valid yet
+    - EXPIRED: Code has expired
+    - USAGE_LIMIT_REACHED: Maximum uses reached
+    - SELF_REFERRAL: User trying to use their own code
+    - INVALID_AMOUNT: Invalid amount format
+    """
+    
+    permission_classes = [AllowAny]
+    
+    @action(detail=False, methods=['post'], url_path='validate')
+    def validate_referral(self, request):
+        """
+        Validate a referral code and return discount information.
+        
+        POST /api/v1/subscriptions/validate-referral/validate/
+        Body: {"code": "REF123", "amount": 100.00, "user_id": "uuid"}
+        """
+        
+        # Get code from request
+        code = request.data.get('code')
+        amount = request.data.get('amount')
+        user_id = request.data.get('user_id')
+        
+        # Validate code presence
+        if not code:
+            return Response({
+                'valid': False,
+                'error': 'Referral code is required',
+                'error_code': 'MISSING_CODE'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Normalize code (uppercase)
+        code = code.upper().strip()
+        
+        # Check if referral code exists
+        try:
+            referral_code = ReferralCode.objects.select_related('referrer').get(code=code)
+        except ReferralCode.DoesNotExist:
+            return Response({
+                'valid': False,
+                'code': code,
+                'error': 'Referral code not found',
+                'error_code': 'REFERRAL_NOT_FOUND'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Check if referral code is active
+        if not referral_code.is_active:
+            return Response({
+                'valid': False,
+                'code': code,
+                'error': 'This referral code is no longer active',
+                'error_code': 'REFERRAL_INACTIVE'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if referral code has started
+        now = timezone.now()
+        if referral_code.valid_from and now < referral_code.valid_from:
+            return Response({
+                'valid': False,
+                'code': code,
+                'error': f'This referral code will be valid from {referral_code.valid_from.strftime("%Y-%m-%d %H:%M")}',
+                'error_code': 'NOT_STARTED',
+                'valid_from': referral_code.valid_from.isoformat()
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if referral code has expired
+        if referral_code.valid_until and now > referral_code.valid_until:
+            return Response({
+                'valid': False,
+                'code': code,
+                'error': 'This referral code has expired',
+                'error_code': 'EXPIRED',
+                'expired_at': referral_code.valid_until.isoformat()
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check total usage limit
+        if referral_code.max_uses is not None and referral_code.current_uses >= referral_code.max_uses:
+            return Response({
+                'valid': False,
+                'code': code,
+                'error': 'This referral code has reached its usage limit',
+                'error_code': 'USAGE_LIMIT_REACHED',
+                'max_uses': referral_code.max_uses,
+                'current_uses': referral_code.current_uses
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check for self-referral if user_id provided
+        if user_id:
+            try:
+                # Convert user_id to string for comparison
+                user_id_str = str(user_id)
+                referrer_id_str = str(referral_code.referrer.id)
+                
+                if user_id_str == referrer_id_str:
+                    return Response({
+                        'valid': False,
+                        'code': code,
+                        'error': 'You cannot use your own referral code',
+                        'error_code': 'SELF_REFERRAL'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            except (ValueError, AttributeError):
+                # If user_id is invalid format, we'll just skip this check
+                pass
+        
+        # Calculate discounts if amount provided
+        referrer_discount = None
+        referee_discount = None
+        
+        if amount is not None:
+            try:
+                amount = Decimal(str(amount))
+                referrer_discount = referral_code.calculate_referrer_discount(amount)
+                referee_discount = referral_code.calculate_referee_discount(amount)
+            except (ValueError, TypeError, InvalidOperation):
+                return Response({
+                    'valid': False,
+                    'error': 'Invalid amount provided',
+                    'error_code': 'INVALID_AMOUNT'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Build success response
+        response_data = {
+            'valid': True,
+            'code': referral_code.code,
+            'referrer': {
+                'username': referral_code.referrer.username,
+                'discount_type': referral_code.referrer_discount_type,
+                'discount_value': float(referral_code.referrer_discount_value),
+                'discount_display': referral_code.get_referrer_discount_display()
+            },
+            'referee': {
+                'discount_type': referral_code.referee_discount_type,
+                'discount_value': float(referral_code.referee_discount_value),
+                'discount_display': referral_code.get_referee_discount_display()
+            },
+            'description': referral_code.description,
+            'message': f'Referral code applied! You get {referral_code.get_referee_discount_display()}'
+        }
+        
+        # Add discount calculations if amount was provided
+        if referrer_discount:
+            response_data['referrer']['discount_calculation'] = {
+                'original_price': float(referrer_discount['original_price']),
+                'discount_amount': float(referrer_discount['discount_amount']),
+                'final_price': float(referrer_discount['final_price']),
+                'savings_percentage': float(referrer_discount['savings_percentage'])
+            }
+        
+        if referee_discount:
+            response_data['referee']['discount_calculation'] = {
+                'original_price': float(referee_discount['original_price']),
+                'discount_amount': float(referee_discount['discount_amount']),
+                'final_price': float(referee_discount['final_price']),
+                'savings_percentage': float(referee_discount['savings_percentage'])
+            }
+        
+        # Add usage stats
+        response_data['usage'] = {
+            'current_uses': referral_code.current_uses,
+            'max_uses': referral_code.max_uses,
+            'remaining_uses': (referral_code.max_uses - referral_code.current_uses) if referral_code.max_uses else None
+        }
+        
+        # Add validity period
+        response_data['validity'] = {
+            'valid_from': referral_code.valid_from.isoformat() if referral_code.valid_from else None,
+            'valid_until': referral_code.valid_until.isoformat() if referral_code.valid_until else None
+        }
+        
+        return Response(response_data, status=status.HTTP_200_OK)

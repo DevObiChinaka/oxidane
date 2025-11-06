@@ -8,8 +8,8 @@
 
 ## 📊 PROGRESS UPDATE
 
-**Phase 0.5 Completion:** 30/46 tasks (65.2%)  
-**Test Coverage:** 1194/1194 tests passing (100%)  
+**Phase 0.5 Completion:** 32/46 tasks (69.6%)  
+**Test Coverage:** 1251/1251 tests passing (100%)  
 **Migrations Applied:** 0008-0026 (19 migrations)
 
 ### Completed Models:
@@ -39,9 +39,11 @@
 - ✅ **Email Configuration API** (Task 0.5.30) - 34 tests | Admin singleton, encrypted password, test SMTP connection
 - ✅ **Send Test Email API** (Task 0.5.31) - 16 tests | Admin action to send test email, validate SMTP config
 - ✅ **Setup Status API** (Task 0.5.32) - 26 tests | GET /api/admin/setup/status/ - platform config overview
+- ✅ **Public Pricing API** (Task 0.5.33) - 30 tests | GET /api/v1/subscriptions/plans/?currency=NGN - multi-currency
+- ✅ **Validate Coupon API** (Task 0.5.34) - 27 tests | POST /api/v1/subscriptions/validate-coupon/ - checkout validation
 
 ### In Progress:
-- [ ] **0.5.32**: Setup Status API (GET `/api/admin/setup/status/`) + tests
+- [ ] **0.5.35**: Validate Referral API (POST `/api/v1/subscriptions/validate-referral/`) + tests
 
 ### Key Achievements:
 - ✅ Discount-based referral system (non-stackable credits)
@@ -51,6 +53,7 @@
 - ✅ Comprehensive admin interfaces for all models
 - ✅ TelegramGroup replaces queue-based TelegramGroupManagement (represents actual groups)
 - ✅ TDD approach: All tests written before migrations
+- ✅ Public versioned API (v1) with multi-currency and validation endpoints
 
 ---
 
@@ -213,9 +216,9 @@
 ```
 
 **Tasks:**
-- 🔄 0.5.33: Public pricing API (GET `/api/v1/subscriptions/plans/?currency=NGN`) + tests ← **NEXT**
-- 0.5.34: Validate coupon API (POST `/api/v1/subscriptions/validate-coupon/`) + tests
-- 0.5.35: Validate referral API (POST `/api/v1/subscriptions/validate-referral/`) + tests
+- ✅ 0.5.33: Public pricing API (GET `/api/v1/subscriptions/plans/?currency=NGN`) + tests (30 tests)
+- ✅ 0.5.34: Validate coupon API (POST `/api/v1/subscriptions/validate-coupon/`) + tests (27 tests)
+- 🔄 0.5.35: Validate referral API (POST `/api/v1/subscriptions/validate-referral/`) + tests ← **NEXT**
 - 0.5.36: Plan upgrade/downgrade APIs + tests
 
 ### **PHASE 6: Frontend (Tasks 0.5.37-0.5.46)** [4 hours]
