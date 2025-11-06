@@ -8,7 +8,7 @@
 
 ## 📊 PROGRESS UPDATE
 
-**Phase 0.5 Completion:** 34/46 tasks (73.9%)  
+**Phase 0.5 Completion:** 35/46 tasks (76.1%)  
 **Test Coverage:** 1291/1291 tests passing (100%)  
 **Migrations Applied:** 0008-0026 (19 migrations)
 
@@ -43,9 +43,10 @@
 - ✅ **Validate Coupon API** (Task 0.5.34) - 27 tests | POST /api/v1/subscriptions/validate-coupon/ - checkout validation
 - ✅ **Validate Referral API** (Task 0.5.35) - 24 tests | POST /api/v1/subscriptions/validate-referral/ - checkout validation
 - ✅ **Plan Upgrade/Downgrade APIs** (Task 0.5.36) - 16 tests | Prorated billing, scheduled/immediate downgrade
+- ✅ **Setup Wizard Dashboard** (Task 0.5.37) - Frontend | 5-step wizard with progress tracker, auto-redirect
 
 ### In Progress:
-- [ ] **0.5.37**: Build SetupDashboard.tsx (frontend setup wizard)
+- [ ] **0.5.38**: Build PlansPage.tsx (admin pricing management UI)
 
 ### Key Achievements:
 - ✅ Discount-based referral system (non-stackable credits)
