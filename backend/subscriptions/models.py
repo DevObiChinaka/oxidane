@@ -2674,11 +2674,11 @@ class EmailConfiguration(models.Model):
     )
     
     # Authentication
-    smtp_username = models.EmailField(
+    smtp_username = models.CharField(
         max_length=255,
         blank=True,
         default='',
-        help_text='SMTP username (usually an email address)'
+        help_text='SMTP username (email address or API key)'
     )
     smtp_password = models.CharField(
         max_length=500,
@@ -2696,6 +2696,7 @@ class EmailConfiguration(models.Model):
     )
     from_name = models.CharField(
         max_length=200,
+        blank=True,
         default='OxiWorld',
         help_text='Default "From" name'
     )

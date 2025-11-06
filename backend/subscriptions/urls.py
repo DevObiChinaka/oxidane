@@ -8,8 +8,9 @@ from . import mentorship_admin_views
 from .api_views import (
     SubscriptionViewSet, SubscriptionPlanViewSet, FeatureViewSet, 
     CouponViewSet as APICouponViewSet, ReferralCodeViewSet, ReferralStatsViewSet,
-    TelegramConfigurationViewSet, TelegramGroupViewSet, PaymentConfigurationViewSet
-)  # Phase 0.5 - Tasks 0.5.20-0.5.29
+    TelegramConfigurationViewSet, TelegramGroupViewSet, PaymentConfigurationViewSet,
+    EmailConfigurationViewSet
+)  # Phase 0.5 - Tasks 0.5.20-0.5.30
 
 app_name = 'subscriptions'
 
@@ -22,7 +23,7 @@ router.register(r'pricing/coupons', CouponViewSet, basename='coupon-codes')
 user_router = DefaultRouter()
 user_router.register(r'subscriptions', UserSubscriptionViewSet, basename='user-subscriptions')
 
-# NEW: Phase 0.5 - Tasks 0.5.20-0.5.29 - Subscription, Plan, Feature, Coupon, Referral, Telegram Config/Groups, Payment Config API endpoints
+# NEW: Phase 0.5 - Tasks 0.5.20-0.5.30 - Subscription, Plan, Feature, Coupon, Referral, Telegram, Payment, Email Config API endpoints
 api_router = DefaultRouter()
 api_router.register(r'subscriptions', SubscriptionViewSet, basename='subscription')
 api_router.register(r'plans', SubscriptionPlanViewSet, basename='plan')
@@ -33,6 +34,7 @@ api_router.register(r'admin/referrals/stats', ReferralStatsViewSet, basename='re
 api_router.register(r'admin/telegram/config', TelegramConfigurationViewSet, basename='telegram-config')
 api_router.register(r'admin/telegram/groups', TelegramGroupViewSet, basename='telegram-group')
 api_router.register(r'admin/payment/config', PaymentConfigurationViewSet, basename='payment-config')
+api_router.register(r'admin/email/config', EmailConfigurationViewSet, basename='email-config')
 
 urlpatterns = [
     # Admin API endpoints for pricing management

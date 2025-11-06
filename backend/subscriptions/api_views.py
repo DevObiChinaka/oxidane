@@ -19,8 +19,8 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
 from django.db.models import Q, Count, Sum
 
-from .models import Subscription, SubscriptionPlan, BillingProfile, Feature, Coupon, ReferralCode, Referral, ReferralCredit, TelegramConfiguration, TelegramGroup, PaymentConfiguration
-from .serializers import SubscriptionSerializer, PricingPlanSerializer, FeatureSerializer, CouponSerializer, ReferralCodeSerializer, TelegramConfigurationSerializer, TelegramGroupSerializer, PaymentConfigurationSerializer
+from .models import Subscription, SubscriptionPlan, BillingProfile, Feature, Coupon, ReferralCode, Referral, ReferralCredit, TelegramConfiguration, TelegramGroup, PaymentConfiguration, EmailConfiguration
+from .serializers import SubscriptionSerializer, PricingPlanSerializer, FeatureSerializer, CouponSerializer, ReferralCodeSerializer, TelegramConfigurationSerializer, TelegramGroupSerializer, PaymentConfigurationSerializer, EmailConfigurationSerializer
 from .permissions import CanManageSubscription, IsAdmin
 
 
@@ -2159,3 +2159,161 @@ class PaymentConfigurationViewSet(viewsets.ModelViewSet):
                 'success': False,
                 'message': f'Unexpected error: {str(e)}'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ============================================================================
+# EMAIL CONFIGURATION API (Task 0.5.30)
+# ============================================================================
+
+class EmailConfigurationViewSet(viewsets.ModelViewSet):
+    """
+    Admin-only API for managing Email Configuration (singleton).
+    
+    Supports SMTP server configuration with encrypted password storage.
+    
+    **Endpoints:**
+    - GET /api/admin/email/config/ - List (returns singleton as list)
+    - GET /api/admin/email/config/{id}/ - Retrieve config details
+    - POST /api/admin/email/config/ - Create/update config
+    - PUT /api/admin/email/config/{id}/ - Full update
+    - PATCH /api/admin/email/config/{id}/ - Partial update
+    - POST /api/admin/email/config/{id}/test-connection/ - Test SMTP connection
+    
+    **Permissions:** Admin only (IsAuthenticated + IsAdmin)
+    
+    **Features:**
+    - Singleton pattern (only one instance exists)
+    - Encrypted SMTP password (never expose raw password)
+    - Masked password display
+    - SMTP connection testing
+    - TLS/SSL validation
+    - Port validation
+    
+    Phase 0.5, Task 0.5.30
+    """
+    serializer_class = EmailConfigurationSerializer
+    permission_classes = [IsAuthenticated, IsAdmin]
+    queryset = EmailConfiguration.objects.all()
+    http_method_names = ['get', 'post', 'put', 'patch', 'head', 'options']  # No DELETE for singleton
+    
+    def get_queryset(self):
+        """Return singleton instance as queryset."""
+        # Always return the singleton instance
+        instance = EmailConfiguration.get_instance()
+        return EmailConfiguration.objects.filter(pk=instance.pk)
+    
+    def list(self, request, *args, **kwargs):
+        """List returns the singleton instance as a single-item list."""
+        instance = EmailConfiguration.get_instance()
+        serializer = self.get_serializer(instance)
+        return Response([serializer.data])
+    
+    def retrieve(self, request, *args, **kwargs):
+        """Retrieve the singleton instance."""
+        instance = EmailConfiguration.get_instance()
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+    
+    def create(self, request, *args, **kwargs):
+        """Create or update the singleton instance."""
+        instance = EmailConfiguration.get_instance()
+        serializer = self.get_serializer(instance, data=request.data, partial=False)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    def update(self, request, *args, **kwargs):
+        """Full update of the singleton instance."""
+        instance = EmailConfiguration.get_instance()
+        serializer = self.get_serializer(instance, data=request.data, partial=False)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+    
+    def partial_update(self, request, *args, **kwargs):
+        """Partial update of the singleton instance."""
+        instance = EmailConfiguration.get_instance()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'], url_path='test-connection')
+    def test_connection(self, request, pk=None):
+        """
+        Test SMTP connection with current configuration.
+        
+        **Request:** POST /api/admin/email/config/{id}/test-connection/
+        
+        **Success Response (200):**
+        ```json
+        {
+            "success": true,
+            "message": "Successfully connected to smtp.gmail.com:587",
+            "host": "smtp.gmail.com",
+            "port": 587,
+            "encryption": "TLS"
+        }
+        ```
+        
+        **Error Responses:**
+        - 400: Missing required settings
+        - 401: Authentication failed
+        - 408: Connection timeout
+        - 500: Unexpected error
+        """
+        config = self.get_object()
+        
+        # Validate that configuration has required fields
+        if not config.smtp_host:
+            return Response({
+                'success': False,
+                'message': 'SMTP host is not configured'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not config.smtp_username or not config.smtp_password:
+            return Response({
+                'success': False,
+                'message': 'SMTP credentials (username and password) are required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Test connection using model method
+        try:
+            result = config.test_connection()
+            
+            if result['success']:
+                # Return success with connection details
+                encryption_type = 'SSL' if config.use_ssl else 'TLS'
+                return Response({
+                    'success': True,
+                    'message': result['message'],
+                    'host': config.smtp_host,
+                    'port': config.smtp_port,
+                    'encryption': encryption_type
+                }, status=status.HTTP_200_OK)
+            else:
+                # Return error from test_connection
+                # Determine appropriate status code based on error message
+                error_msg = result['message'].lower()
+                
+                if 'authentication' in error_msg or 'login' in error_msg:
+                    status_code = status.HTTP_401_UNAUTHORIZED
+                elif 'timeout' in error_msg:
+                    status_code = status.HTTP_408_REQUEST_TIMEOUT
+                elif 'credentials' in error_msg or 'required' in error_msg:
+                    status_code = status.HTTP_400_BAD_REQUEST
+                else:
+                    status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+                
+                return Response({
+                    'success': False,
+                    'message': result['message']
+                }, status=status_code)
+                
+        except Exception as e:
+            return Response({
+                'success': False,
+                'message': f'Unexpected error during connection test: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+

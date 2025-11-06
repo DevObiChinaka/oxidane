@@ -267,19 +267,25 @@ class TestEmailConfigurationValidation:
             config.full_clean()
         assert 'from_email' in str(exc_info.value)
 
-    def test_smtp_username_email_format(self):
-        """Test smtp_username should be email format."""
+    def test_smtp_username_allows_various_formats(self):
+        """Test smtp_username accepts email and non-email formats (e.g., API keys)."""
         config = EmailConfiguration.get_instance()
         
-        # Valid email
+        # Valid email format
         config.smtp_username = "user@example.com"
         config.full_clean()  # Should not raise
         
-        # Invalid format
-        config.smtp_username = "not-an-email"
-        with pytest.raises(ValidationError) as exc_info:
-            config.full_clean()
-        assert 'smtp_username' in str(exc_info.value)
+        # API key format (e.g., SendGrid)
+        config.smtp_username = "apikey"
+        config.full_clean()  # Should not raise
+        
+        # Custom username
+        config.smtp_username = "smtp-user-123"
+        config.full_clean()  # Should not raise
+        
+        # Empty username should fail (if required by other validation)
+        config.smtp_username = ""
+        # Note: CharField with blank=True allows empty, so no validation error expected
 
     def test_cannot_enable_both_tls_and_ssl(self):
         """Test cannot have both TLS and SSL enabled."""

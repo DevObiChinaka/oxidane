@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from .models import (
     SubscriptionPlan, Subscription, Coupon, Feature, Referral, ReferralCode,
     BillingProfile, PaymentMethod, Payment, TelegramGroup, TelegramConfiguration,
-    PaymentConfiguration
+    PaymentConfiguration, EmailConfiguration
 )
 
 User = get_user_model()
@@ -1641,4 +1641,191 @@ class PaymentConfigurationSerializer(serializers.ModelSerializer):
         instance.save()
         
         return instance
+
+
+# ============================================================================
+# EMAIL CONFIGURATION SERIALIZER (Task 0.5.30)
+# ============================================================================
+
+class EmailConfigurationSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Email Configuration singleton with SMTP settings.
+    
+    Features:
+    - Write-only password (encrypted storage)
+    - Masked password display for security
+    - Computed fields (is_configured, connection_status)
+    - Singleton pattern handling
+    - SMTP validation
+    
+    Phase 0.5, Task 0.5.30
+    """
+    
+    # Write-only field for setting SMTP password (will be encrypted)
+    smtp_password_write = serializers.CharField(
+        write_only=True,
+        required=False,
+        allow_blank=True,
+        help_text='SMTP password (will be encrypted)'
+    )
+    
+    # Read-only masked password
+    masked_smtp_password = serializers.SerializerMethodField(
+        help_text='Masked SMTP password for display (***XX)'
+    )
+    
+    # Computed fields
+    is_configured = serializers.SerializerMethodField(
+        help_text='Whether all required SMTP settings are configured'
+    )
+    connection_status = serializers.SerializerMethodField(
+        help_text='Connection status information'
+    )
+    
+    class Meta:
+        model = EmailConfiguration
+        fields = [
+            'id',
+            'smtp_host',
+            'smtp_port',
+            'use_tls',
+            'use_ssl',
+            'smtp_username',
+            'smtp_password_write',  # Write-only
+            'masked_smtp_password',  # Read-only
+            'from_email',
+            'from_name',
+            'is_enabled',
+            'is_configured',  # Computed
+            'is_connected',
+            'connection_status',  # Computed
+            'connection_error',
+            'last_test_at',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = [
+            'id',
+            'is_connected',
+            'connection_error',
+            'last_test_at',
+            'created_at',
+            'updated_at',
+        ]
+    
+    def get_masked_smtp_password(self, obj):
+        """Return masked SMTP password for security."""
+        return obj.get_masked_password()
+    
+    def get_is_configured(self, obj):
+        """Check if email configuration is complete."""
+        return obj.is_configured()
+    
+    def get_connection_status(self, obj):
+        """Get connection status information."""
+        return {
+            'is_connected': obj.is_connected,
+            'last_test_at': obj.last_test_at,
+            'error': obj.connection_error if not obj.is_connected else None,
+        }
+    
+    def validate_smtp_host(self, value):
+        """Validate SMTP host format."""
+        if not value or len(value.strip()) == 0:
+            raise serializers.ValidationError('SMTP host cannot be empty or whitespace.')
+        return value.strip()
+    
+    def validate_smtp_port(self, value):
+        """Validate SMTP port range."""
+        if value and (value < 1 or value > 65535):
+            raise serializers.ValidationError('SMTP port must be between 1 and 65535.')
+        return value
+    
+    def validate_smtp_username(self, value):
+        """Validate SMTP username is not empty."""
+        if not value or len(value.strip()) == 0:
+            raise serializers.ValidationError('SMTP username cannot be empty.')
+        return value
+    
+    def validate(self, attrs):
+        """Cross-field validation."""
+        # Check TLS/SSL conflict
+        use_tls = attrs.get('use_tls', getattr(self.instance, 'use_tls', True) if self.instance else True)
+        use_ssl = attrs.get('use_ssl', getattr(self.instance, 'use_ssl', False) if self.instance else False)
+        
+        if use_tls and use_ssl:
+            raise serializers.ValidationError({
+                'use_ssl': 'Cannot enable both TLS and SSL. Choose one.'
+            })
+        
+        if not use_tls and not use_ssl:
+            raise serializers.ValidationError({
+                'use_tls': 'Either TLS or SSL must be enabled for security.'
+            })
+        
+        # Validate port matches encryption type
+        smtp_port = attrs.get('smtp_port', getattr(self.instance, 'smtp_port', 587) if self.instance else 587)
+        
+        if use_ssl and smtp_port not in [465]:
+            # Warning: SSL typically uses port 465
+            pass  # Allow but log warning in production
+        
+        if use_tls and smtp_port not in [587, 25]:
+            # Warning: TLS typically uses port 587 or 25
+            pass  # Allow but log warning in production
+        
+        return attrs
+    
+    def create(self, validated_data):
+        """
+        Create or update singleton instance.
+        Handle SMTP password encryption.
+        """
+        # Extract write-only password
+        smtp_password = validated_data.pop('smtp_password_write', None)
+        
+        # Get or create singleton
+        instance = EmailConfiguration.get_instance()
+        
+        # Update fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        
+        # Update SMTP password if provided
+        if smtp_password is not None:
+            instance.smtp_password = smtp_password
+            # Note: Encryption will be handled before save
+        
+        # Encrypt password before saving
+        if smtp_password:
+            instance.encrypt_field('smtp_password')
+        
+        instance.save()
+        
+        return instance
+    
+    def update(self, instance, validated_data):
+        """
+        Update existing instance.
+        Handle SMTP password encryption.
+        """
+        # Extract write-only password
+        smtp_password = validated_data.pop('smtp_password_write', None)
+        
+        # Update non-password fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        
+        # Update SMTP password if provided
+        if smtp_password is not None:
+            instance.smtp_password = smtp_password
+        
+        # Encrypt password BEFORE saving
+        if smtp_password:
+            instance.encrypt_field('smtp_password')
+        
+        instance.save()
+        
+        return instance
+
 
