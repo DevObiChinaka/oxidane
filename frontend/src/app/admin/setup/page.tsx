@@ -116,7 +116,7 @@ export default function SetupDashboardPage() {
       setLoading(true);
       setError(null);
       
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('access_token');
       if (!token) {
         router.push('/admin/login');
         return;
@@ -141,11 +141,10 @@ export default function SetupDashboardPage() {
       const data = await response.json();
       setStatus(data);
 
-      // If setup is complete, redirect to main dashboard after 2 seconds
+      // Allow users to stay on setup page - they can access settings anytime
+      // Mark setup as completed in localStorage when they visit this page
       if (data.setup_complete) {
-        setTimeout(() => {
-          router.push('/admin');
-        }, 2000);
+        localStorage.setItem('admin_setup_completed', 'true');
       }
     } catch (err: any) {
       console.error('Setup status error:', err);
@@ -304,9 +303,16 @@ export default function SetupDashboardPage() {
               <div className="flex-1">
                 <h2 className="text-2xl font-bold mb-2">Setup Complete!</h2>
                 <p className="text-green-100">
-                  Your platform is fully configured and ready to use. Redirecting to dashboard...
+                  Your platform is fully configured and ready to use. You can access settings anytime from the sidebar.
                 </p>
               </div>
+              <Link
+                href="/admin/dashboard"
+                className="bg-white text-green-600 px-6 py-3 rounded-lg hover:bg-green-50 transition-colors font-semibold flex items-center space-x-2"
+              >
+                <span>Go to Dashboard</span>
+                <span>→</span>
+              </Link>
             </div>
           </div>
         ) : (
