@@ -9,8 +9,8 @@ from .api_views import (
     SubscriptionViewSet, SubscriptionPlanViewSet, FeatureViewSet, 
     CouponViewSet as APICouponViewSet, ReferralCodeViewSet, ReferralStatsViewSet,
     TelegramConfigurationViewSet, TelegramGroupViewSet, PaymentConfigurationViewSet,
-    EmailConfigurationViewSet
-)  # Phase 0.5 - Tasks 0.5.20-0.5.30
+    EmailConfigurationViewSet, SetupStatusViewSet
+)  # Phase 0.5 - Tasks 0.5.20-0.5.32
 
 app_name = 'subscriptions'
 
@@ -35,6 +35,7 @@ api_router.register(r'admin/telegram/config', TelegramConfigurationViewSet, base
 api_router.register(r'admin/telegram/groups', TelegramGroupViewSet, basename='telegram-group')
 api_router.register(r'admin/payment/config', PaymentConfigurationViewSet, basename='payment-config')
 api_router.register(r'admin/email/config', EmailConfigurationViewSet, basename='email-config')
+api_router.register(r'admin/setup/status', SetupStatusViewSet, basename='setup-status')
 
 urlpatterns = [
     # Admin API endpoints for pricing management

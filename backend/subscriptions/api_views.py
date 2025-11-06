@@ -2456,3 +2456,167 @@ Oxidane Platform
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+# ============================================================================
+# SETUP STATUS API (Task 0.5.32)
+# ============================================================================
+
+class SetupStatusViewSet(viewsets.ViewSet):
+    """
+    Admin-only API for checking platform setup/configuration status.
+    
+    **Endpoints:**
+    - GET /api/admin/setup/status/ - Get comprehensive setup status
+    
+    **Permissions:** Admin only (IsAuthenticated + IsAdmin)
+    
+    **Response includes:**
+    - Overall setup completion percentage
+    - Individual component status (Telegram, Payment, Email)
+    - Database status (plans, features, groups)
+    - Recommendations for incomplete setup
+    
+    Phase 0.5, Task 0.5.32
+    """
+    permission_classes = [IsAuthenticated, IsAdmin]
+    
+    def list(self, request):
+        """
+        Get comprehensive platform setup status.
+        
+        GET /api/admin/setup/status/
+        
+        Returns:
+        {
+            "setup_complete": bool,
+            "completion_percentage": int,  // 0-100
+            "components": {
+                "telegram": {...},
+                "payment": {...},
+                "email": {...},
+                "database": {...}
+            },
+            "recommendations": [...]
+        }
+        """
+        from subscriptions.models import (
+            TelegramConfiguration, PaymentConfiguration, EmailConfiguration,
+            SubscriptionPlan, Feature, TelegramGroup
+        )
+        
+        recommendations = []
+        
+        # ===== TELEGRAM CONFIGURATION =====
+        telegram_config = TelegramConfiguration.get_instance()
+        telegram_status = {
+            'configured': False,
+            'healthy': telegram_config.is_healthy(),
+            'has_token': bool(telegram_config.bot_token),
+            'has_username': bool(telegram_config.bot_username),
+            'last_check': telegram_config.last_health_check,
+            'connection_status': 'connected' if telegram_config.is_connected else 'disconnected'
+        }
+        
+        # Check if Telegram is configured
+        if telegram_config.bot_token and telegram_config.is_enabled:
+            telegram_status['configured'] = True
+        else:
+            recommendations.append({
+                'component': 'telegram',
+                'message': 'Configure Telegram bot to enable automated group management',
+                'action': 'Add bot token in Telegram Configuration'
+            })
+        
+        # ===== PAYMENT CONFIGURATION =====
+        payment_config = PaymentConfiguration.get_instance()
+        payment_status = {
+            'configured': False,
+            'paystack_configured': bool(payment_config.paystack_secret_key),
+            'stripe_configured': bool(payment_config.stripe_secret_key),
+            'test_mode': payment_config.is_test_mode
+        }
+        
+        # Check if at least one payment gateway is configured
+        if payment_config.paystack_secret_key or payment_config.stripe_secret_key:
+            payment_status['configured'] = True
+        else:
+            recommendations.append({
+                'component': 'payment',
+                'message': 'Configure at least one payment gateway (Paystack or Stripe)',
+                'action': 'Add payment gateway credentials in Payment Configuration'
+            })
+        
+        # ===== EMAIL CONFIGURATION =====
+        email_config = EmailConfiguration.get_instance()
+        email_status = {
+            'configured': email_config.is_configured(),
+            'enabled': email_config.is_enabled,
+            'has_host': bool(email_config.smtp_host),
+            'has_credentials': bool(email_config.smtp_username and email_config.smtp_password),
+            'connection_status': 'connected' if email_config.is_connected else 'not_tested',
+            'last_test': email_config.last_test_at
+        }
+        
+        if not email_config.is_configured():
+            recommendations.append({
+                'component': 'email',
+                'message': 'Configure SMTP settings to enable email notifications',
+                'action': 'Add SMTP credentials in Email Configuration'
+            })
+        
+        # ===== DATABASE CONTENT =====
+        plans_count = SubscriptionPlan.objects.filter(is_active=True).count()
+        features_count = Feature.objects.count()
+        groups_count = TelegramGroup.objects.filter(is_active=True).count()
+        
+        database_status = {
+            'has_active_plans': plans_count > 0,
+            'plans_count': plans_count,
+            'features_count': features_count,
+            'active_groups_count': groups_count,
+            'ready': plans_count > 0  # At least one plan is required
+        }
+        
+        if plans_count == 0:
+            recommendations.append({
+                'component': 'database',
+                'message': 'Create at least one subscription plan',
+                'action': 'Add subscription plans via Plans API'
+            })
+        
+        if features_count == 0:
+            recommendations.append({
+                'component': 'database',
+                'message': 'Define platform features for subscription plans',
+                'action': 'Add features via Features API'
+            })
+        
+        # ===== CALCULATE COMPLETION =====
+        checks = [
+            telegram_status['configured'],
+            payment_status['configured'],
+            email_status['configured'],
+            database_status['ready']
+        ]
+        
+        completed_checks = sum(checks)
+        total_checks = len(checks)
+        completion_percentage = int((completed_checks / total_checks) * 100)
+        setup_complete = completion_percentage == 100
+        
+        return Response({
+            'setup_complete': setup_complete,
+            'completion_percentage': completion_percentage,
+            'components': {
+                'telegram': telegram_status,
+                'payment': payment_status,
+                'email': email_status,
+                'database': database_status
+            },
+            'recommendations': recommendations,
+            'summary': {
+                'total_checks': total_checks,
+                'completed_checks': completed_checks,
+                'pending_checks': total_checks - completed_checks
+            }
+        })
+
