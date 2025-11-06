@@ -18,6 +18,10 @@ from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
 from django.db.models import Q, Count, Sum
+from django.contrib.auth import get_user_model
+from decimal import Decimal, InvalidOperation
+
+User = get_user_model()
 
 from .models import Subscription, SubscriptionPlan, BillingProfile, Feature, Coupon, ReferralCode, Referral, ReferralCredit, TelegramConfiguration, TelegramGroup, PaymentConfiguration, EmailConfiguration
 from .serializers import SubscriptionSerializer, PricingPlanSerializer, FeatureSerializer, CouponSerializer, ReferralCodeSerializer, TelegramConfigurationSerializer, TelegramGroupSerializer, PaymentConfigurationSerializer, EmailConfigurationSerializer, PublicPricingPlanSerializer
@@ -2775,3 +2779,240 @@ class PublicPricingViewSet(viewsets.ReadOnlyModelViewSet):
                 # Note: In production, you might want to log this
         
         return plans_data
+
+
+# ============================================================================
+# VALIDATE COUPON API (Task 0.5.34)
+# ============================================================================
+
+class ValidateCouponViewSet(viewsets.ViewSet):
+    """
+    Public API endpoint for validating coupon codes during checkout.
+    
+    **Endpoint:**
+    - POST /api/v1/subscriptions/validate-coupon/ - Validate a coupon code
+    
+    **Request Body:**
+    {
+        "code": "SAVE20",
+        "plan_id": "uuid-string",  // optional - validate for specific plan
+        "amount": 99.00,            // optional - original price for discount calculation
+        "user_id": "uuid-string"    // optional - check user-specific usage limits
+    }
+    
+    **Response Format (Success):**
+    {
+        "valid": true,
+        "code": "SAVE20",
+        "discount_type": "percentage",
+        "discount_value": 20.0,
+        "discount_display": "20% off",
+        "original_price": 99.00,
+        "discount_amount": 19.80,
+        "final_price": 79.20,
+        "savings_percentage": 20.0,
+        "message": "Coupon applied successfully!"
+    }
+    
+    **Response Format (Invalid):**
+    {
+        "valid": false,
+        "code": "INVALID",
+        "error": "Coupon code not found or inactive",
+        "error_code": "COUPON_NOT_FOUND"
+    }
+    
+    **Error Codes:**
+    - COUPON_NOT_FOUND: Code doesn't exist or is inactive
+    - COUPON_EXPIRED: Coupon has expired
+    - COUPON_NOT_STARTED: Coupon is not yet valid
+    - USAGE_LIMIT_REACHED: Total usage limit exceeded
+    - USER_LIMIT_REACHED: User has already used this coupon max times
+    - PLAN_NOT_APPLICABLE: Coupon doesn't apply to the specified plan
+    - MISSING_PLAN_ID: Plan ID required for plan-specific coupons
+    
+    Phase 0.5, Task 0.5.34
+    """
+    permission_classes = [AllowAny]
+    
+    @action(detail=False, methods=['post'], url_path='validate')
+    def validate(self, request):
+        """
+        Validate a coupon code and calculate discount.
+        
+        POST /api/v1/subscriptions/validate-coupon/validate/
+        """
+        code = request.data.get('code', '').strip().upper()
+        plan_id = request.data.get('plan_id')
+        amount = request.data.get('amount')
+        user_id = request.data.get('user_id')
+        
+        # Validate required fields
+        if not code:
+            return Response({
+                'valid': False,
+                'error': 'Coupon code is required',
+                'error_code': 'MISSING_CODE'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Try to find the coupon
+        try:
+            coupon = Coupon.objects.get(code=code)
+        except Coupon.DoesNotExist:
+            return Response({
+                'valid': False,
+                'code': code,
+                'error': 'Coupon code not found or inactive',
+                'error_code': 'COUPON_NOT_FOUND'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Check if coupon is active
+        if not coupon.is_active:
+            return Response({
+                'valid': False,
+                'code': code,
+                'error': 'This coupon is no longer active',
+                'error_code': 'COUPON_INACTIVE'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check time validity
+        now = timezone.now()
+        
+        if coupon.valid_from and now < coupon.valid_from:
+            return Response({
+                'valid': False,
+                'code': code,
+                'error': f'Coupon is not valid until {coupon.valid_from.strftime("%Y-%m-%d")}',
+                'error_code': 'COUPON_NOT_STARTED',
+                'valid_from': coupon.valid_from.isoformat()
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if coupon.valid_until and now > coupon.valid_until:
+            return Response({
+                'valid': False,
+                'code': code,
+                'error': f'Coupon expired on {coupon.valid_until.strftime("%Y-%m-%d")}',
+                'error_code': 'COUPON_EXPIRED',
+                'valid_until': coupon.valid_until.isoformat()
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check total usage limit
+        if not coupon.is_usage_available():
+            return Response({
+                'valid': False,
+                'code': code,
+                'error': 'This coupon has reached its usage limit',
+                'error_code': 'USAGE_LIMIT_REACHED',
+                'current_uses': coupon.current_uses,
+                'max_uses': coupon.max_uses
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check user-specific usage limit (if user_id provided)
+        if user_id:
+            try:
+                user = User.objects.get(id=user_id)
+                # Count how many times this user has used this coupon
+                user_usage_count = Subscription.objects.filter(
+                    billing_profile__user=user,
+                    metadata__coupon_code=code
+                ).count()
+                
+                if user_usage_count >= coupon.max_uses_per_user:
+                    return Response({
+                        'valid': False,
+                        'code': code,
+                        'error': f'You have already used this coupon {coupon.max_uses_per_user} time(s)',
+                        'error_code': 'USER_LIMIT_REACHED',
+                        'user_usage': user_usage_count,
+                        'max_uses_per_user': coupon.max_uses_per_user
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            except User.DoesNotExist:
+                pass  # Invalid user_id, but don't fail validation
+        
+        # Check plan applicability (if plan_id provided)
+        plan = None
+        if plan_id:
+            try:
+                plan = SubscriptionPlan.objects.get(id=plan_id, is_active=True)
+                
+                if not coupon.applies_to_plan(plan):
+                    # Get applicable plan names for better error message
+                    applicable_plans = coupon.plans.filter(is_active=True)
+                    if applicable_plans.exists():
+                        plan_names = ', '.join([p.name for p in applicable_plans[:3]])
+                        error_msg = f'This coupon is only valid for: {plan_names}'
+                    else:
+                        error_msg = 'This coupon is not applicable to the selected plan'
+                    
+                    return Response({
+                        'valid': False,
+                        'code': code,
+                        'error': error_msg,
+                        'error_code': 'PLAN_NOT_APPLICABLE'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                
+            except SubscriptionPlan.DoesNotExist:
+                return Response({
+                    'valid': False,
+                    'error': 'Invalid plan ID',
+                    'error_code': 'INVALID_PLAN_ID'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            # If coupon has plan restrictions but no plan_id provided
+            if coupon.plans.exists():
+                return Response({
+                    'valid': False,
+                    'code': code,
+                    'error': 'This coupon requires a plan to be selected',
+                    'error_code': 'MISSING_PLAN_ID'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Calculate discount if amount provided
+        discount_info = None
+        if amount:
+            try:
+                amount = Decimal(str(amount))
+                discount_info = coupon.calculate_discount(amount)
+            except (ValueError, TypeError, InvalidOperation):
+                return Response({
+                    'valid': False,
+                    'error': 'Invalid amount provided',
+                    'error_code': 'INVALID_AMOUNT'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Build success response
+        response_data = {
+            'valid': True,
+            'code': coupon.code,
+            'discount_type': coupon.discount_type,
+            'discount_value': float(coupon.discount_value),
+            'discount_display': coupon.get_discount_display(),
+            'description': coupon.description,
+            'message': 'Coupon applied successfully!'
+        }
+        
+        # Add discount calculation if amount was provided
+        if discount_info:
+            response_data.update({
+                'original_price': float(discount_info['original_price']),
+                'discount_amount': float(discount_info['discount_amount']),
+                'final_price': float(discount_info['final_price']),
+                'savings_percentage': float(discount_info['savings_percentage'])
+            })
+        
+        # Add plan info if applicable
+        if plan:
+            response_data['applicable_plan'] = {
+                'id': str(plan.id),
+                'name': plan.name,
+                'slug': plan.slug
+            }
+        
+        # Add usage stats
+        response_data['usage'] = {
+            'current_uses': coupon.current_uses,
+            'max_uses': coupon.max_uses,
+            'remaining_uses': (coupon.max_uses - coupon.current_uses) if coupon.max_uses else None
+        }
+        
+        return Response(response_data, status=status.HTTP_200_OK)
