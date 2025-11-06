@@ -53,6 +53,7 @@ export default function AdminSidebar() {
     {
       section: 'Settings',
       items: [
+        { name: 'Platform Setup', href: '/admin/setup', icon: '⚙️' },
         { name: 'Email Configuration', href: '/admin/settings/email', icon: '📧' },
         { name: 'Telegram Integration', href: '/admin/settings/telegram', icon: '💬' },
         { name: 'System Health', href: '/admin/settings/system', icon: '🔧' },
