@@ -8,8 +8,8 @@
 
 ## 📊 PROGRESS UPDATE
 
-**Phase 0.5 Completion:** 32/46 tasks (69.6%)  
-**Test Coverage:** 1251/1251 tests passing (100%)  
+**Phase 0.5 Completion:** 34/46 tasks (73.9%)  
+**Test Coverage:** 1291/1291 tests passing (100%)  
 **Migrations Applied:** 0008-0026 (19 migrations)
 
 ### Completed Models:
@@ -41,9 +41,11 @@
 - ✅ **Setup Status API** (Task 0.5.32) - 26 tests | GET /api/admin/setup/status/ - platform config overview
 - ✅ **Public Pricing API** (Task 0.5.33) - 30 tests | GET /api/v1/subscriptions/plans/?currency=NGN - multi-currency
 - ✅ **Validate Coupon API** (Task 0.5.34) - 27 tests | POST /api/v1/subscriptions/validate-coupon/ - checkout validation
+- ✅ **Validate Referral API** (Task 0.5.35) - 24 tests | POST /api/v1/subscriptions/validate-referral/ - checkout validation
+- ✅ **Plan Upgrade/Downgrade APIs** (Task 0.5.36) - 16 tests | Prorated billing, scheduled/immediate downgrade
 
 ### In Progress:
-- [ ] **0.5.35**: Validate Referral API (POST `/api/v1/subscriptions/validate-referral/`) + tests
+- [ ] **0.5.37**: Build SetupDashboard.tsx (frontend setup wizard)
 
 ### Key Achievements:
 - ✅ Discount-based referral system (non-stackable credits)

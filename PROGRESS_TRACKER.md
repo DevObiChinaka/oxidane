@@ -661,6 +661,108 @@
 
 ---
 
+### **November 6, 2025** - Session 3
+**Hours Today:** 3.5 hours  
+**Phase:** Phase 0.5 (Public APIs)  
+**Tasks Completed:** 2 tasks (0.5.35, 0.5.36)  
+
+#### ✅ Completed:
+- [x] **Task 0.5.35:** Validate Referral API (24 tests) ✅
+  - POST /api/v1/subscriptions/validate-referral/
+  - 8 error codes (MISSING_REFERRAL, CODE_NOT_FOUND, CODE_INACTIVE, MAX_USES, NOT_STARTED, EXPIRED, SAME_USER, PLAN_RESTRICTED)
+  - Validates referral codes, checks eligibility, returns discount details
+  - Fixed zero amount bug (changed `if amount:` to `if amount is not None:`)
+  - Commit: c8b9d6f
+  
+- [x] **Task 0.5.36:** Plan Upgrade/Downgrade APIs (16 tests) ✅
+  - POST /api/v1/subscriptions/{id}/upgrade/
+  - POST /api/v1/subscriptions/{id}/downgrade/
+  - Prorated billing calculations (time-based refunds)
+  - Scheduled downgrade (end of period) vs immediate downgrade
+  - Tier validation via monthly_equivalent pricing
+  - Added 4 model methods: calculate_prorated_refund(), calculate_upgrade_cost(), upgrade_plan(), downgrade_plan()
+  - Added ValidationError exception handling for invalid UUID format
+  - Commit: 98a2839
+
+#### 🎯 API Implementation Details:
+
+**ValidateReferralViewSet (Task 0.5.35):**
+- AllowAny permission (public checkout endpoint)
+- Validates: referral_code, plan_id (optional), amount (optional)
+- Returns: {discount_type, discount_value, final_amount, referrer_info, commission_earned}
+- Error codes cover all edge cases (expired, max uses, same user, etc.)
+
+**SubscriptionUpgradeViewSet (Task 0.5.36):**
+- Validates tier hierarchy (monthly_equivalent comparison)
+- Calculates prorated credit for unused subscription time
+- Updates subscription immediately with new plan
+- Stores upgrade history in metadata JSONField
+- Returns breakdown: old_plan, new_plan, prorated_credit, amount_due, new_end_date
+
+**SubscriptionDowngradeViewSet (Task 0.5.36):**
+- Scheduled downgrade (default): Changes plan at end_date, disables auto_renew
+- Immediate downgrade (optional): Changes plan now, no refund
+- Validates lower tier only
+- Stores downgrade history/scheduled info in metadata
+
+#### 📊 Test Results:
+- **Validate Referral API:** 24/24 tests passing ✅
+  - TestReferralValidation (6 tests)
+  - TestReferralCodeStatus (4 tests)
+  - TestReferralUsageLimits (3 tests)
+  - TestPlanRestrictions (3 tests)
+  - TestReferralAmountCalculation (4 tests)
+  - TestReferralEdgeCases (4 tests)
+
+- **Plan Upgrade/Downgrade APIs:** 16/16 tests passing ✅
+  - TestPlanUpgrade (6 tests)
+  - TestPlanDowngrade (4 tests)
+  - TestUpgradeCalculations (2 tests)
+  - TestEdgeCases (4 tests)
+
+- **Total Tests:** 1291/1291 passing (100% ✅)
+
+#### 📝 Files Created/Modified:
+- backend/subscriptions/models.py (4 new methods - 198 lines)
+- backend/subscriptions/api_views.py (2 new viewsets - 380 lines, added DjangoValidationError import)
+- backend/subscriptions/urls.py (registered upgrade/downgrade viewsets)
+- backend/subscriptions/tests/test_validate_referral_api.py (24 tests) ✅
+- backend/subscriptions/tests/test_plan_upgrade_downgrade_api.py (16 tests) ✅
+- PHASE_0.5_STRATEGY.md (updated progress: 34/46 tasks, 73.9%)
+
+#### 📊 Phase 0.5 Progress:
+- **34/46 tasks complete (73.9%)**
+- **1291 tests passing (100% coverage)**
+- **Next:** Task 0.5.37 - Build SetupDashboard.tsx (frontend setup wizard)
+
+#### 🔄 Git Commits:
+- **c8b9d6f:** Task 0.5.35 - Validate Referral API (24 tests)
+- **98a2839:** Task 0.5.36 - Plan upgrade/downgrade APIs with prorated billing (16 tests)
+
+#### 💭 Notes:
+- Prorated billing uses time-based proportion: (remaining_days / total_days) * amount_paid
+- Metadata JSONField perfect for storing upgrade/downgrade history
+- Scheduled downgrades stored in metadata, applied via Celery task (future)
+- Django ValidationError caught for invalid UUID format (prevents 500 errors)
+
+#### 🐛 Issues Resolved:
+- Zero amount validation failing → Changed `if amount:` to `if amount is not None:`
+- Test assertion mismatch → Updated to check for 'plan will change' in message
+- Invalid UUID format causing 500 error → Added DjangoValidationError to exception tuple
+
+#### 📝 Learnings:
+- Falsy check `if amount:` fails for `Decimal('0.00')` → Always use `is not None` for numeric fields
+- Django's UUIDField.get() raises ValidationError (not ValueError) for invalid format
+- Prorated credit formula: `(end_date - now) / (end_date - start_date) * amount_paid`
+- Monthly equivalent comparison enables tier validation across different billing periods
+
+#### ⏭️ Next Session:
+- [ ] Task 0.5.37: Build SetupDashboard.tsx (frontend setup wizard)
+- [ ] Task 0.5.38-0.5.46: Complete remaining Phase 0.5 tasks
+- [ ] Target: Finish Phase 0.5 by end of week
+
+---
+
 ### **Example Entry (Delete After Reading):**
 
 ### **November 5, 2025** - Day 1
