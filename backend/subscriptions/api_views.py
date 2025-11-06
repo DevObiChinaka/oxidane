@@ -19,6 +19,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
 from django.db.models import Q, Count, Sum
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError as DjangoValidationError
 from decimal import Decimal, InvalidOperation
 
 User = get_user_model()
@@ -3211,3 +3212,319 @@ class ValidateReferralViewSet(viewsets.ViewSet):
         }
         
         return Response(response_data, status=status.HTTP_200_OK)
+
+
+class SubscriptionUpgradeViewSet(viewsets.ViewSet):
+    """
+    ViewSet for upgrading subscription plans (Phase 0.5 - Task 0.5.36)
+    
+    Handles immediate plan upgrades with prorated billing.
+    User receives credit for unused portion of current plan.
+    
+    Endpoints:
+    - POST /api/v1/subscriptions/{id}/upgrade/
+    
+    Request Body:
+    - new_plan_id (required): UUID of the plan to upgrade to
+    - payment_reference (optional): Payment reference for the upgrade transaction
+    
+    Returns:
+    - Cost breakdown with prorated credit
+    - New plan details and end date
+    - Amount due for upgrade
+    
+    Error Codes:
+    - SUBSCRIPTION_NOT_FOUND: Subscription doesn't exist
+    - SUBSCRIPTION_INACTIVE: Cannot upgrade inactive subscription
+    - MISSING_PLAN_ID: No new plan ID provided
+    - PLAN_NOT_FOUND: New plan doesn't exist
+    - PLAN_INACTIVE: New plan is not active
+    - SAME_PLAN: Trying to upgrade to current plan
+    - INVALID_UPGRADE: New plan is not an upgrade (lower or same price)
+    """
+    
+    permission_classes = [IsAuthenticated]
+    
+    @action(detail=True, methods=['post'], url_path='upgrade')
+    def upgrade_subscription(self, request, pk=None):
+        """
+        Upgrade subscription to a higher-tier plan with prorated credit.
+        
+        POST /api/v1/subscriptions/{id}/upgrade/
+        Body: {"new_plan_id": "uuid", "payment_reference": "optional"}
+        """
+        
+        # Get subscription
+        try:
+            subscription = Subscription.objects.select_related('plan', 'billing_profile__user').get(pk=pk)
+        except Subscription.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Subscription not found',
+                'error_code': 'SUBSCRIPTION_NOT_FOUND'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Check if user owns this subscription
+        if subscription.billing_profile.user != request.user and not request.user.is_staff:
+            return Response({
+                'success': False,
+                'error': 'You do not have permission to upgrade this subscription',
+                'error_code': 'PERMISSION_DENIED'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        # Check if subscription is active
+        if not subscription.is_active:
+            return Response({
+                'success': False,
+                'error': 'Cannot upgrade an inactive subscription',
+                'error_code': 'SUBSCRIPTION_INACTIVE',
+                'current_status': subscription.status
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get new plan ID
+        new_plan_id = request.data.get('new_plan_id')
+        payment_reference = request.data.get('payment_reference')
+        
+        if not new_plan_id:
+            return Response({
+                'success': False,
+                'error': 'New plan ID is required',
+                'error_code': 'MISSING_PLAN_ID'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get new plan
+        try:
+            new_plan = SubscriptionPlan.objects.get(pk=new_plan_id)
+        except (SubscriptionPlan.DoesNotExist, ValueError, DjangoValidationError):
+            return Response({
+                'success': False,
+                'error': 'Plan not found',
+                'error_code': 'PLAN_NOT_FOUND'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Check if new plan is active
+        if not new_plan.is_active:
+            return Response({
+                'success': False,
+                'error': 'The selected plan is not currently available',
+                'error_code': 'PLAN_INACTIVE'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if trying to upgrade to same plan
+        if subscription.plan and subscription.plan.id == new_plan.id:
+            return Response({
+                'success': False,
+                'error': 'You are already subscribed to this plan',
+                'error_code': 'SAME_PLAN'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Validate upgrade (new plan should be higher price)
+        if subscription.plan:
+            current_monthly_price = subscription.plan.get_monthly_equivalent()
+            new_monthly_price = new_plan.get_monthly_equivalent()
+            
+            if new_monthly_price <= current_monthly_price:
+                return Response({
+                    'success': False,
+                    'error': 'Cannot upgrade to a plan with lower or equal value. Use downgrade instead.',
+                    'error_code': 'INVALID_UPGRADE',
+                    'current_plan_monthly': float(current_monthly_price),
+                    'new_plan_monthly': float(new_monthly_price)
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Calculate upgrade cost
+        try:
+            cost_breakdown = subscription.calculate_upgrade_cost(new_plan)
+        except ValueError as e:
+            return Response({
+                'success': False,
+                'error': str(e),
+                'error_code': 'CALCULATION_ERROR'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Perform upgrade
+        try:
+            upgrade_details = subscription.upgrade_plan(new_plan, payment_reference)
+            
+            # Build success response
+            response_data = {
+                'success': True,
+                'message': f'Successfully upgraded to {new_plan.name}',
+                'subscription_id': str(subscription.id),
+                'upgrade_details': {
+                    'old_plan': upgrade_details['current_plan_name'],
+                    'new_plan': upgrade_details['new_plan_name'],
+                    'old_plan_price': float(upgrade_details['current_plan_price']),
+                    'new_plan_price': float(upgrade_details['new_plan_price']),
+                    'prorated_credit': float(upgrade_details['prorated_credit']),
+                    'amount_due': float(upgrade_details['amount_due']),
+                    'days_remaining_old_plan': upgrade_details['days_remaining'],
+                    'old_end_date': upgrade_details['current_end_date'].isoformat(),
+                    'new_end_date': upgrade_details['new_end_date'].isoformat(),
+                    'upgraded_at': timezone.now().isoformat()
+                }
+            }
+            
+            if payment_reference:
+                response_data['payment_reference'] = payment_reference
+            
+            return Response(response_data, status=status.HTTP_200_OK)
+            
+        except ValueError as e:
+            return Response({
+                'success': False,
+                'error': str(e),
+                'error_code': 'UPGRADE_FAILED'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class SubscriptionDowngradeViewSet(viewsets.ViewSet):
+    """
+    ViewSet for downgrading subscription plans (Phase 0.5 - Task 0.5.36)
+    
+    Handles plan downgrades with two modes:
+    - Scheduled: Downgrade takes effect at end of current billing period (default)
+    - Immediate: Downgrade immediately without refund (no prorated credit)
+    
+    Endpoints:
+    - POST /api/v1/subscriptions/{id}/downgrade/
+    
+    Request Body:
+    - new_plan_id (required): UUID of the plan to downgrade to
+    - immediate (optional): Boolean, if True downgrade immediately
+    
+    Returns:
+    - Downgrade details
+    - Effective date (when change takes effect)
+    - End date of current subscription
+    
+    Error Codes:
+    - SUBSCRIPTION_NOT_FOUND: Subscription doesn't exist
+    - SUBSCRIPTION_INACTIVE: Cannot downgrade inactive subscription
+    - MISSING_PLAN_ID: No new plan ID provided
+    - PLAN_NOT_FOUND: New plan doesn't exist
+    - PLAN_INACTIVE: New plan is not active
+    - SAME_PLAN: Trying to downgrade to current plan
+    - INVALID_DOWNGRADE: New plan is not a downgrade (higher or same price)
+    """
+    
+    permission_classes = [IsAuthenticated]
+    
+    @action(detail=True, methods=['post'], url_path='downgrade')
+    def downgrade_subscription(self, request, pk=None):
+        """
+        Downgrade subscription to a lower-tier plan.
+        
+        POST /api/v1/subscriptions/{id}/downgrade/
+        Body: {"new_plan_id": "uuid", "immediate": false}
+        """
+        
+        # Get subscription
+        try:
+            subscription = Subscription.objects.select_related('plan', 'billing_profile__user').get(pk=pk)
+        except Subscription.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Subscription not found',
+                'error_code': 'SUBSCRIPTION_NOT_FOUND'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Check if user owns this subscription
+        if subscription.billing_profile.user != request.user and not request.user.is_staff:
+            return Response({
+                'success': False,
+                'error': 'You do not have permission to downgrade this subscription',
+                'error_code': 'PERMISSION_DENIED'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        # Check if subscription is active
+        if not subscription.is_active:
+            return Response({
+                'success': False,
+                'error': 'Cannot downgrade an inactive subscription',
+                'error_code': 'SUBSCRIPTION_INACTIVE',
+                'current_status': subscription.status
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get new plan ID and immediate flag
+        new_plan_id = request.data.get('new_plan_id')
+        immediate = request.data.get('immediate', False)
+        
+        if not new_plan_id:
+            return Response({
+                'success': False,
+                'error': 'New plan ID is required',
+                'error_code': 'MISSING_PLAN_ID'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get new plan
+        try:
+            new_plan = SubscriptionPlan.objects.get(pk=new_plan_id)
+        except (SubscriptionPlan.DoesNotExist, ValueError, DjangoValidationError):
+            return Response({
+                'success': False,
+                'error': 'Plan not found',
+                'error_code': 'PLAN_NOT_FOUND'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Check if new plan is active
+        if not new_plan.is_active:
+            return Response({
+                'success': False,
+                'error': 'The selected plan is not currently available',
+                'error_code': 'PLAN_INACTIVE'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if trying to downgrade to same plan
+        if subscription.plan and subscription.plan.id == new_plan.id:
+            return Response({
+                'success': False,
+                'error': 'You are already subscribed to this plan',
+                'error_code': 'SAME_PLAN'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Validate downgrade (new plan should be lower price)
+        if subscription.plan:
+            current_monthly_price = subscription.plan.get_monthly_equivalent()
+            new_monthly_price = new_plan.get_monthly_equivalent()
+            
+            if new_monthly_price >= current_monthly_price:
+                return Response({
+                    'success': False,
+                    'error': 'Cannot downgrade to a plan with higher or equal value. Use upgrade instead.',
+                    'error_code': 'INVALID_DOWNGRADE',
+                    'current_plan_monthly': float(current_monthly_price),
+                    'new_plan_monthly': float(new_monthly_price)
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Perform downgrade
+        try:
+            downgrade_details = subscription.downgrade_plan(new_plan, immediate=immediate)
+            
+            # Build success response
+            response_data = {
+                'success': True,
+                'message': downgrade_details.get('message', f'Successfully downgraded to {new_plan.name}'),
+                'subscription_id': str(subscription.id),
+                'downgrade_details': {
+                    'old_plan': downgrade_details['old_plan_name'],
+                    'new_plan': downgrade_details['new_plan_name'],
+                    'new_plan_price': float(downgrade_details['new_plan_price']),
+                    'effective_date': downgrade_details['effective_date'].isoformat(),
+                    'end_date': downgrade_details['end_date'].isoformat(),
+                    'immediate': downgrade_details['immediate'],
+                    'downgraded_at': timezone.now().isoformat()
+                }
+            }
+            
+            if not immediate:
+                response_data['note'] = 'Downgrade scheduled for end of current billing period. You will retain access to current plan features until then.'
+            
+            return Response(response_data, status=status.HTTP_200_OK)
+            
+        except ValueError as e:
+            return Response({
+                'success': False,
+                'error': str(e),
+                'error_code': 'DOWNGRADE_FAILED'
+            }, status=status.HTTP_400_BAD_REQUEST)

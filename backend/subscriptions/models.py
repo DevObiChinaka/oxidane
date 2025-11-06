@@ -291,6 +291,226 @@ class Subscription(models.Model):
             self.save()
             return True
         return False
+    
+    def calculate_prorated_refund(self):
+        """
+        Calculate prorated refund for unused portion of subscription.
+        Returns the amount credit the user should receive for remaining days.
+        """
+        from decimal import Decimal
+        
+        if not self.is_active:
+            return Decimal('0.00')
+        
+        now = timezone.now()
+        total_duration = (self.end_date - self.start_date).total_seconds()
+        elapsed_duration = (now - self.start_date).total_seconds()
+        remaining_duration = (self.end_date - now).total_seconds()
+        
+        if total_duration <= 0 or remaining_duration <= 0:
+            return Decimal('0.00')
+        
+        # Calculate proportion of time remaining
+        remaining_proportion = Decimal(str(remaining_duration / total_duration))
+        
+        # Calculate refund based on amount paid
+        refund_amount = self.amount_paid * remaining_proportion
+        
+        # Round to 2 decimal places
+        return refund_amount.quantize(Decimal('0.01'))
+    
+    def calculate_upgrade_cost(self, new_plan):
+        """
+        Calculate cost to upgrade to a new plan with prorated credit.
+        
+        Args:
+            new_plan: SubscriptionPlan to upgrade to
+        
+        Returns:
+            dict with breakdown: {
+                'current_plan_price': Decimal,
+                'new_plan_price': Decimal,
+                'prorated_credit': Decimal,
+                'amount_due': Decimal,
+                'days_remaining': int,
+                'new_end_date': datetime
+            }
+        """
+        from decimal import Decimal
+        from datetime import timedelta
+        
+        if not self.plan:
+            raise ValueError("Current subscription has no plan")
+        
+        # Get prorated credit from current plan
+        prorated_credit = self.calculate_prorated_refund()
+        
+        # Calculate new plan price (same currency as current)
+        new_plan_price = new_plan.base_price
+        
+        # Amount due = new plan price - prorated credit
+        amount_due = max(Decimal('0.00'), new_plan_price - prorated_credit)
+        
+        # Calculate new end date based on new plan's billing period
+        now = timezone.now()
+        if new_plan.billing_period == 'weekly':
+            new_end_date = now + timedelta(days=7)
+        elif new_plan.billing_period == 'monthly':
+            new_end_date = now + timedelta(days=30)
+        elif new_plan.billing_period == 'quarterly':
+            new_end_date = now + timedelta(days=90)
+        elif new_plan.billing_period == 'yearly':
+            new_end_date = now + timedelta(days=365)
+        elif new_plan.billing_period == 'lifetime':
+            new_end_date = now + timedelta(days=36500)  # 100 years
+        else:
+            new_end_date = now + timedelta(days=30)
+        
+        return {
+            'current_plan_name': self.plan.name,
+            'current_plan_price': self.amount_paid,
+            'new_plan_name': new_plan.name,
+            'new_plan_price': new_plan_price,
+            'prorated_credit': prorated_credit,
+            'amount_due': amount_due,
+            'days_remaining': self.days_remaining,
+            'current_end_date': self.end_date,
+            'new_end_date': new_end_date
+        }
+    
+    def upgrade_plan(self, new_plan, payment_reference=None):
+        """
+        Upgrade subscription to a new plan immediately with prorated credit.
+        
+        Args:
+            new_plan: SubscriptionPlan to upgrade to
+            payment_reference: Optional payment reference for the upgrade
+        
+        Returns:
+            dict with upgrade details
+        """
+        from decimal import Decimal
+        from datetime import timedelta
+        
+        if not self.is_active:
+            raise ValueError("Cannot upgrade an inactive subscription")
+        
+        if not new_plan:
+            raise ValueError("New plan is required")
+        
+        # Calculate upgrade cost
+        cost_breakdown = self.calculate_upgrade_cost(new_plan)
+        
+        # Store old plan info in metadata
+        if 'upgrade_history' not in self.metadata:
+            self.metadata['upgrade_history'] = []
+        
+        self.metadata['upgrade_history'].append({
+            'old_plan_id': str(self.plan.id),
+            'old_plan_name': self.plan.name,
+            'new_plan_id': str(new_plan.id),
+            'new_plan_name': new_plan.name,
+            'upgraded_at': timezone.now().isoformat(),
+            'prorated_credit': str(cost_breakdown['prorated_credit']),
+            'amount_charged': str(cost_breakdown['amount_due']),
+            'payment_reference': payment_reference
+        })
+        
+        # Update subscription
+        self.plan = new_plan
+        self.amount_paid = cost_breakdown['new_plan_price']
+        self.end_date = cost_breakdown['new_end_date']
+        self.updated_at = timezone.now()
+        
+        self.save()
+        
+        return cost_breakdown
+    
+    def downgrade_plan(self, new_plan, immediate=False):
+        """
+        Downgrade subscription to a new plan.
+        By default, downgrade takes effect at end of current period.
+        
+        Args:
+            new_plan: SubscriptionPlan to downgrade to
+            immediate: If True, downgrade immediately with no refund
+        
+        Returns:
+            dict with downgrade details
+        """
+        from decimal import Decimal
+        
+        if not self.is_active:
+            raise ValueError("Cannot downgrade an inactive subscription")
+        
+        if not new_plan:
+            raise ValueError("New plan is required")
+        
+        if immediate:
+            # Immediate downgrade (no refund)
+            old_plan_name = self.plan.name if self.plan else "Unknown"
+            old_end_date = self.end_date
+            
+            # Update subscription immediately
+            self.plan = new_plan
+            self.amount_paid = new_plan.base_price
+            # Keep current end date for immediate downgrade
+            
+            # Store downgrade info in metadata
+            if 'downgrade_history' not in self.metadata:
+                self.metadata['downgrade_history'] = []
+            
+            self.metadata['downgrade_history'].append({
+                'old_plan_id': str(self.plan.id) if self.plan else None,
+                'old_plan_name': old_plan_name,
+                'new_plan_id': str(new_plan.id),
+                'new_plan_name': new_plan.name,
+                'downgraded_at': timezone.now().isoformat(),
+                'immediate': True,
+                'scheduled_for': None
+            })
+            
+            self.save()
+            
+            return {
+                'old_plan_name': old_plan_name,
+                'new_plan_name': new_plan.name,
+                'new_plan_price': new_plan.base_price,
+                'effective_date': timezone.now(),
+                'end_date': old_end_date,
+                'immediate': True
+            }
+        else:
+            # Scheduled downgrade (at end of current period)
+            old_plan_name = self.plan.name if self.plan else "Unknown"
+            scheduled_date = self.end_date
+            
+            # Store scheduled downgrade in metadata
+            if 'scheduled_downgrade' not in self.metadata:
+                self.metadata['scheduled_downgrade'] = {}
+            
+            self.metadata['scheduled_downgrade'] = {
+                'new_plan_id': str(new_plan.id),
+                'new_plan_name': new_plan.name,
+                'new_plan_price': str(new_plan.base_price),
+                'scheduled_for': scheduled_date.isoformat(),
+                'requested_at': timezone.now().isoformat()
+            }
+            
+            # Disable auto-renewal to prevent renewal at current plan
+            self.auto_renew = False
+            
+            self.save()
+            
+            return {
+                'old_plan_name': old_plan_name,
+                'new_plan_name': new_plan.name,
+                'new_plan_price': new_plan.base_price,
+                'effective_date': scheduled_date,
+                'end_date': scheduled_date,
+                'immediate': False,
+                'message': f'Your plan will change to {new_plan.name} on {scheduled_date.strftime("%Y-%m-%d")}'
+            }
 
 
 class Payment(models.Model):

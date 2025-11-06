@@ -10,8 +10,8 @@ from .api_views import (
     CouponViewSet as APICouponViewSet, ReferralCodeViewSet, ReferralStatsViewSet,
     TelegramConfigurationViewSet, TelegramGroupViewSet, PaymentConfigurationViewSet,
     EmailConfigurationViewSet, SetupStatusViewSet, PublicPricingViewSet, ValidateCouponViewSet,
-    ValidateReferralViewSet
-)  # Phase 0.5 - Tasks 0.5.20-0.5.35
+    ValidateReferralViewSet, SubscriptionUpgradeViewSet, SubscriptionDowngradeViewSet
+)  # Phase 0.5 - Tasks 0.5.20-0.5.36
 
 app_name = 'subscriptions'
 
@@ -38,11 +38,13 @@ api_router.register(r'admin/payment/config', PaymentConfigurationViewSet, basena
 api_router.register(r'admin/email/config', EmailConfigurationViewSet, basename='email-config')
 api_router.register(r'admin/setup/status', SetupStatusViewSet, basename='setup-status')
 
-# NEW: Phase 0.5 - Task 0.5.33-0.5.35 - Public versioned API (v1)
+# NEW: Phase 0.5 - Task 0.5.33-0.5.36 - Public versioned API (v1)
 v1_router = DefaultRouter()
 v1_router.register(r'subscriptions/plans', PublicPricingViewSet, basename='v1-plans')
 v1_router.register(r'subscriptions/validate-coupon', ValidateCouponViewSet, basename='v1-validate-coupon')
 v1_router.register(r'subscriptions/validate-referral', ValidateReferralViewSet, basename='v1-validate-referral')
+v1_router.register(r'subscriptions', SubscriptionUpgradeViewSet, basename='v1-subscription-upgrade')
+v1_router.register(r'subscriptions', SubscriptionDowngradeViewSet, basename='v1-subscription-downgrade')
 
 urlpatterns = [
     # Admin API endpoints for pricing management
