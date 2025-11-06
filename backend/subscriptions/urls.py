@@ -9,8 +9,8 @@ from .api_views import (
     SubscriptionViewSet, SubscriptionPlanViewSet, FeatureViewSet, 
     CouponViewSet as APICouponViewSet, ReferralCodeViewSet, ReferralStatsViewSet,
     TelegramConfigurationViewSet, TelegramGroupViewSet, PaymentConfigurationViewSet,
-    EmailConfigurationViewSet, SetupStatusViewSet
-)  # Phase 0.5 - Tasks 0.5.20-0.5.32
+    EmailConfigurationViewSet, SetupStatusViewSet, PublicPricingViewSet
+)  # Phase 0.5 - Tasks 0.5.20-0.5.33
 
 app_name = 'subscriptions'
 
@@ -37,6 +37,10 @@ api_router.register(r'admin/payment/config', PaymentConfigurationViewSet, basena
 api_router.register(r'admin/email/config', EmailConfigurationViewSet, basename='email-config')
 api_router.register(r'admin/setup/status', SetupStatusViewSet, basename='setup-status')
 
+# NEW: Phase 0.5 - Task 0.5.33 - Public versioned API (v1)
+v1_router = DefaultRouter()
+v1_router.register(r'subscriptions/plans', PublicPricingViewSet, basename='v1-plans')
+
 urlpatterns = [
     # Admin API endpoints for pricing management
     path('admin/', include(router.urls)),
@@ -44,6 +48,10 @@ urlpatterns = [
     # NEW: Phase 0.5 - Task 0.5.20 - Comprehensive subscription API
     # Note: Already prefixed with 'api/' in main urls.py, so this becomes /api/subscriptions/
     path('', include(api_router.urls)),
+    
+    # NEW: Phase 0.5 - Task 0.5.33 - Public versioned API (v1)
+    # Note: Already prefixed with 'api/' in main urls.py, so this becomes /api/v1/subscriptions/plans/
+    path('v1/', include(v1_router.urls)),
     
     # User subscription management API (legacy, will be deprecated)
     # path('', include(user_router.urls)),  # Temporarily disabled to avoid conflicts

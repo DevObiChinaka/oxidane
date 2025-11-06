@@ -20,7 +20,7 @@ from django.utils import timezone
 from django.db.models import Q, Count, Sum
 
 from .models import Subscription, SubscriptionPlan, BillingProfile, Feature, Coupon, ReferralCode, Referral, ReferralCredit, TelegramConfiguration, TelegramGroup, PaymentConfiguration, EmailConfiguration
-from .serializers import SubscriptionSerializer, PricingPlanSerializer, FeatureSerializer, CouponSerializer, ReferralCodeSerializer, TelegramConfigurationSerializer, TelegramGroupSerializer, PaymentConfigurationSerializer, EmailConfigurationSerializer
+from .serializers import SubscriptionSerializer, PricingPlanSerializer, FeatureSerializer, CouponSerializer, ReferralCodeSerializer, TelegramConfigurationSerializer, TelegramGroupSerializer, PaymentConfigurationSerializer, EmailConfigurationSerializer, PublicPricingPlanSerializer
 from .permissions import CanManageSubscription, IsAdmin
 
 
@@ -2620,3 +2620,158 @@ class SetupStatusViewSet(viewsets.ViewSet):
             }
         })
 
+
+# ============================================================================
+# PUBLIC PRICING API (Task 0.5.33)
+# ============================================================================
+
+class PublicPricingViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Public API for subscription plans with multi-currency support.
+    
+    **Endpoints:**
+    - GET /api/v1/subscriptions/plans/ - List all active plans
+    - GET /api/v1/subscriptions/plans/{id}/ - Get plan details
+    
+    **Query Parameters:**
+    - currency: Currency code (USD, NGN, GBP, EUR, etc.) - defaults to USD
+    - billing_period: Filter by billing period (weekly, monthly, quarterly, yearly, lifetime)
+    - featured: Filter featured plans (true/false)
+    
+    **Features:**
+    - Automatic currency conversion using live exchange rates
+    - Includes plan features in response
+    - Public access (no authentication required)
+    - Returns only active plans
+    
+    **Response Format:**
+    {
+        "id": "uuid",
+        "name": "Premium Plan",
+        "description": "...",
+        "price": 99.00,
+        "currency": "USD",
+        "base_price_usd": 99.00,
+        "billing_period": "monthly",
+        "billing_period_display": "Monthly",
+        "trial_days": 7,
+        "is_featured": true,
+        "features": [
+            {
+                "id": "uuid",
+                "name": "Feature Name",
+                "description": "...",
+                "icon": "✨",
+                "category": "signals"
+            }
+        ],
+        "limits": {...}
+    }
+    
+    Phase 0.5, Task 0.5.33
+    """
+    permission_classes = [AllowAny]
+    serializer_class = PublicPricingPlanSerializer
+    pagination_class = SubscriptionPlanPagination
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['billing_period', 'is_featured']
+    search_fields = ['name', 'description']
+    ordering_fields = ['base_price', 'name']
+    ordering = ['sort_order', 'base_price']
+    
+    def get_queryset(self):
+        """
+        Return only active subscription plans with features prefetched.
+        Public API always shows only active plans.
+        """
+        return SubscriptionPlan.objects.filter(
+            is_active=True
+        ).prefetch_related('features').order_by('sort_order', 'base_price')
+    
+    def list(self, request, *args, **kwargs):
+        """
+        List all active plans with optional currency conversion.
+        
+        GET /api/v1/subscriptions/plans/?currency=NGN
+        """
+        # Get requested currency (default: USD)
+        currency = request.query_params.get('currency', 'USD').upper()
+        
+        # Get queryset and apply filters
+        queryset = self.filter_queryset(self.get_queryset())
+        
+        # Paginate
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            # Convert prices to requested currency
+            data = self._convert_prices(serializer.data, currency)
+            return self.get_paginated_response(data)
+        
+        serializer = self.get_serializer(queryset, many=True)
+        data = self._convert_prices(serializer.data, currency)
+        return Response(data)
+    
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Retrieve a single plan with optional currency conversion.
+        
+        GET /api/v1/subscriptions/plans/{id}/?currency=NGN
+        """
+        # Get requested currency (default: USD)
+        currency = request.query_params.get('currency', 'USD').upper()
+        
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        
+        # Convert price to requested currency
+        data = self._convert_prices([serializer.data], currency)[0]
+        return Response(data)
+    
+    def _convert_prices(self, plans_data, target_currency):
+        """
+        Convert plan prices from USD to target currency.
+        
+        Args:
+            plans_data (list): List of plan dictionaries
+            target_currency (str): Target currency code
+            
+        Returns:
+            list: Plans data with converted prices
+        """
+        from subscriptions.models import ExchangeRate
+        from decimal import Decimal
+        
+        # If target currency is USD, no conversion needed
+        if target_currency == 'USD':
+            for plan in plans_data:
+                # price already set by serializer as float
+                plan['currency'] = 'USD'
+                plan['base_price_usd'] = plan['price']
+            return plans_data
+        
+        # Convert each plan's price
+        for plan in plans_data:
+            base_price = Decimal(str(plan['price']))
+            
+            # Attempt currency conversion
+            converted_price = ExchangeRate.convert_amount(
+                amount=base_price,
+                from_currency='USD',
+                to_currency=target_currency,
+                round_result=True
+            )
+            
+            if converted_price is not None:
+                # Conversion successful
+                plan['price'] = float(converted_price)
+                plan['currency'] = target_currency
+                plan['base_price_usd'] = float(base_price)
+            else:
+                # Conversion failed - fallback to USD
+                plan['price'] = float(base_price)
+                plan['currency'] = 'USD'
+                plan['base_price_usd'] = float(base_price)
+                # Note: In production, you might want to log this
+        
+        return plans_data

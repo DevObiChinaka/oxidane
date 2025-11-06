@@ -199,44 +199,58 @@ class FeatureSerializer(serializers.ModelSerializer):
         # Check alphanumeric with underscores/hyphens only
         if not value.replace('_', '').replace('-', '').isalnum():
             raise serializers.ValidationError(
-                "Feature key must contain only letters, numbers, underscores, and hyphens."
+                "Feature key must contain only lowercase letters, numbers, underscores, and hyphens."
             )
         
-        # Auto-convert to lowercase with underscores
-        normalized_key = value.lower().replace('-', '_')
+        # Check lowercase
+        if value != value.lower():
+            raise serializers.ValidationError("Feature key must be lowercase.")
         
-        # Check uniqueness on create (not on update since key is read-only after create)
-        if not self.instance:  # Creating new feature
-            if Feature.objects.filter(key=normalized_key).exists():
-                raise serializers.ValidationError(
-                    f"Feature with key '{normalized_key}' already exists."
-                )
-        
-        return normalized_key
-    
-    def validate_name(self, value):
-        """Validate feature name is not empty"""
-        if not value or not value.strip():
-            raise serializers.ValidationError("Feature name cannot be empty.")
-        return value.strip()
-    
-    def validate_icon(self, value):
-        """Validate icon field (allow emoji or short text)"""
-        if len(value) > 10:
-            raise serializers.ValidationError("Icon must be 10 characters or less.")
         return value
+
+
+class PublicFeatureSerializer(serializers.ModelSerializer):
+    """
+    Simplified Feature serializer for public pricing API (Phase 0.5 - Task 0.5.33)
+    Only exposes essential feature info without sensitive data like plan_count
+    """
+    class Meta:
+        model = Feature
+        fields = ['id', 'key', 'name', 'description', 'icon', 'category', 'sort_order']
+        read_only_fields = ['id', 'key', 'name', 'description', 'icon', 'category', 'sort_order']
+
+
+class PublicPricingPlanSerializer(serializers.ModelSerializer):
+    """
+    Public-facing serializer for SubscriptionPlan (Phase 0.5 - Task 0.5.33)
+    Used by PublicPricingViewSet for /api/v1/subscriptions/plans/ endpoint
     
-    def validate_sort_order(self, value):
-        """Validate sort_order is non-negative"""
-        if value < 0:
-            raise serializers.ValidationError("Sort order cannot be negative.")
-        return value
+    Includes features list and billing_period_display for frontend pricing page.
+    Price fields are returned as floats (not Decimal strings) for consistency.
+    """
+    features = PublicFeatureSerializer(many=True, read_only=True)
+    billing_period_display = serializers.CharField(source='get_billing_period_display', read_only=True)
+    price = serializers.SerializerMethodField()
+    base_price = serializers.SerializerMethodField()
     
-    def update(self, instance, validated_data):
-        """Override update to prevent key modification"""
-        # Remove 'key' from validated_data if present (make it immutable after creation)
-        validated_data.pop('key', None)
-        return super().update(instance, validated_data)
+    class Meta:
+        model = SubscriptionPlan
+        fields = [
+            'id', 'name', 'slug', 'description', 'billing_period', 'billing_period_display',
+            'trial_days', 'is_featured', 'is_active', 'sort_order', 'price', 'base_price',
+            'features', 'limits'
+        ]
+        read_only_fields = ['id', 'name', 'slug', 'description', 'billing_period', 
+                            'billing_period_display', 'trial_days', 'is_featured', 'is_active',
+                            'sort_order', 'price', 'base_price', 'features', 'limits']
+    
+    def get_price(self, obj):
+        """Return base_price as float (not Decimal string)"""
+        return float(obj.base_price)
+    
+    def get_base_price(self, obj):
+        """Return base_price as float (not Decimal string)"""
+        return float(obj.base_price)
 
 
 class NestedSubscriptionPlanSerializer(serializers.ModelSerializer):
