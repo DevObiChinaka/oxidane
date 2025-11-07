@@ -27,8 +27,8 @@ user_router.register(r'subscriptions', UserSubscriptionViewSet, basename='user-s
 # NEW: Phase 0.5 - Tasks 0.5.20-0.5.30 - Subscription, Plan, Feature, Coupon, Referral, Telegram, Payment, Email Config API endpoints
 api_router = DefaultRouter()
 api_router.register(r'subscriptions', SubscriptionViewSet, basename='subscription')
-api_router.register(r'plans', SubscriptionPlanViewSet, basename='plan')
-api_router.register(r'features', FeatureViewSet, basename='feature')
+api_router.register(r'admin/plans', SubscriptionPlanViewSet, basename='plan')
+api_router.register(r'admin/features', FeatureViewSet, basename='feature')
 api_router.register(r'coupons', APICouponViewSet, basename='coupon')
 api_router.register(r'referrals/codes', ReferralCodeViewSet, basename='referral-code')
 api_router.register(r'admin/referrals/stats', ReferralStatsViewSet, basename='referral-stats')
