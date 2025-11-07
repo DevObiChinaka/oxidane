@@ -81,6 +81,7 @@ export default function AdminSidebar() {
         { name: 'Subscription Plans', href: '/admin/plans', icon: '💰' },
         { name: 'Features', href: '/admin/features', icon: '✨' },
         { name: 'Coupons', href: '/admin/coupons', icon: '🎟️' },
+        { name: 'Referral Codes', href: '/admin/referrals', icon: '🔗' },
         { name: 'Payments', href: '/admin/payments', icon: '💳' },
         { name: 'Revenue Reports', href: '/admin/revenue', icon: '📊' },
       ]
