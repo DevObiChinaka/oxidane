@@ -31,6 +31,40 @@ interface BotInfo {
   can_read_all_group_messages: boolean;
 }
 
+interface TelegramGroup {
+  id: string;
+  name: string;
+  chat_id: string;
+  group_key: string;
+  description: string;
+  invite_link: string;
+  is_active: boolean;
+  is_private: boolean;
+  member_count: number;
+  max_members: number | null;
+  last_sync_at: string | null;
+  auto_add_enabled: boolean;
+  auto_remove_enabled: boolean;
+  can_add_users: boolean;
+  can_remove_users: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
+interface GroupFormData {
+  name: string;
+  chat_id: string;
+  group_key: string;
+  description: string;
+  invite_link: string;
+  is_active: boolean;
+  is_private: boolean;
+  max_members: string;
+  auto_add_enabled: boolean;
+  auto_remove_enabled: boolean;
+  sort_order: number;
+}
+
 export default function TelegramConfigurationPage() {
   const [config, setConfig] = useState<TelegramConfig | null>(null);
   const [editedConfig, setEditedConfig] = useState<Partial<TelegramConfig>>({});
@@ -41,9 +75,29 @@ export default function TelegramConfigurationPage() {
   const [botInfo, setBotInfo] = useState<BotInfo | null>(null);
   const [showInstructions, setShowInstructions] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info' | 'warning'; text: string } | null>(null);
+  
+  // Groups state
+  const [groups, setGroups] = useState<TelegramGroup[]>([]);
+  const [showGroupModal, setShowGroupModal] = useState(false);
+  const [editingGroup, setEditingGroup] = useState<TelegramGroup | null>(null);
+  const [savingGroup, setSavingGroup] = useState(false);
+  const [groupForm, setGroupForm] = useState<GroupFormData>({
+    name: '',
+    chat_id: '',
+    group_key: '',
+    description: '',
+    invite_link: '',
+    is_active: true,
+    is_private: false,
+    max_members: '',
+    auto_add_enabled: true,
+    auto_remove_enabled: true,
+    sort_order: 0
+  });
 
   useEffect(() => {
     loadConfiguration();
+    loadGroups();
   }, []);
 
   const loadConfiguration = async () => {
@@ -156,6 +210,149 @@ export default function TelegramConfigurationPage() {
       setEditedConfig({ ...config });
       setNewBotToken('');  // Clear new token input
       setMessage(null);
+    }
+  };
+
+  // Groups functions
+  const loadGroups = async () => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch('http://127.0.0.1:8000/api/admin/telegram/groups/', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setGroups(data.results || data);
+      }
+    } catch (error) {
+      console.error('Failed to load groups:', error);
+    }
+  };
+
+  const handleOpenGroupModal = (group?: TelegramGroup) => {
+    if (group) {
+      setEditingGroup(group);
+      setGroupForm({
+        name: group.name,
+        chat_id: group.chat_id,
+        group_key: group.group_key,
+        description: group.description,
+        invite_link: group.invite_link,
+        is_active: group.is_active,
+        is_private: group.is_private,
+        max_members: group.max_members?.toString() || '',
+        auto_add_enabled: group.auto_add_enabled,
+        auto_remove_enabled: group.auto_remove_enabled,
+        sort_order: group.sort_order
+      });
+    } else {
+      setEditingGroup(null);
+      setGroupForm({
+        name: '',
+        chat_id: '',
+        group_key: '',
+        description: '',
+        invite_link: '',
+        is_active: true,
+        is_private: false,
+        max_members: '',
+        auto_add_enabled: true,
+        auto_remove_enabled: true,
+        sort_order: 0
+      });
+    }
+    setShowGroupModal(true);
+  };
+
+  const handleSaveGroup = async () => {
+    try {
+      setSavingGroup(true);
+      const token = localStorage.getItem('access_token');
+
+      const payload = {
+        ...groupForm,
+        max_members: groupForm.max_members ? parseInt(groupForm.max_members) : null
+      };
+
+      const url = editingGroup
+        ? `http://127.0.0.1:8000/api/admin/telegram/groups/${editingGroup.id}/`
+        : 'http://127.0.0.1:8000/api/admin/telegram/groups/';
+
+      const method = editingGroup ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to save group');
+      }
+
+      await loadGroups();
+      setShowGroupModal(false);
+      setMessage({ type: 'success', text: `Group ${editingGroup ? 'updated' : 'created'} successfully` });
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.message || 'Failed to save group' });
+    } finally {
+      setSavingGroup(false);
+    }
+  };
+
+  const handleDeleteGroup = async (groupId: string) => {
+    if (!confirm('Are you sure you want to delete this group?')) return;
+
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(`http://127.0.0.1:8000/api/admin/telegram/groups/${groupId}/`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) throw new Error('Failed to delete group');
+
+      await loadGroups();
+      setMessage({ type: 'success', text: 'Group deleted successfully' });
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.message || 'Failed to delete group' });
+    }
+  };
+
+  const handleSyncMembers = async (groupId: string) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(`http://127.0.0.1:8000/api/admin/telegram/groups/${groupId}/sync-members/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setMessage({ 
+          type: 'success', 
+          text: `Member count synced: ${data.old_count} → ${data.new_count} (${data.difference >= 0 ? '+' : ''}${data.difference})`
+        });
+        await loadGroups();
+      } else {
+        setMessage({ type: 'error', text: data.message });
+      }
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.message || 'Failed to sync members' });
     }
   };
 
@@ -730,6 +927,268 @@ export default function TelegramConfigurationPage() {
           </div>
         </div>
       </div>
+
+      {/* Telegram Groups */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Telegram Groups</h2>
+            <p className="text-sm text-gray-600 mt-1">Manage groups linked to subscription plans</p>
+          </div>
+          <button
+            onClick={() => handleOpenGroupModal()}
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+          >
+            <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            Add Group
+          </button>
+        </div>
+
+        {groups.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">No Groups Yet</h3>
+            <p className="text-gray-600 mb-6">Add your first Telegram group to get started</p>
+            <button
+              onClick={() => handleOpenGroupModal()}
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+            >
+              <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              Add First Group
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {groups.map(group => (
+              <div key={group.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-lg font-semibold text-gray-900">{group.name}</h3>
+                      <span className={`text-xs font-semibold px-2 py-1 rounded ${
+                        group.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {group.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                      {group.is_private && (
+                        <span className="text-xs font-semibold px-2 py-1 rounded bg-blue-100 text-blue-700">
+                          Private
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600 mb-3">{group.description || 'No description'}</p>
+                    <div className="grid grid-cols-3 gap-4 text-sm">
+                      <div>
+                        <p className="text-gray-500">Chat ID</p>
+                        <p className="font-mono text-gray-900">{group.chat_id}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Members</p>
+                        <p className="font-semibold text-gray-900">
+                          {group.member_count}{group.max_members ? ` / ${group.max_members}` : ''}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Last Sync</p>
+                        <p className="text-gray-900">
+                          {group.last_sync_at ? new Date(group.last_sync_at).toLocaleDateString() : 'Never'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 ml-4">
+                    <button
+                      onClick={() => handleSyncMembers(group.id)}
+                      className="px-3 py-1.5 text-sm text-blue-700 border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors"
+                      title="Sync member count from Telegram"
+                    >
+                      Sync
+                    </button>
+                    <button
+                      onClick={() => handleOpenGroupModal(group)}
+                      className="px-3 py-1.5 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteGroup(group.id)}
+                      className="px-3 py-1.5 text-sm text-red-700 border border-red-300 rounded-lg hover:bg-red-50 transition-colors"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Group Modal */}
+      {showGroupModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 z-10">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {editingGroup ? 'Edit Group' : 'Add New Group'}
+                </h2>
+                <button
+                  onClick={() => setShowGroupModal(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  Group Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={groupForm.name}
+                  onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })}
+                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  Chat ID <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={groupForm.chat_id}
+                  onChange={(e) => setGroupForm({ ...groupForm, chat_id: e.target.value })}
+                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 font-mono"
+                  placeholder="-1001234567890"
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">Must start with - (negative number for groups)</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  Group Key <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={groupForm.group_key}
+                  onChange={(e) => setGroupForm({ ...groupForm, group_key: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '-') })}
+                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 font-mono"
+                  placeholder="premium-signals"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">Description</label>
+                <textarea
+                  value={groupForm.description}
+                  onChange={(e) => setGroupForm({ ...groupForm, description: e.target.value })}
+                  rows={3}
+                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">Max Members</label>
+                  <input
+                    type="number"
+                    value={groupForm.max_members}
+                    onChange={(e) => setGroupForm({ ...groupForm, max_members: e.target.value })}
+                    className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                    placeholder="Unlimited"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">Sort Order</label>
+                  <input
+                    type="number"
+                    value={groupForm.sort_order}
+                    onChange={(e) => setGroupForm({ ...groupForm, sort_order: parseInt(e.target.value) || 0 })}
+                    className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={groupForm.is_active}
+                    onChange={(e) => setGroupForm({ ...groupForm, is_active: e.target.checked })}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">Active</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={groupForm.is_private}
+                    onChange={(e) => setGroupForm({ ...groupForm, is_private: e.target.checked })}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">Private Group</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={groupForm.auto_add_enabled}
+                    onChange={(e) => setGroupForm({ ...groupForm, auto_add_enabled: e.target.checked })}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">Auto-Add Enabled</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={groupForm.auto_remove_enabled}
+                    onChange={(e) => setGroupForm({ ...groupForm, auto_remove_enabled: e.target.checked })}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">Auto-Remove Enabled</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex items-center justify-end space-x-3">
+              <button
+                onClick={() => setShowGroupModal(false)}
+                disabled={savingGroup}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveGroup}
+                disabled={savingGroup || !groupForm.name || !groupForm.chat_id || !groupForm.group_key}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              >
+                {savingGroup && (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                )}
+                <span>{savingGroup ? 'Saving...' : (editingGroup ? 'Update Group' : 'Create Group')}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );
