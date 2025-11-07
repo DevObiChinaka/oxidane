@@ -386,6 +386,11 @@ export default function TelegramConfigurationPage() {
             type: 'error', 
             text: '❌ Bot has been removed from the group or lacks permissions. Please re-add the bot as an admin with "Add Users" permission.' 
           });
+        } else if (errorMsg.includes('chat not found') || errorMsg.includes('Chat not found')) {
+          setMessage({ 
+            type: 'error', 
+            text: '❌ Chat not found. Please ensure: 1) The bot is added to the group as an admin, 2) The Chat ID is correct and starts with a minus sign.' 
+          });
         } else {
           setMessage({ type: 'error', text: `❌ ${errorMsg}` });
         }
