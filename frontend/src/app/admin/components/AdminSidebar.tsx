@@ -79,6 +79,7 @@ export default function AdminSidebar() {
       requiresSetup: false, // TEMP: Disabled for development
       items: [
         { name: 'Subscription Plans', href: '/admin/plans', icon: '💰' },
+        { name: 'Features', href: '/admin/features', icon: '✨' },
         { name: 'Payments', href: '/admin/payments', icon: '💳' },
         { name: 'Revenue Reports', href: '/admin/revenue', icon: '📊' },
       ]
