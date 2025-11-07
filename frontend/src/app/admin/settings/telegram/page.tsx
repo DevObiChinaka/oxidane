@@ -51,6 +51,14 @@ interface TelegramGroup {
   created_at: string;
 }
 
+interface DiscoveredChat {
+  chat_id: string;
+  title: string;
+  type: string;
+  username: string;
+  member_count: number | null;
+}
+
 interface GroupFormData {
   name: string;
   chat_id: string;
@@ -97,6 +105,12 @@ export default function TelegramConfigurationPage() {
     auto_remove_enabled: true,
     sort_order: 0
   });
+
+  // Discovery state
+  const [showDiscoverModal, setShowDiscoverModal] = useState(false);
+  const [discoveredChats, setDiscoveredChats] = useState<DiscoveredChat[]>([]);
+  const [discovering, setDiscovering] = useState(false);
+  const [copiedChatId, setCopiedChatId] = useState<string | null>(null);
 
   useEffect(() => {
     loadConfiguration();
@@ -404,6 +418,54 @@ export default function TelegramConfigurationPage() {
     } finally {
       setSyncingGroupId(null);
     }
+  };
+
+  const handleDiscoverChats = async () => {
+    try {
+      setDiscovering(true);
+      const token = localStorage.getItem('access_token');
+      
+      const response = await fetch('http://127.0.0.1:8000/api/admin/telegram/groups/discover-chats/', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setDiscoveredChats(data.chats);
+        setShowDiscoverModal(true);
+        setMessage({
+          type: 'success',
+          text: `✅ ${data.message}. ${data.hint || ''}`
+        });
+      } else {
+        setMessage({
+          type: 'error',
+          text: `❌ ${data.message}`
+        });
+      }
+    } catch (error: any) {
+      setMessage({
+        type: 'error',
+        text: `❌ Failed to discover chats: ${error.message}`
+      });
+    } finally {
+      setDiscovering(false);
+    }
+  };
+
+  const handleCopyChatId = (chatId: string, title: string) => {
+    navigator.clipboard.writeText(chatId);
+    setCopiedChatId(chatId);
+    setTimeout(() => setCopiedChatId(null), 2000);
+    setMessage({ 
+      type: 'success', 
+      text: `✅ Copied Chat ID for "${title}": ${chatId}` 
+    });
   };
 
   if (loading) {
@@ -1040,8 +1102,26 @@ export default function TelegramConfigurationPage() {
               
               {showGroupInstructions && (
                 <div className="space-y-4 text-sm text-gray-700">
+                  <div className="bg-green-50 border-2 border-green-500 rounded-lg p-4">
+                    <h4 className="font-semibold text-green-900 mb-2 flex items-center gap-2">
+                      <span className="text-2xl">⭐</span>
+                      Method 1: Use "Discover Available Groups" Button (Recommended)
+                    </h4>
+                    <ol className="list-decimal list-inside space-y-2 ml-2 text-green-900">
+                      <li>Add your bot to the Telegram group as an <strong>administrator</strong></li>
+                      <li>Send any test message in the group (so the bot receives an update)</li>
+                      <li>Click the <strong className="bg-white px-2 py-0.5 rounded border border-green-300">🔍 Discover Available Groups</strong> button below</li>
+                      <li>Find your group in the list of discovered groups</li>
+                      <li>Click <strong className="bg-white px-2 py-0.5 rounded border border-green-300">Copy</strong> next to the correct Chat ID</li>
+                      <li>Paste the Chat ID when creating or editing the group</li>
+                    </ol>
+                    <p className="mt-3 text-sm text-green-800 italic">
+                      💡 This method is the most reliable and doesn't require any third-party bots!
+                    </p>
+                  </div>
+                  
                   <div>
-                    <h4 className="font-semibold text-gray-900 mb-2">Method 1: Using @userinfobot (Easiest)</h4>
+                    <h4 className="font-semibold text-gray-900 mb-2">Method 2: Using @userinfobot (Alternative)</h4>
                     <ol className="list-decimal list-inside space-y-2 ml-2">
                       <li>Add your bot to the Telegram group as an administrator</li>
                       <li>Add <span className="font-mono bg-white px-2 py-0.5 rounded border">@userinfobot</span> to the same group</li>
@@ -1053,7 +1133,7 @@ export default function TelegramConfigurationPage() {
                   </div>
                   
                   <div>
-                    <h4 className="font-semibold text-gray-900 mb-2">Method 2: Using Web Telegram</h4>
+                    <h4 className="font-semibold text-gray-900 mb-2">Method 3: Using Web Telegram</h4>
                     <ol className="list-decimal list-inside space-y-2 ml-2">
                       <li>Open <a href="https://web.telegram.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">web.telegram.org</a> in your browser</li>
                       <li>Navigate to your group</li>
@@ -1064,7 +1144,7 @@ export default function TelegramConfigurationPage() {
                   </div>
 
                   <div>
-                    <h4 className="font-semibold text-gray-900 mb-2">Method 3: Using @getidsbot</h4>
+                    <h4 className="font-semibold text-gray-900 mb-2">Method 4: Using @getidsbot</h4>
                     <ol className="list-decimal list-inside space-y-2 ml-2">
                       <li>Add <span className="font-mono bg-white px-2 py-0.5 rounded border">@getidsbot</span> to your group</li>
                       <li>Send the command <span className="font-mono bg-white px-2 py-0.5 rounded border">/id@getidsbot</span> in the group</li>
@@ -1085,6 +1165,7 @@ export default function TelegramConfigurationPage() {
                           <li>Your bot must be added as an <strong>administrator</strong> to the group</li>
                           <li>The bot needs "Add Users" and "Ban Users" permissions to manage memberships</li>
                           <li>Private groups and channels work the same way</li>
+                          <li>Supergroups have Chat IDs starting with <strong>-100</strong> (e.g., -1001234567890)</li>
                         </ul>
                       </div>
                     </div>
@@ -1093,6 +1174,32 @@ export default function TelegramConfigurationPage() {
               )}
             </div>
           </div>
+        </div>
+
+        {/* Discover Chats Button */}
+        <div className="mb-6">
+          <button
+            onClick={handleDiscoverChats}
+            disabled={discovering}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+          >
+            {discovering ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span>Discovering...</span>
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <span>Discover Chat IDs</span>
+              </>
+            )}
+          </button>
+          <p className="text-sm text-gray-600 mt-2">
+            Automatically find all groups where your bot has recent activity. Most reliable method.
+          </p>
         </div>
 
       {/* Telegram Groups */}
@@ -1365,6 +1472,168 @@ export default function TelegramConfigurationPage() {
                 )}
                 <span>{savingGroup ? 'Saving...' : (editingGroup ? 'Update Group' : 'Create Group')}</span>
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Discover Chats Modal */}
+      {showDiscoverModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-5xl w-full max-h-[85vh] overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Discovered Telegram Groups</h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Click Copy to use the Chat ID when adding a new group
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowDiscoverModal(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-6">
+              {discoveredChats.length === 0 ? (
+                <div className="text-center py-16">
+                  <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">No Groups Found</h3>
+                  <p className="text-gray-600 max-w-md mx-auto">
+                    No groups or channels were discovered. Make sure your bot is added to a group and 
+                    send a test message in that group, then try discovering again.
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b-2 border-gray-200 bg-gray-50">
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Group/Channel Name</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Chat ID</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Type</th>
+                        <th className="text-right py-3 px-4 font-semibold text-gray-700">Members</th>
+                        <th className="text-right py-3 px-4 font-semibold text-gray-700">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {discoveredChats.map((chat, index) => (
+                        <tr 
+                          key={chat.chat_id} 
+                          className={`border-b border-gray-100 hover:bg-blue-50 transition-colors ${
+                            index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                          }`}
+                        >
+                          <td className="py-4 px-4">
+                            <div className="flex items-center gap-2">
+                              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                                {chat.title.charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <div className="font-semibold text-gray-900">{chat.title}</div>
+                                {chat.username && (
+                                  <div className="text-xs text-gray-500">@{chat.username}</div>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-4 px-4">
+                            <code className="bg-gray-100 px-3 py-1.5 rounded text-sm font-mono text-gray-800 border border-gray-200">
+                              {chat.chat_id}
+                            </code>
+                          </td>
+                          <td className="py-4 px-4">
+                            <span className={`text-xs px-3 py-1 rounded-full font-medium ${
+                              chat.type === 'supergroup' ? 'bg-blue-100 text-blue-700' :
+                              chat.type === 'group' ? 'bg-green-100 text-green-700' :
+                              chat.type === 'channel' ? 'bg-purple-100 text-purple-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {chat.type}
+                            </span>
+                          </td>
+                          <td className="py-4 px-4 text-right">
+                            <span className="font-semibold text-gray-900">
+                              {chat.member_count !== null ? chat.member_count.toLocaleString() : 'N/A'}
+                            </span>
+                          </td>
+                          <td className="py-4 px-4 text-right">
+                            <button
+                              onClick={() => handleCopyChatId(chat.chat_id, chat.title)}
+                              className={`px-4 py-2 text-sm rounded-lg transition-colors shadow-sm hover:shadow-md flex items-center gap-2 ml-auto ${
+                                copiedChatId === chat.chat_id
+                                  ? 'bg-green-600 text-white'
+                                  : 'bg-blue-600 text-white hover:bg-blue-700'
+                              }`}
+                            >
+                              {copiedChatId === chat.chat_id ? (
+                                <>
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                  Copied!
+                                </>
+                              ) : (
+                                <>
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                  </svg>
+                                  Copy
+                                </>
+                              )}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+            
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-between items-center">
+              <div className="text-sm text-gray-600">
+                {discoveredChats.length > 0 && (
+                  <span>Found <strong className="text-gray-900">{discoveredChats.length}</strong> group{discoveredChats.length !== 1 ? 's' : ''}</span>
+                )}
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleDiscoverChats}
+                  disabled={discovering}
+                  className="px-5 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50 flex items-center gap-2"
+                >
+                  {discovering ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-gray-700 border-t-transparent rounded-full animate-spin"></div>
+                      <span>Refreshing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Refresh
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => setShowDiscoverModal(false)}
+                  className="px-5 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
