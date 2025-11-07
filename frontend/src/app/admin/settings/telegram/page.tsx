@@ -83,6 +83,7 @@ export default function TelegramConfigurationPage() {
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [editingGroup, setEditingGroup] = useState<TelegramGroup | null>(null);
   const [savingGroup, setSavingGroup] = useState(false);
+  const [syncingGroupId, setSyncingGroupId] = useState<string | null>(null);
   const [groupForm, setGroupForm] = useState<GroupFormData>({
     name: '',
     chat_id: '',
@@ -333,7 +334,11 @@ export default function TelegramConfigurationPage() {
 
   const handleSyncMembers = async (groupId: string) => {
     try {
+      setSyncingGroupId(groupId);
       const token = localStorage.getItem('access_token');
+      
+      console.log('Syncing members for group:', groupId);
+      
       const response = await fetch(`http://127.0.0.1:8000/api/admin/telegram/groups/${groupId}/sync-members/`, {
         method: 'POST',
         headers: {
@@ -342,19 +347,57 @@ export default function TelegramConfigurationPage() {
         }
       });
 
+      console.log('Response status:', response.status);
+      
       const data = await response.json();
       
-      if (data.success) {
+      console.log('Sync response data:', data);
+      
+      if (response.ok && data.success) {
         setMessage({ 
           type: 'success', 
-          text: `Member count synced: ${data.old_count} → ${data.new_count} (${data.difference >= 0 ? '+' : ''}${data.difference})`
+          text: `✅ Member count synced: ${data.old_count} → ${data.new_count} (${data.difference >= 0 ? '+' : ''}${data.difference})`
         });
         await loadGroups();
       } else {
-        setMessage({ type: 'error', text: data.message });
+        // Show detailed error message from backend
+        const errorMsg = data.message || 'Failed to sync members';
+        
+        console.error('Sync failed:', errorMsg);
+        
+        // Provide helpful error messages
+        if (errorMsg.includes('Bot token not configured')) {
+          setMessage({ 
+            type: 'warning', 
+            text: '⚠️ Bot token not configured. Please switch to "Bot Configuration" tab and set up your bot token first.' 
+          });
+        } else if (errorMsg.includes('timeout') || response.status === 408) {
+          setMessage({ 
+            type: 'error', 
+            text: '❌ Connection timeout. The Telegram API took too long to respond. Please check your internet connection and try again.' 
+          });
+        } else if (errorMsg.includes('Unauthorized') || errorMsg.includes('Invalid bot token')) {
+          setMessage({ 
+            type: 'error', 
+            text: '❌ Invalid bot token. Please verify your bot token on the "Bot Configuration" tab.' 
+          });
+        } else if (errorMsg.includes('Forbidden') || errorMsg.includes('removed from group')) {
+          setMessage({ 
+            type: 'error', 
+            text: '❌ Bot has been removed from the group or lacks permissions. Please re-add the bot as an admin with "Add Users" permission.' 
+          });
+        } else {
+          setMessage({ type: 'error', text: `❌ ${errorMsg}` });
+        }
       }
     } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || 'Failed to sync members' });
+      console.error('Sync error:', error);
+      setMessage({ 
+        type: 'error', 
+        text: `❌ Network error: ${error.message || 'Failed to connect to server. Please check your connection.'}` 
+      });
+    } finally {
+      setSyncingGroupId(null);
     }
   };
 
@@ -1126,10 +1169,23 @@ export default function TelegramConfigurationPage() {
                   <div className="flex items-center gap-2 ml-4">
                     <button
                       onClick={() => handleSyncMembers(group.id)}
-                      className="px-3 py-1.5 text-sm text-blue-700 border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors"
+                      disabled={syncingGroupId === group.id}
+                      className="px-3 py-1.5 text-sm text-blue-700 border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                       title="Sync member count from Telegram"
                     >
-                      Sync
+                      {syncingGroupId === group.id ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-blue-700 border-t-transparent rounded-full animate-spin"></div>
+                          <span>Syncing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          <span>Sync</span>
+                        </>
+                      )}
                     </button>
                     <button
                       onClick={() => handleOpenGroupModal(group)}
