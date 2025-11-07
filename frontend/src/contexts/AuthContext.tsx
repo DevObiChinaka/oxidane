@@ -82,6 +82,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Redirect based on role
     if (data.user.is_staff) {
+      // Always check setup status on login
+      try {
+        const setupResponse = await fetch('http://localhost:8000/api/admin/setup/status/', {
+          headers: {
+            'Authorization': `Bearer ${data.access}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (setupResponse.ok) {
+          const setupData = await setupResponse.json();
+          
+          // If setup is not complete, redirect to setup page
+          if (!setupData.setup_complete) {
+            router.push('/admin/setup');
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('Setup status check failed:', error);
+        // Continue to dashboard if check fails
+      }
+      
       router.push('/admin/dashboard');
     } else {
       router.push('/dashboard');

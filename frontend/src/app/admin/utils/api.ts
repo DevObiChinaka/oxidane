@@ -45,16 +45,14 @@ export class AdminAPIClient {
     return response.blob();
   }
 
-  // Test connectivity to the backend with comprehensive debugging
+  // Test connectivity to the backend
   async testConnection(): Promise<boolean> {
     try {
       const correctBaseURL = 'http://127.0.0.1:8000/api';
 
-      // Test multiple endpoints to isolate the issue
+      // Test health endpoint only
       const testEndpoints = [
         '/health/',
-        '/admin-auth/check-session/',
-        '/admin/dashboard/metrics/'
       ];
       
       for (const endpoint of testEndpoints) {
@@ -68,7 +66,6 @@ export class AdminAPIClient {
             }
           });
           
-          const contentType = response.headers.get('content-type') || 'unknown';
           const responseText = await response.text();
 
           console.log(`🔍 ${endpoint} - Response preview:`, responseText.substring(0, 150));

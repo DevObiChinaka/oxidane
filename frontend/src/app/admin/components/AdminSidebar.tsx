@@ -50,7 +50,7 @@ export default function AdminSidebar() {
   const navigationItems = [
     {
       section: 'Overview',
-      requiresSetup: true, // Blocked until setup complete
+      requiresSetup: false, // TEMP: Disabled for development
       items: [
         { name: 'Dashboard', href: '/admin', icon: '📊' },
         { name: 'Analytics', href: '/admin/analytics', icon: '📈' },
@@ -58,7 +58,7 @@ export default function AdminSidebar() {
     },
     {
       section: 'Content Management',
-      requiresSetup: true, // Blocked until setup complete
+      requiresSetup: false, // TEMP: Disabled for development
       items: [
         { name: 'Courses', href: '/admin/courses', icon: '📚' },
         { name: 'Lessons', href: '/admin/lessons', icon: '🎥' },
@@ -66,7 +66,7 @@ export default function AdminSidebar() {
     },
     {
       section: 'User Management',
-      requiresSetup: true, // Blocked until setup complete
+      requiresSetup: false, // TEMP: Disabled for development
       items: [
         { name: 'Users', href: '/admin/users', icon: '👥' },
         { name: 'Signal Subscriptions', href: '/admin/subscriptions', icon: '📡' },
@@ -76,9 +76,9 @@ export default function AdminSidebar() {
     },
     {
       section: 'Financial',
-      requiresSetup: true, // Blocked until setup complete
+      requiresSetup: false, // TEMP: Disabled for development
       items: [
-        { name: 'Pricing Plans', href: '/admin/pricing', icon: '💰' },
+        { name: 'Subscription Plans', href: '/admin/plans', icon: '💰' },
         { name: 'Payments', href: '/admin/payments', icon: '💳' },
         { name: 'Revenue Reports', href: '/admin/revenue', icon: '📊' },
       ]

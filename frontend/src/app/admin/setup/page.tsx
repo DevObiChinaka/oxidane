@@ -94,7 +94,7 @@ export default function SetupDashboardPage() {
       title: 'Subscription Plans',
       description: 'Create pricing plans with features and billing options',
       icon: '💰',
-      href: '/admin/pricing',
+      href: '/admin/plans',
       key: 'database'
     },
     {
