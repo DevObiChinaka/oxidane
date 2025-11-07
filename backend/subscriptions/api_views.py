@@ -2596,11 +2596,14 @@ class SetupStatusViewSet(viewsets.ViewSet):
             })
         
         # ===== CALCULATE COMPLETION =====
+        # Count 5 separate checks to match frontend display:
+        # 1. Telegram, 2. Payment, 3. Email, 4. Plans, 5. Features
         checks = [
             telegram_status['configured'],
             payment_status['configured'],
             email_status['configured'],
-            database_status['ready']
+            database_status['has_active_plans'],  # Plans step
+            features_count > 0  # Features step
         ]
         
         completed_checks = sum(checks)
