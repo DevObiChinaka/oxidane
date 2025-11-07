@@ -66,6 +66,7 @@ interface GroupFormData {
 }
 
 export default function TelegramConfigurationPage() {
+  const [activeTab, setActiveTab] = useState<'bot' | 'groups'>('bot');
   const [config, setConfig] = useState<TelegramConfig | null>(null);
   const [editedConfig, setEditedConfig] = useState<Partial<TelegramConfig>>({});
   const [newBotToken, setNewBotToken] = useState<string>('');  // Track new token input
@@ -74,6 +75,7 @@ export default function TelegramConfigurationPage() {
   const [testing, setTesting] = useState(false);
   const [botInfo, setBotInfo] = useState<BotInfo | null>(null);
   const [showInstructions, setShowInstructions] = useState(false);
+  const [showGroupInstructions, setShowGroupInstructions] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info' | 'warning'; text: string } | null>(null);
   
   // Groups state
@@ -368,34 +370,68 @@ export default function TelegramConfigurationPage() {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-6xl mx-auto p-8 space-y-8">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-                {/* Official Telegram Paper Plane Icon */}
-                <svg className="w-7 h-7 text-white" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
-                </svg>
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">
-                  Telegram Bot Configuration
-                </h1>
-                <p className="text-gray-600 mt-0.5 text-sm">Automate group member management with your Telegram bot</p>
-              </div>
+        <div>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+              {/* Official Telegram Paper Plane Icon */}
+              <svg className="w-7 h-7 text-white" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">
+                Telegram Integration
+              </h1>
+              <p className="text-gray-600 mt-0.5 text-sm">Configure bot and manage group memberships</p>
             </div>
           </div>
-          <Link 
-            href="/admin/telegram-groups"
-            className="px-5 py-2.5 bg-white text-gray-700 rounded-xl hover:bg-gray-50 transition-all text-sm font-semibold border border-gray-200 shadow-sm hover:shadow flex items-center gap-2"
-          >
-            <span>Manage Groups</span>
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </Link>
+
+          {/* Tabs */}
+          <div className="border-b border-gray-200">
+            <nav className="-mb-px flex space-x-8">
+              <button
+                onClick={() => setActiveTab('bot')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'bot'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <span>Bot Configuration</span>
+                </div>
+              </button>
+              <button
+                onClick={() => setActiveTab('groups')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'groups'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  <span>Groups Management</span>
+                  {groups.length > 0 && (
+                    <span className="ml-1 bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-0.5 rounded-full">
+                      {groups.length}
+                    </span>
+                  )}
+                </div>
+              </button>
+            </nav>
+          </div>
         </div>
 
+        {/* Bot Configuration Tab */}
+        {activeTab === 'bot' && (
+          <>
         {/* Connection Status Banner */}
         {config && (
           <div className={`rounded-xl p-6 shadow-sm border-2 ${
@@ -927,6 +963,89 @@ export default function TelegramConfigurationPage() {
           </div>
         </div>
       </div>
+          </>
+        )}
+
+      {/* Groups Management Tab */}
+      {activeTab === 'groups' && (
+        <>
+        {/* How to Get Chat ID Guide */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0">
+              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-semibold text-gray-900">How to Get Your Telegram Group Chat ID</h3>
+                <button
+                  onClick={() => setShowGroupInstructions(!showGroupInstructions)}
+                  className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                >
+                  {showGroupInstructions ? 'Hide' : 'Show'} Instructions
+                </button>
+              </div>
+              
+              {showGroupInstructions && (
+                <div className="space-y-4 text-sm text-gray-700">
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">Method 1: Using @userinfobot (Easiest)</h4>
+                    <ol className="list-decimal list-inside space-y-2 ml-2">
+                      <li>Add your bot to the Telegram group as an administrator</li>
+                      <li>Add <span className="font-mono bg-white px-2 py-0.5 rounded border">@userinfobot</span> to the same group</li>
+                      <li>The bot will automatically send the group's Chat ID</li>
+                      <li>The Chat ID will be a negative number (e.g., <span className="font-mono bg-white px-2 py-0.5 rounded border">-1001234567890</span>)</li>
+                      <li>Copy this ID and use it when adding the group below</li>
+                      <li>You can remove @userinfobot after getting the ID</li>
+                    </ol>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">Method 2: Using Web Telegram</h4>
+                    <ol className="list-decimal list-inside space-y-2 ml-2">
+                      <li>Open <a href="https://web.telegram.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">web.telegram.org</a> in your browser</li>
+                      <li>Navigate to your group</li>
+                      <li>Check the URL in your browser's address bar</li>
+                      <li>Look for the number after <span className="font-mono bg-white px-2 py-0.5 rounded border">#-</span> (e.g., <span className="font-mono bg-white px-2 py-0.5 rounded border">#-1001234567890</span>)</li>
+                      <li>Include the minus sign: <span className="font-mono bg-white px-2 py-0.5 rounded border">-1001234567890</span></li>
+                    </ol>
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">Method 3: Using @getidsbot</h4>
+                    <ol className="list-decimal list-inside space-y-2 ml-2">
+                      <li>Add <span className="font-mono bg-white px-2 py-0.5 rounded border">@getidsbot</span> to your group</li>
+                      <li>Send the command <span className="font-mono bg-white px-2 py-0.5 rounded border">/id@getidsbot</span> in the group</li>
+                      <li>The bot will reply with the Chat ID</li>
+                      <li>Remove the bot after getting the ID</li>
+                    </ol>
+                  </div>
+
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
+                    <div className="flex items-start gap-2">
+                      <svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      <div>
+                        <p className="font-semibold text-yellow-900 mb-1">Important Notes:</p>
+                        <ul className="list-disc list-inside space-y-1 text-yellow-800">
+                          <li>Group Chat IDs <strong>always</strong> start with a minus sign (-)</li>
+                          <li>Your bot must be added as an <strong>administrator</strong> to the group</li>
+                          <li>The bot needs "Add Users" and "Ban Users" permissions to manage memberships</li>
+                          <li>Private groups and channels work the same way</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
 
       {/* Telegram Groups */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
@@ -1188,6 +1307,8 @@ export default function TelegramConfigurationPage() {
             </div>
           </div>
         </div>
+      )}
+        </>
       )}
       </div>
     </div>
