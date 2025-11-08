@@ -38,6 +38,10 @@ export default function PaymentConfigPage() {
   const [testing, setTesting] = useState<'paystack' | 'stripe' | null>(null);
   const [message, setMessage] = useState<Message | null>(null);
   
+  // Visibility toggles for masked keys
+  const [showPaystackSecret, setShowPaystackSecret] = useState(false);
+  const [showStripeSecret, setShowStripeSecret] = useState(false);
+  
   // Form states
   const [formData, setFormData] = useState({
     // Paystack
@@ -108,12 +112,8 @@ export default function PaymentConfigPage() {
       setMessage(null);
       const token = localStorage.getItem('access_token');
       
-      const endpoint = config?.id 
-        ? `http://127.0.0.1:8000/api/admin/payment/config/${config.id}/`
-        : 'http://127.0.0.1:8000/api/admin/payment/config/';
-      
-      const response = await fetch(endpoint, {
-        method: config?.id ? 'PATCH' : 'POST',
+      const response = await fetch('http://127.0.0.1:8000/api/admin/payment/config/', {
+        method: 'POST',  // Use POST for singleton create-or-update
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -124,9 +124,23 @@ export default function PaymentConfigPage() {
       const data = await response.json();
       
       if (response.ok) {
+        // Update config with returned data
         setConfig(data);
+        // Update form with the returned data (including masked values)
+        setFormData({
+          paystack_public_key: data.paystack_public_key || '',
+          paystack_secret_key: data.paystack_secret_key || '',
+          paystack_webhook_secret: data.paystack_webhook_secret || '',
+          paystack_enabled: data.paystack_enabled ?? true,
+          stripe_publishable_key: data.stripe_publishable_key || '',
+          stripe_secret_key: data.stripe_secret_key || '',
+          stripe_webhook_secret: data.stripe_webhook_secret || '',
+          stripe_enabled: data.stripe_enabled ?? false,
+          primary_provider: data.primary_provider || 'paystack',
+          is_test_mode: data.is_test_mode ?? true,
+          supported_currencies: data.supported_currencies || ['NGN', 'USD'],
+        });
         setMessage({ type: 'success', text: 'Payment configuration saved successfully' });
-        await loadConfig();
       } else {
         const errorMessage = typeof data === 'object' 
           ? JSON.stringify(data) 
@@ -142,18 +156,13 @@ export default function PaymentConfigPage() {
   };
 
   const handleTestConnection = async (provider: 'paystack' | 'stripe') => {
-    if (!config?.id) {
-      setMessage({ type: 'warning', text: 'Please save the configuration first before testing' });
-      return;
-    }
-
     try {
       setTesting(provider);
       setMessage(null);
       const token = localStorage.getItem('access_token');
       
       const response = await fetch(
-        `http://127.0.0.1:8000/api/admin/payment/config/${config.id}/test-${provider}/`,
+        `http://127.0.0.1:8000/api/admin/payment/config/test-${provider}/`,
         {
           method: 'POST',
           headers: {
@@ -380,7 +389,7 @@ export default function PaymentConfigPage() {
                     onKeyPress={(e) => e.key === 'Enter' && handleAddCurrency()}
                     placeholder="e.g., GBP, EUR"
                     maxLength={3}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base text-gray-900 bg-white"
                   />
                   <button
                     onClick={handleAddCurrency}
@@ -482,7 +491,7 @@ export default function PaymentConfigPage() {
                   value={formData.paystack_public_key}
                   onChange={(e) => setFormData(prev => ({ ...prev, paystack_public_key: e.target.value }))}
                   placeholder="pk_test_... or pk_live_..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-base text-gray-900 placeholder-gray-400 bg-white"
                 />
                 {config?.masked_paystack_public && (
                   <p className="mt-2 text-sm text-gray-500">
@@ -496,21 +505,62 @@ export default function PaymentConfigPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Secret Key
                 </label>
-                <input
-                  type="password"
-                  value={formData.paystack_secret_key}
-                  onChange={(e) => setFormData(prev => ({ ...prev, paystack_secret_key: e.target.value }))}
-                  placeholder="sk_test_... or sk_live_..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
-                />
-                {config?.masked_paystack_secret && (
-                  <p className="mt-2 text-sm text-gray-500">
-                    Current: {config.masked_paystack_secret}
-                  </p>
+                {config?.masked_paystack_secret && config.masked_paystack_secret !== '(not set)' ? (
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <input
+                          type={showPaystackSecret ? "text" : "password"}
+                          value={config.masked_paystack_secret}
+                          readOnly
+                          className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-lg bg-gray-50 font-mono text-base text-gray-600"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPaystackSecret(!showPaystackSecret)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        >
+                          {showPaystackSecret ? (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                            </svg>
+                          ) : (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData(prev => ({ ...prev, paystack_secret_key: '' }));
+                          setConfig(prev => prev ? { ...prev, masked_paystack_secret: '' } : null);
+                        }}
+                        className="px-4 py-2 text-sm text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 whitespace-nowrap"
+                      >
+                        Change Key
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Secret key is set and encrypted. Click "Change Key" to update it.
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <input
+                      type="password"
+                      value={formData.paystack_secret_key}
+                      onChange={(e) => setFormData(prev => ({ ...prev, paystack_secret_key: e.target.value }))}
+                      placeholder="sk_test_... or sk_live_..."
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-base text-gray-900 placeholder-gray-400 bg-white"
+                    />
+                    <p className="mt-2 text-sm text-gray-500">
+                      This key will be encrypted when saved
+                    </p>
+                  </div>
                 )}
-                <p className="mt-2 text-sm text-gray-500">
-                  This key will be encrypted when saved
-                </p>
               </div>
 
               {/* Webhook Secret */}
@@ -523,7 +573,7 @@ export default function PaymentConfigPage() {
                   value={formData.paystack_webhook_secret}
                   onChange={(e) => setFormData(prev => ({ ...prev, paystack_webhook_secret: e.target.value }))}
                   placeholder="Webhook secret from Paystack dashboard"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-base text-gray-900 placeholder-gray-400 bg-white"
                 />
                 <p className="mt-2 text-sm text-gray-500">
                   Used for verifying webhook signatures
@@ -563,7 +613,7 @@ export default function PaymentConfigPage() {
               <div>
                 <button
                   onClick={() => handleTestConnection('paystack')}
-                  disabled={testing === 'paystack' || !config?.id}
+                  disabled={testing === 'paystack'}
                   className="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {testing === 'paystack' ? (
@@ -641,7 +691,7 @@ export default function PaymentConfigPage() {
                   value={formData.stripe_publishable_key}
                   onChange={(e) => setFormData(prev => ({ ...prev, stripe_publishable_key: e.target.value }))}
                   placeholder="pk_test_... or pk_live_..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-base text-gray-900 bg-white"
                 />
                 {config?.masked_stripe_publishable && (
                   <p className="mt-2 text-sm text-gray-500">
@@ -655,21 +705,62 @@ export default function PaymentConfigPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Secret Key
                 </label>
-                <input
-                  type="password"
-                  value={formData.stripe_secret_key}
-                  onChange={(e) => setFormData(prev => ({ ...prev, stripe_secret_key: e.target.value }))}
-                  placeholder="sk_test_... or sk_live_..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
-                />
-                {config?.masked_stripe_secret && (
-                  <p className="mt-2 text-sm text-gray-500">
-                    Current: {config.masked_stripe_secret}
-                  </p>
+                {config?.masked_stripe_secret && config.masked_stripe_secret !== '(not set)' ? (
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <input
+                          type={showStripeSecret ? "text" : "password"}
+                          value={config.masked_stripe_secret}
+                          readOnly
+                          className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-lg bg-gray-50 font-mono text-base text-gray-600"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowStripeSecret(!showStripeSecret)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        >
+                          {showStripeSecret ? (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                            </svg>
+                          ) : (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData(prev => ({ ...prev, stripe_secret_key: '' }));
+                          setConfig(prev => prev ? { ...prev, masked_stripe_secret: '' } : null);
+                        }}
+                        className="px-4 py-2 text-sm text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 whitespace-nowrap"
+                      >
+                        Change Key
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Secret key is set and encrypted. Click "Change Key" to update it.
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <input
+                      type="password"
+                      value={formData.stripe_secret_key}
+                      onChange={(e) => setFormData(prev => ({ ...prev, stripe_secret_key: e.target.value }))}
+                      placeholder="sk_test_... or sk_live_..."
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-base text-gray-900 bg-white"
+                    />
+                    <p className="mt-2 text-sm text-gray-500">
+                      This key will be encrypted when saved
+                    </p>
+                  </div>
                 )}
-                <p className="mt-2 text-sm text-gray-500">
-                  This key will be encrypted when saved
-                </p>
               </div>
 
               {/* Webhook Secret */}
@@ -682,7 +773,7 @@ export default function PaymentConfigPage() {
                   value={formData.stripe_webhook_secret}
                   onChange={(e) => setFormData(prev => ({ ...prev, stripe_webhook_secret: e.target.value }))}
                   placeholder="whsec_..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-base text-gray-900 bg-white"
                 />
                 <p className="mt-2 text-sm text-gray-500">
                   Used for verifying webhook signatures
@@ -700,7 +791,7 @@ export default function PaymentConfigPage() {
                       type="text"
                       value={config.stripe_webhook_url}
                       readOnly
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm"
+                      className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-50 font-mono text-base text-gray-900"
                     />
                     <button
                       onClick={() => {
@@ -722,7 +813,7 @@ export default function PaymentConfigPage() {
               <div>
                 <button
                   onClick={() => handleTestConnection('stripe')}
-                  disabled={testing === 'stripe' || !config?.id}
+                  disabled={testing === 'stripe'}
                   className="inline-flex items-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {testing === 'stripe' ? (

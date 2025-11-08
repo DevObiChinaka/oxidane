@@ -2093,12 +2093,12 @@ class PaymentConfigurationViewSet(viewsets.ModelViewSet):
         serializer.save()
         return Response(serializer.data)
     
-    @action(detail=True, methods=['post'])
-    def test_paystack(self, request, pk=None):
+    @action(detail=False, methods=['post'], url_path='test-paystack')
+    def test_paystack(self, request):
         """
         Test Paystack API connection by verifying the secret key.
         
-        **Request:** POST /api/admin/payment/config/{id}/test-paystack/
+        **Request:** POST /api/admin/payment/config/test-paystack/
         
         **Response:**
         ```json
@@ -2118,7 +2118,7 @@ class PaymentConfigurationViewSet(viewsets.ModelViewSet):
         import requests
         from requests.exceptions import Timeout, RequestException
         
-        instance = self.get_object()
+        instance = PaymentConfiguration.get_instance()
         
         # Check if Paystack is configured
         if not instance.paystack_secret_key:
@@ -2189,12 +2189,12 @@ class PaymentConfigurationViewSet(viewsets.ModelViewSet):
                 'message': f'Unexpected error: {str(e)}'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
-    @action(detail=True, methods=['post'])
-    def test_stripe(self, request, pk=None):
+    @action(detail=False, methods=['post'], url_path='test-stripe')
+    def test_stripe(self, request):
         """
         Test Stripe API connection by retrieving account info.
         
-        **Request:** POST /api/admin/payment/config/{id}/test-stripe/
+        **Request:** POST /api/admin/payment/config/test-stripe/
         
         **Response:**
         ```json
@@ -2218,7 +2218,7 @@ class PaymentConfigurationViewSet(viewsets.ModelViewSet):
         import requests
         from requests.exceptions import Timeout, RequestException
         
-        instance = self.get_object()
+        instance = PaymentConfiguration.get_instance()
         
         # Check if Stripe is configured
         if not instance.stripe_secret_key:
