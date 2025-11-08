@@ -154,8 +154,8 @@ export default function PlansPage() {
         sort_order: plan.sort_order,
         limits: JSON.stringify(plan.limits, null, 2),
         paystack_plan_code: plan.paystack_plan_code || '',
-        feature_ids: plan.features.map(f => f.id),
-        telegram_group_ids: plan.telegram_groups.map(g => g.id)
+        feature_ids: plan.features?.map(f => f.id) || [],
+        telegram_group_ids: plan.telegram_groups?.map(g => g.id) || []
       });
     } else {
       setEditingPlan(null);
