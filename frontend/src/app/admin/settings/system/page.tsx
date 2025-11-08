@@ -8,14 +8,22 @@ interface HealthMetrics {
   message: string;
 }
 
+interface Recommendation {
+  component: string;
+  message: string;
+  action: string;
+}
+
 interface SetupStatus {
   setup_complete: boolean;
   completion_percentage: number;
   components: {
     telegram: {
       configured: boolean;
-      bot_token: boolean;
-      bot_username: string | null;
+      healthy: boolean;
+      has_token: boolean;
+      has_username: boolean;
+      last_check: string | null;
       connection_status: 'connected' | 'disconnected' | 'error';
     };
     payment: {
@@ -26,17 +34,21 @@ interface SetupStatus {
     };
     email: {
       configured: boolean;
-      smtp_host: string | null;
-      smtp_configured: boolean;
-      connection_status: 'connected' | 'disconnected' | 'error';
+      enabled: boolean;
+      has_host: boolean;
+      has_credentials: boolean;
+      connection_status: 'connected' | 'not_tested';
+      last_test: string | null;
     };
     database: {
-      subscription_plans: number;
-      plan_features: number;
-      telegram_groups: number;
+      has_active_plans: boolean;
+      plans_count: number;
+      features_count: number;
+      active_groups_count: number;
+      ready: boolean;
     };
   };
-  recommendations: string[];
+  recommendations: Recommendation[];
 }
 
 export default function SystemHealthPage() {
@@ -260,16 +272,10 @@ export default function SystemHealthPage() {
           <div className="space-y-1">
             <div className="flex items-center text-xs">
               <span className={`w-2 h-2 rounded-full mr-2 ${
-                setupStatus?.components.telegram.bot_token ? 'bg-green-500' : 'bg-red-500'
+                setupStatus?.components.telegram.has_token ? 'bg-green-500' : 'bg-red-500'
               }`}></span>
-              <span className="text-gray-600">Token: {setupStatus?.components.telegram.bot_token ? 'Set' : 'Not set'}</span>
+              <span className="text-gray-600">Token: {setupStatus?.components.telegram.has_token ? 'Set' : 'Not set'}</span>
             </div>
-            {setupStatus?.components.telegram.bot_username && (
-              <div className="flex items-center text-xs">
-                <span className="w-2 h-2 rounded-full mr-2 bg-blue-500"></span>
-                <span className="text-gray-600">@{setupStatus.components.telegram.bot_username}</span>
-              </div>
-            )}
             <div className="flex items-center text-xs">
               <span className={`w-2 h-2 rounded-full mr-2 ${
                 setupStatus?.components.telegram.connection_status === 'connected' ? 'bg-green-500' :
@@ -341,7 +347,6 @@ export default function SystemHealthPage() {
             </div>
             <div className={`w-2 h-2 rounded-full ${
               setupStatus?.components.email.connection_status === 'connected' ? 'bg-green-500' :
-              setupStatus?.components.email.connection_status === 'error' ? 'bg-red-500' :
               'bg-gray-400'
             }`}></div>
           </div>
@@ -350,23 +355,16 @@ export default function SystemHealthPage() {
           <div className="space-y-1">
             <div className="flex items-center text-xs">
               <span className={`w-2 h-2 rounded-full mr-2 ${
-                setupStatus?.components.email.smtp_configured ? 'bg-green-500' : 'bg-red-500'
+                setupStatus?.components.email.has_credentials ? 'bg-green-500' : 'bg-red-500'
               }`}></span>
-              <span className="text-gray-600">SMTP: {setupStatus?.components.email.smtp_configured ? 'Configured' : 'Not set'}</span>
+              <span className="text-gray-600">SMTP: {setupStatus?.components.email.has_credentials ? 'Configured' : 'Not set'}</span>
             </div>
-            {setupStatus?.components.email.smtp_host && (
-              <div className="flex items-center text-xs">
-                <span className="w-2 h-2 rounded-full mr-2 bg-purple-500"></span>
-                <span className="text-gray-600 truncate">{setupStatus.components.email.smtp_host}</span>
-              </div>
-            )}
             <div className="flex items-center text-xs">
               <span className={`w-2 h-2 rounded-full mr-2 ${
                 setupStatus?.components.email.connection_status === 'connected' ? 'bg-green-500' :
-                setupStatus?.components.email.connection_status === 'error' ? 'bg-red-500' :
                 'bg-gray-400'
               }`}></span>
-              <span className="text-gray-600 capitalize">{setupStatus?.components.email.connection_status || 'Unknown'}</span>
+              <span className="text-gray-600 capitalize">{setupStatus?.components.email.connection_status === 'not_tested' ? 'Not tested' : setupStatus?.components.email.connection_status}</span>
             </div>
           </div>
         </div>
@@ -386,15 +384,15 @@ export default function SystemHealthPage() {
           <div className="space-y-1">
             <div className="flex items-center text-xs">
               <span className="w-2 h-2 rounded-full mr-2 bg-indigo-500"></span>
-              <span className="text-gray-600">{setupStatus?.components.database.subscription_plans || 0} Plans</span>
+              <span className="text-gray-600">{setupStatus?.components.database.plans_count || 0} Plans</span>
             </div>
             <div className="flex items-center text-xs">
               <span className="w-2 h-2 rounded-full mr-2 bg-indigo-500"></span>
-              <span className="text-gray-600">{setupStatus?.components.database.plan_features || 0} Features</span>
+              <span className="text-gray-600">{setupStatus?.components.database.features_count || 0} Features</span>
             </div>
             <div className="flex items-center text-xs">
               <span className="w-2 h-2 rounded-full mr-2 bg-indigo-500"></span>
-              <span className="text-gray-600">{setupStatus?.components.database.telegram_groups || 0} Groups</span>
+              <span className="text-gray-600">{setupStatus?.components.database.active_groups_count || 0} Groups</span>
             </div>
           </div>
         </div>
@@ -409,11 +407,20 @@ export default function SystemHealthPage() {
             </svg>
             <div className="flex-1">
               <h3 className="text-lg font-semibold text-orange-900 mb-2">Setup Recommendations</h3>
-              <ul className="space-y-2">
+              <ul className="space-y-3">
                 {setupStatus.recommendations.map((recommendation, index) => (
-                  <li key={index} className="flex items-start text-sm text-orange-800">
-                    <span className="mr-2">•</span>
-                    <span>{recommendation}</span>
+                  <li key={index} className="bg-white rounded-lg p-3 border border-orange-200">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center mb-1">
+                          <span className="text-xs font-semibold text-orange-700 bg-orange-100 px-2 py-1 rounded">
+                            {recommendation.component}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-800 mb-2">{recommendation.message}</p>
+                        <p className="text-xs text-orange-600 font-medium">→ {recommendation.action}</p>
+                      </div>
+                    </div>
                   </li>
                 ))}
               </ul>
