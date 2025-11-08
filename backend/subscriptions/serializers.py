@@ -189,13 +189,36 @@ class PricingPlanSerializer(serializers.ModelSerializer):
     
     def get_features(self, obj):
         """Get list of features with their details"""
-        from subscriptions.serializers import FeatureSerializer
-        return FeatureSerializer(obj.features.all(), many=True).data
+        # Import here to avoid circular dependency (FeatureSerializer defined later in file)
+        features = obj.features.all()
+        return [
+            {
+                'id': str(f.id),
+                'key': f.key,
+                'name': f.name,
+                'description': f.description,
+                'category': f.category,
+                'icon': f.icon,
+                'sort_order': f.sort_order,
+                'is_active': f.is_active,
+            }
+            for f in features
+        ]
     
     def get_telegram_groups(self, obj):
         """Get list of telegram groups with their details"""
-        from telegram_bot.serializers import TelegramGroupSerializer
-        return TelegramGroupSerializer(obj.telegram_groups.all(), many=True).data
+        # Import here to avoid circular dependency (TelegramGroupSerializer defined later in file)
+        groups = obj.telegram_groups.all()
+        return [
+            {
+                'id': str(g.id),
+                'name': g.name,
+                'group_id': g.group_id,
+                'invite_link': g.invite_link,
+                'is_active': g.is_active,
+            }
+            for g in groups
+        ]
     
     def create(self, validated_data):
         """Handle creation with feature_ids and telegram_group_ids"""
