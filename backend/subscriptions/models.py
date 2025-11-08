@@ -2548,16 +2548,16 @@ class PaymentConfiguration(models.Model):
     # ============================================================================
     
     def get_masked_paystack_public_key(self):
-        """Get masked Paystack public key for display."""
-        return self._mask_key(self.paystack_public_key)
+        """Get Paystack public key for display (unmasked since it's public)."""
+        return self.paystack_public_key or ""
     
     def get_masked_paystack_secret_key(self):
         """Get masked Paystack secret key for display."""
         return self._mask_key(self.paystack_secret_key)
     
     def get_masked_stripe_publishable_key(self):
-        """Get masked Stripe publishable key for display."""
-        return self._mask_key(self.stripe_publishable_key)
+        """Get Stripe publishable key for display (unmasked since it's public)."""
+        return self.stripe_publishable_key or ""
     
     def get_masked_stripe_secret_key(self):
         """Get masked Stripe secret key for display."""
@@ -2615,40 +2615,48 @@ class PaymentConfiguration(models.Model):
     
     def get_paystack_settings(self):
         """
-        Get Paystack-specific settings.
+        Get Paystack-specific settings with decrypted secrets.
         
         Returns:
-            dict: Paystack settings
+            dict: Paystack settings with decrypted secret_key and webhook_secret
         """
+        # Decrypt sensitive fields
+        secret_key = self.decrypt_field('paystack_secret_key') if self.paystack_secret_key else ''
+        webhook_secret = self.decrypt_field('paystack_webhook_secret') if self.paystack_webhook_secret else ''
+        
         return {
             'public_key': self.paystack_public_key,
-            'secret_key': self.paystack_secret_key,
-            'webhook_secret': self.paystack_webhook_secret,
+            'secret_key': secret_key,
+            'webhook_secret': webhook_secret,
             'webhook_url': self.paystack_webhook_url,
             'enabled': self.paystack_enabled,
         }
     
     def get_stripe_settings(self):
         """
-        Get Stripe-specific settings.
+        Get Stripe-specific settings with decrypted secrets.
         
         Returns:
-            dict: Stripe settings
+            dict: Stripe settings with decrypted secret_key and webhook_secret
         """
+        # Decrypt sensitive fields
+        secret_key = self.decrypt_field('stripe_secret_key') if self.stripe_secret_key else ''
+        webhook_secret = self.decrypt_field('stripe_webhook_secret') if self.stripe_webhook_secret else ''
+        
         return {
             'publishable_key': self.stripe_publishable_key,
-            'secret_key': self.stripe_secret_key,
-            'webhook_secret': self.stripe_webhook_secret,
+            'secret_key': secret_key,
+            'webhook_secret': webhook_secret,
             'webhook_url': self.stripe_webhook_url,
             'enabled': self.stripe_enabled,
         }
     
     def get_active_provider_settings(self):
         """
-        Get settings for the active (primary) provider.
+        Get settings for the active (primary) provider with decrypted secrets.
         
         Returns:
-            dict: Active provider settings with provider name
+            dict: Active provider settings with provider name and decrypted secrets
         """
         settings = {
             'provider': self.primary_provider,
@@ -2656,16 +2664,24 @@ class PaymentConfiguration(models.Model):
         }
         
         if self.primary_provider == 'paystack':
+            # Decrypt Paystack secrets
+            secret_key = self.decrypt_field('paystack_secret_key') if self.paystack_secret_key else ''
+            webhook_secret = self.decrypt_field('paystack_webhook_secret') if self.paystack_webhook_secret else ''
+            
             settings.update({
                 'public_key': self.paystack_public_key,
-                'secret_key': self.paystack_secret_key,
-                'webhook_secret': self.paystack_webhook_secret,
+                'secret_key': secret_key,
+                'webhook_secret': webhook_secret,
             })
         else:  # stripe
+            # Decrypt Stripe secrets
+            secret_key = self.decrypt_field('stripe_secret_key') if self.stripe_secret_key else ''
+            webhook_secret = self.decrypt_field('stripe_webhook_secret') if self.stripe_webhook_secret else ''
+            
             settings.update({
                 'public_key': self.stripe_publishable_key,
-                'secret_key': self.stripe_secret_key,
-                'webhook_secret': self.stripe_webhook_secret,
+                'secret_key': secret_key,
+                'webhook_secret': webhook_secret,
             })
         
         return settings
@@ -3040,17 +3056,26 @@ class EmailConfiguration(models.Model):
                 'message': 'SMTP credentials (username and password) are required'
             }
         
+        # Decrypt password for authentication
+        try:
+            decrypted_password = self.decrypt_field('smtp_password')
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'Failed to decrypt password: {str(e)}'
+            }
+        
         try:
             if self.use_ssl:
                 # SSL connection (port 465)
                 context = ssl.create_default_context()
                 with smtplib.SMTP_SSL(self.smtp_host, self.smtp_port, context=context, timeout=10) as server:
-                    server.login(self.smtp_username, self.smtp_password)
+                    server.login(self.smtp_username, decrypted_password)
             else:
                 # TLS connection (port 587)
                 with smtplib.SMTP(self.smtp_host, self.smtp_port, timeout=10) as server:
                     server.starttls()
-                    server.login(self.smtp_username, self.smtp_password)
+                    server.login(self.smtp_username, decrypted_password)
             
             # Connection successful
             self.mark_as_connected()

@@ -1562,8 +1562,17 @@ class TelegramConfigurationViewSet(viewsets.ViewSet):
         try:
             import requests
             
+            # Decrypt bot token before using
+            try:
+                decrypted_token = instance.decrypt_field('bot_token')
+            except Exception as e:
+                return Response({
+                    'success': False,
+                    'message': f'Failed to decrypt bot token: {str(e)}'
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
             # Call Telegram getMe API
-            api_url = f'https://api.telegram.org/bot{instance.bot_token}/getMe'
+            api_url = f'https://api.telegram.org/bot{decrypted_token}/getMe'
             response = requests.get(api_url, timeout=10)
             data = response.json()
             
@@ -2501,6 +2510,15 @@ class EmailConfigurationViewSet(viewsets.ModelViewSet):
             from email.mime.text import MIMEText
             from email.mime.multipart import MIMEMultipart
             
+            # Decrypt SMTP password before using
+            try:
+                decrypted_password = instance.decrypt_field('smtp_password')
+            except Exception as e:
+                return Response({
+                    'success': False,
+                    'message': f'Failed to decrypt SMTP password: {str(e)}'
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
             # Create connection with current settings
             from django.core.mail import get_connection
             
@@ -2509,7 +2527,7 @@ class EmailConfigurationViewSet(viewsets.ModelViewSet):
                 'host': instance.smtp_host,
                 'port': instance.smtp_port,
                 'username': instance.smtp_username,
-                'password': instance.smtp_password,
+                'password': decrypted_password,  # Use decrypted password
                 'use_tls': instance.use_tls,
                 'use_ssl': instance.use_ssl,
                 'timeout': 10,

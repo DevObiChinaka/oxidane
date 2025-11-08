@@ -4,25 +4,30 @@ import { useState, useEffect } from 'react';
 
 interface PaymentConfig {
   id: string;
-  paystack_public_key: string;
-  paystack_secret_key: string;
-  paystack_webhook_secret: string;
+  // Read-only masked keys
+  paystack_public_key_masked?: string;
+  paystack_secret_key_masked?: string;
+  paystack_webhook_secret_masked?: string;
+  stripe_publishable_key_masked?: string;
+  stripe_secret_key_masked?: string;
+  stripe_webhook_secret_masked?: string;
+  // Webhook URLs
   paystack_webhook_url: string;
-  paystack_enabled: boolean;
-  stripe_publishable_key: string;
-  stripe_secret_key: string;
-  stripe_webhook_secret: string;
   stripe_webhook_url: string;
+  // Settings
+  paystack_enabled: boolean;
   stripe_enabled: boolean;
   primary_provider: 'paystack' | 'stripe';
   is_test_mode: boolean;
   supported_currencies: string[];
+  // Computed fields
+  is_paystack_configured?: boolean;
+  is_stripe_configured?: boolean;
+  has_any_provider?: boolean;
+  provider_status?: any;
+  // Timestamps
   created_at: string;
   updated_at: string;
-  masked_paystack_public?: string;
-  masked_paystack_secret?: string;
-  masked_stripe_publishable?: string;
-  masked_stripe_secret?: string;
 }
 
 interface Message {
@@ -42,17 +47,17 @@ export default function PaymentConfigPage() {
   const [showPaystackSecret, setShowPaystackSecret] = useState(false);
   const [showStripeSecret, setShowStripeSecret] = useState(false);
   
-  // Form states
+  // Form states - use _write suffix for keys that will be sent to backend
   const [formData, setFormData] = useState({
-    // Paystack
-    paystack_public_key: '',
-    paystack_secret_key: '',
-    paystack_webhook_secret: '',
+    // Paystack - write fields
+    paystack_public_key_write: '',
+    paystack_secret_key_write: '',
+    paystack_webhook_secret_write: '',
     paystack_enabled: true,
-    // Stripe
-    stripe_publishable_key: '',
-    stripe_secret_key: '',
-    stripe_webhook_secret: '',
+    // Stripe - write fields
+    stripe_publishable_key_write: '',
+    stripe_secret_key_write: '',
+    stripe_webhook_secret_write: '',
     stripe_enabled: false,
     // General
     primary_provider: 'paystack' as 'paystack' | 'stripe',
@@ -83,15 +88,15 @@ export default function PaymentConfigPage() {
         const configData = Array.isArray(data) ? data[0] : data;
         setConfig(configData);
         
-        // Update form with existing data
+        // Update form with existing data - don't set write fields (they should be empty unless user is updating)
         setFormData({
-          paystack_public_key: configData.paystack_public_key || '',
-          paystack_secret_key: configData.paystack_secret_key || '',
-          paystack_webhook_secret: configData.paystack_webhook_secret || '',
+          paystack_public_key_write: '',  // Keep empty - will show masked value instead
+          paystack_secret_key_write: '',
+          paystack_webhook_secret_write: '',
           paystack_enabled: configData.paystack_enabled ?? true,
-          stripe_publishable_key: configData.stripe_publishable_key || '',
-          stripe_secret_key: configData.stripe_secret_key || '',
-          stripe_webhook_secret: configData.stripe_webhook_secret || '',
+          stripe_publishable_key_write: '',  // Keep empty - will show masked value instead
+          stripe_secret_key_write: '',
+          stripe_webhook_secret_write: '',
           stripe_enabled: configData.stripe_enabled ?? false,
           primary_provider: configData.primary_provider || 'paystack',
           is_test_mode: configData.is_test_mode ?? true,
@@ -124,22 +129,24 @@ export default function PaymentConfigPage() {
       const data = await response.json();
       
       if (response.ok) {
-        // Update config with returned data
+        // Update config with returned data (includes masked keys)
         setConfig(data);
-        // Update form with the returned data (including masked values)
-        setFormData({
-          paystack_public_key: data.paystack_public_key || '',
-          paystack_secret_key: data.paystack_secret_key || '',
-          paystack_webhook_secret: data.paystack_webhook_secret || '',
-          paystack_enabled: data.paystack_enabled ?? true,
-          stripe_publishable_key: data.stripe_publishable_key || '',
-          stripe_secret_key: data.stripe_secret_key || '',
-          stripe_webhook_secret: data.stripe_webhook_secret || '',
-          stripe_enabled: data.stripe_enabled ?? false,
-          primary_provider: data.primary_provider || 'paystack',
-          is_test_mode: data.is_test_mode ?? true,
-          supported_currencies: data.supported_currencies || ['NGN', 'USD'],
-        });
+        // Clear the write fields after successful save
+        setFormData(prev => ({
+          ...prev,
+          paystack_public_key_write: '',
+          paystack_secret_key_write: '',
+          paystack_webhook_secret_write: '',
+          stripe_publishable_key_write: '',
+          stripe_secret_key_write: '',
+          stripe_webhook_secret_write: '',
+          // Keep other fields from response
+          paystack_enabled: data.paystack_enabled ?? prev.paystack_enabled,
+          stripe_enabled: data.stripe_enabled ?? prev.stripe_enabled,
+          primary_provider: data.primary_provider || prev.primary_provider,
+          is_test_mode: data.is_test_mode ?? prev.is_test_mode,
+          supported_currencies: data.supported_currencies || prev.supported_currencies,
+        }));
         setMessage({ type: 'success', text: 'Payment configuration saved successfully' });
       } else {
         const errorMessage = typeof data === 'object' 
@@ -177,7 +184,7 @@ export default function PaymentConfigPage() {
       if (response.ok && data.success) {
         setMessage({ 
           type: 'success', 
-          text: `${provider === 'paystack' ? 'Paystack' : 'Stripe'} connection successful! ${data.message || ''}` 
+          text: `${data.message || ''}` 
         });
       } else {
         setMessage({ 
@@ -348,7 +355,7 @@ export default function PaymentConfigPage() {
                     ...prev, 
                     primary_provider: e.target.value as 'paystack' | 'stripe' 
                   }))}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base text-gray-900 bg-white"
                 >
                   <option value="paystack">Paystack (Nigerian Market)</option>
                   <option value="stripe">Stripe (International)</option>
@@ -488,16 +495,15 @@ export default function PaymentConfigPage() {
                 </label>
                 <input
                   type="text"
-                  value={formData.paystack_public_key}
-                  onChange={(e) => setFormData(prev => ({ ...prev, paystack_public_key: e.target.value }))}
+                  value={config?.paystack_public_key_masked || formData.paystack_public_key_write}
+                  onChange={(e) => setFormData(prev => ({ ...prev, paystack_public_key_write: e.target.value }))}
                   placeholder="pk_test_... or pk_live_..."
+                  autoComplete="off"
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-base text-gray-900 placeholder-gray-400 bg-white"
                 />
-                {config?.masked_paystack_public && (
-                  <p className="mt-2 text-sm text-gray-500">
-                    Current: {config.masked_paystack_public}
-                  </p>
-                )}
+                <p className="mt-2 text-sm text-gray-500">
+                  Public keys are safe to share and used in client-side code
+                </p>
               </div>
 
               {/* Secret Key */}
@@ -505,13 +511,13 @@ export default function PaymentConfigPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Secret Key
                 </label>
-                {config?.masked_paystack_secret && config.masked_paystack_secret !== '(not set)' ? (
+                {config?.paystack_secret_key_masked && config.paystack_secret_key_masked !== '(not set)' ? (
                   <div className="space-y-2">
                     <div className="flex gap-2">
                       <div className="relative flex-1">
                         <input
                           type={showPaystackSecret ? "text" : "password"}
-                          value={config.masked_paystack_secret}
+                          value={config.paystack_secret_key_masked}
                           readOnly
                           className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-lg bg-gray-50 font-mono text-base text-gray-600"
                         />
@@ -535,8 +541,8 @@ export default function PaymentConfigPage() {
                       <button
                         type="button"
                         onClick={() => {
-                          setFormData(prev => ({ ...prev, paystack_secret_key: '' }));
-                          setConfig(prev => prev ? { ...prev, masked_paystack_secret: '' } : null);
+                          setFormData(prev => ({ ...prev, paystack_secret_key_write: '' }));
+                          setConfig(prev => prev ? { ...prev, paystack_secret_key_masked: '' } : null);
                         }}
                         className="px-4 py-2 text-sm text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 whitespace-nowrap"
                       >
@@ -551,9 +557,10 @@ export default function PaymentConfigPage() {
                   <div>
                     <input
                       type="password"
-                      value={formData.paystack_secret_key}
-                      onChange={(e) => setFormData(prev => ({ ...prev, paystack_secret_key: e.target.value }))}
+                      value={formData.paystack_secret_key_write}
+                      onChange={(e) => setFormData(prev => ({ ...prev, paystack_secret_key_write: e.target.value }))}
                       placeholder="sk_test_... or sk_live_..."
+                      autoComplete="new-password"
                       className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-base text-gray-900 placeholder-gray-400 bg-white"
                     />
                     <p className="mt-2 text-sm text-gray-500">
@@ -570,9 +577,10 @@ export default function PaymentConfigPage() {
                 </label>
                 <input
                   type="password"
-                  value={formData.paystack_webhook_secret}
-                  onChange={(e) => setFormData(prev => ({ ...prev, paystack_webhook_secret: e.target.value }))}
+                  value={formData.paystack_webhook_secret_write}
+                  onChange={(e) => setFormData(prev => ({ ...prev, paystack_webhook_secret_write: e.target.value }))}
                   placeholder="Webhook secret from Paystack dashboard"
+                  autoComplete="new-password"
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-base text-gray-900 placeholder-gray-400 bg-white"
                 />
                 <p className="mt-2 text-sm text-gray-500">
@@ -688,16 +696,15 @@ export default function PaymentConfigPage() {
                 </label>
                 <input
                   type="text"
-                  value={formData.stripe_publishable_key}
-                  onChange={(e) => setFormData(prev => ({ ...prev, stripe_publishable_key: e.target.value }))}
+                  value={config?.stripe_publishable_key_masked || formData.stripe_publishable_key_write}
+                  onChange={(e) => setFormData(prev => ({ ...prev, stripe_publishable_key_write: e.target.value }))}
                   placeholder="pk_test_... or pk_live_..."
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-base text-gray-900 bg-white"
+                  autoComplete="off"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-base text-gray-900 placeholder-gray-400 bg-white"
                 />
-                {config?.masked_stripe_publishable && (
-                  <p className="mt-2 text-sm text-gray-500">
-                    Current: {config.masked_stripe_publishable}
-                  </p>
-                )}
+                <p className="mt-2 text-sm text-gray-500">
+                  Publishable keys are safe to share and used in client-side code
+                </p>
               </div>
 
               {/* Secret Key */}
@@ -705,13 +712,13 @@ export default function PaymentConfigPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Secret Key
                 </label>
-                {config?.masked_stripe_secret && config.masked_stripe_secret !== '(not set)' ? (
+                {config?.stripe_secret_key_masked && config.stripe_secret_key_masked !== '(not set)' ? (
                   <div className="space-y-2">
                     <div className="flex gap-2">
                       <div className="relative flex-1">
                         <input
                           type={showStripeSecret ? "text" : "password"}
-                          value={config.masked_stripe_secret}
+                          value={config.stripe_secret_key_masked}
                           readOnly
                           className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-lg bg-gray-50 font-mono text-base text-gray-600"
                         />
@@ -735,8 +742,8 @@ export default function PaymentConfigPage() {
                       <button
                         type="button"
                         onClick={() => {
-                          setFormData(prev => ({ ...prev, stripe_secret_key: '' }));
-                          setConfig(prev => prev ? { ...prev, masked_stripe_secret: '' } : null);
+                          setFormData(prev => ({ ...prev, stripe_secret_key_write: '' }));
+                          setConfig(prev => prev ? { ...prev, stripe_secret_key_masked: '' } : null);
                         }}
                         className="px-4 py-2 text-sm text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 whitespace-nowrap"
                       >
@@ -751,9 +758,10 @@ export default function PaymentConfigPage() {
                   <div>
                     <input
                       type="password"
-                      value={formData.stripe_secret_key}
-                      onChange={(e) => setFormData(prev => ({ ...prev, stripe_secret_key: e.target.value }))}
+                      value={formData.stripe_secret_key_write}
+                      onChange={(e) => setFormData(prev => ({ ...prev, stripe_secret_key_write: e.target.value }))}
                       placeholder="sk_test_... or sk_live_..."
+                      autoComplete="new-password"
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-base text-gray-900 bg-white"
                     />
                     <p className="mt-2 text-sm text-gray-500">
@@ -770,9 +778,10 @@ export default function PaymentConfigPage() {
                 </label>
                 <input
                   type="password"
-                  value={formData.stripe_webhook_secret}
-                  onChange={(e) => setFormData(prev => ({ ...prev, stripe_webhook_secret: e.target.value }))}
+                  value={formData.stripe_webhook_secret_write}
+                  onChange={(e) => setFormData(prev => ({ ...prev, stripe_webhook_secret_write: e.target.value }))}
                   placeholder="whsec_..."
+                  autoComplete="new-password"
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-base text-gray-900 bg-white"
                 />
                 <p className="mt-2 text-sm text-gray-500">
