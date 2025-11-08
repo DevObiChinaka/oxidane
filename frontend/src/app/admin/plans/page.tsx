@@ -129,16 +129,8 @@ export default function PlansPage() {
         setTelegramGroups(groupsData.results || groupsData);
       }
 
-      // Load exchange rates
-      const ratesRes = await fetch('http://127.0.0.1:8000/api/v1/subscriptions/exchange-rates/', { headers });
-      if (ratesRes.ok) {
-        const ratesData = await ratesRes.json();
-        const rates: Record<string, number> = {};
-        ratesData.forEach((rate: any) => {
-          rates[rate.currency] = parseFloat(rate.rate);
-        });
-        setExchangeRates(rates);
-      }
+      // Note: Exchange rates are managed by backend automatically
+      // No need to fetch them separately
 
     } catch (err: any) {
       console.error('Failed to load data:', err);
