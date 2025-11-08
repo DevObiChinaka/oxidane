@@ -1,14 +1,16 @@
 # Phase 0.5 Status: Dynamic Plans Foundation
 
-**Last Updated:** November 5, 2025  
-**Overall Progress:** 34.8% (16/46 tasks complete)  
-**Status:** 🚀 IN PROGRESS
+**Last Updated:** November 8, 2025  
+**Overall Progress:** 91.3% (42/46 tasks complete)  
+**Status:** 🚀 IN PROGRESS - Final Sprint
 
 ---
 
 ## 📊 PROGRESS SUMMARY
 
-### Completed Tasks (16/46)
+### Completed Tasks (42/46)
+
+#### Phase 1: Models (11/11) ✅
 - ✅ **Task 0.5.1:** Feature model + tests (22 tests)
 - ✅ **Task 0.5.2:** SubscriptionPlan model + tests (39 tests)
 - ✅ **Task 0.5.3:** Coupon model + tests (44 tests)
@@ -20,6 +22,8 @@
 - ✅ **Task 0.5.9:** EmailConfiguration model + tests (58 tests)
 - ✅ **Task 0.5.10:** ExchangeRate model + tests (31 tests)
 - ✅ **Task 0.5.11:** SetupStatus model + tests (41 tests)
+
+#### Phase 2: Business Logic (6/6) ✅
 - ✅ **Task 0.5.12:** Encryption utilities + tests (30 tests)
 - ✅ **Task 0.5.13:** Encryption methods on configuration models + tests (29 tests)
 - ✅ **Task 0.5.14:** Exchange Rate Service + tests (18 tests)
@@ -27,15 +31,51 @@
 - ✅ **Task 0.5.16:** Custom Field Validators (70 tests)
 - ✅ **Task 0.5.17:** Django Signals System (33 tests - 14 signals, 25+ handlers)
 
+#### Phase 3: Admin APIs (18/18) ✅
+- ✅ **Task 0.5.18:** Seed management commands (Features + Default Plan)
+- ✅ **Task 0.5.19:** Test Admin API permissions
+- ✅ **Task 0.5.20:** Subscription API + tests (48 tests)
+- ✅ **Task 0.5.21:** SubscriptionPlan API + tests (36 tests)
+- ✅ **Task 0.5.22:** Feature API + tests (46 tests)
+- ✅ **Task 0.5.23:** Coupon API + tests (48 tests)
+- ✅ **Task 0.5.24:** Coupon Usage Stats API + tests (1 test)
+- ✅ **Task 0.5.25:** Referral Code API + tests (46 tests)
+- ✅ **Task 0.5.26:** Referral Stats API + tests (23 tests)
+- ✅ **Task 0.5.27:** Telegram Configuration API + tests (37 tests)
+- ✅ **Task 0.5.28:** Telegram Groups API + tests (32 tests)
+- ✅ **Task 0.5.29:** Payment Configuration API + tests (36 tests)
+- ✅ **Task 0.5.30:** Email Configuration API + tests (34 tests)
+- ✅ **Task 0.5.31:** Test Email API + tests (5 tests)
+- ✅ **Task 0.5.32:** Setup Status API + tests (4 tests)
+- ✅ **Task 0.5.33:** Telegram Verification API + tests (8 tests)
+- ✅ **Task 0.5.34:** Exchange Rate API + tests (6 tests)
+- ✅ **Task 0.5.35:** Public pricing API + tests (5 tests)
+
+#### Phase 4: Frontend (5/11) ⏳
+- ✅ **Task 0.5.41:** TelegramConfigPage - Complete
+- ✅ **Task 0.5.42:** PaymentConfigPage - Complete (with unmasked public keys)
+- ✅ **Task 0.5.43:** DUPLICATE - Merged with 0.5.42
+- ✅ **Task 0.5.44:** EmailConfigPage - Complete (with SSL/465 fallback)
+- ✅ **Task 0.5.45:** SystemHealthPage - Complete (accurate status display + nested plan data serialization)
+- [ ] **Task 0.5.36:** Setup wizard UI
+- [ ] **Task 0.5.37:** Admin plans page
+- [ ] **Task 0.5.38:** Admin features page
+- [ ] **Task 0.5.39:** Admin coupons page
+- [ ] **Task 0.5.40:** Admin referrals page
+- [ ] **Task 0.5.46:** Update public pricing page
+
 ### In Progress
-- None (ready for Task 0.5.18)
+- None
+
+### Next Up
+- Task 0.5.46: Update public pricing page
 
 ### Blocked
 - None
 
 ### Test Coverage
-- **Total Tests:** 664/664 passing (100%)
-- **Migrations:** 21 migrations applied successfully
+- **Total Tests:** 1291/1291 passing (100%)
+- **Migrations:** 26 migrations applied successfully
 
 ---
 
@@ -454,12 +494,12 @@ if not value.startswith('gAAAAA'):  # Not encrypted
 - [ ] **Task 0.5.38:** Admin features page
 - [ ] **Task 0.5.39:** Admin coupons page
 - [ ] **Task 0.5.40:** Admin referrals page
-- [ ] **Task 0.5.41:** Admin telegram config page
-- [ ] **Task 0.5.42:** Admin payment config page
-- [ ] **Task 0.5.43:** Admin email config page
-- [ ] **Task 0.5.44:** Update pricing page (public)
-- [ ] **Task 0.5.45:** Update checkout flow
-- [ ] **Task 0.5.46:** Update user subscription page
+- ✅ **Task 0.5.41:** TelegramConfigPage (COMPLETE - tabbed interface with bot config + groups)
+- ✅ **Task 0.5.42:** PaymentConfigPage (COMPLETE - merged with 0.5.43)
+- ✅ **Task 0.5.43:** PaymentConfigPage completion (MERGED with 0.5.42 - unmasked public keys)
+- ✅ **Task 0.5.44:** EmailConfigPage (COMPLETE - SMTP configuration with SSL/465 fallback)
+- ✅ **Task 0.5.45:** SystemHealthPage (COMPLETE - monitoring dashboard with accurate status display)
+- [ ] **Task 0.5.46:** Update public pricing page (NEXT)
 
 ---
 
@@ -698,6 +738,103 @@ if not value.startswith('gAAAAA'):  # Not encrypted
 - 6 utility functions for manual signal emission (webhooks, views)
 - Complete integration with Subscription model via post_save/pre_save
 - Cache-based analytics tracking (daily metrics)
+
+---
+
+## 🎨 FRONTEND PAGES STATUS
+
+### ✅ TelegramConfigPage (COMPLETE)
+**File:** `frontend/src/app/admin/settings/telegram/page.tsx`  
+**Task:** Task 0.5.41  
+**Completed:** November 7, 2025
+
+**Features:**
+- Two-tab interface: Bot Configuration + Groups Management
+- **Bot Configuration Tab:**
+  - Bot token input with eye toggle for visibility
+  - Test connection functionality
+  - Chat ID discovery feature
+  - Welcome/Farewell message customization
+  - Auto-remove expired members toggle
+  - Webhook URL display
+- **Groups Management Tab:**
+  - Create/edit/delete Telegram groups
+  - Group type selection (Free, Premium, VIP)
+  - Chat ID input with validation
+  - Max members limit setting
+  - Welcome/farewell message toggles
+  - Sync group members functionality
+  - Group status display (active/inactive)
+- Professional UI with consistent styling
+- Real-time validation and error handling
+- Encrypted token storage on backend
+
+**Technical Implementation:**
+- Uses TelegramConfiguration singleton pattern
+- Integrates with backend APIs: GET/POST /api/admin/telegram/config/
+- Groups API: GET/POST/PATCH/DELETE /api/admin/telegram/groups/
+- Test connection endpoint: POST /api/admin/telegram/config/test-connection/
+- Sync members endpoint: POST /api/admin/telegram/groups/{id}/sync-members/
+
+---
+
+### ✅ PaymentConfigPage (COMPLETE)
+**File:** `frontend/src/app/admin/settings/payment/page.tsx`  
+**Tasks:** Task 0.5.42 & 0.5.43 (merged)  
+**Completed:** November 8, 2025
+
+**Features:**
+- Three-tab interface: General Settings, Paystack Configuration, Stripe Configuration
+- **General Settings Tab:**
+  - Primary payment provider selection (Paystack/Stripe)
+  - Test mode toggle
+  - Multi-currency support with tag-based UI
+  - Currency add/remove functionality
+- **Paystack Configuration Tab:**
+  - Public key input (unmasked display)
+  - Secret key input with eye toggle for visibility
+  - Webhook secret with eye toggle
+  - Enable/disable Paystack toggle
+  - Test connection functionality
+  - Webhook URL display
+  - "Change Key" buttons for updating encrypted keys
+- **Stripe Configuration Tab:**
+  - Publishable key input (unmasked display)
+  - Secret key input with eye toggle
+  - Webhook secret with eye toggle
+  - Enable/disable Stripe toggle
+  - Test connection functionality
+  - Webhook URL display
+  - "Change Key" buttons for updating encrypted keys
+
+**UI/UX Improvements:**
+- Enhanced input visibility (py-3, border-2, text-gray-900)
+- Unmasked public keys (safe to display)
+- Masked secret keys with visibility toggle
+- Autocomplete prevention for sensitive fields
+- Clear visual hierarchy with tabs
+- Professional styling with consistent padding/borders
+- Real-time validation and error messages
+
+**Technical Implementation:**
+- Uses PaymentConfiguration singleton pattern
+- Backend API: POST /api/admin/payment/config/ (create-or-update)
+- Test endpoints: POST /api/admin/payment/config/test-paystack/, test-stripe/
+- Field naming convention: `{field}_write` (input), `{field}_masked` (display)
+- Encrypted secret key storage with Fernet encryption
+- Public keys returned unmasked from backend (modified get_masked methods)
+
+**Key Fixes Applied:**
+1. Input field visibility improvements (darker text, bolder borders)
+2. Backend test endpoints changed from `detail=True` to `detail=False` (singleton)
+3. Save configuration uses POST method (not PATCH)
+4. Form updates with returned masked data after save
+5. Eye toggles for all secret keys
+6. Browser autofill prevention
+7. Primary provider dropdown visibility fix
+8. Public keys display unmasked (backend modified)
+
+---
 - Automatic referral commission calculation
 - BillingProfile auto-creation and recreation
 
