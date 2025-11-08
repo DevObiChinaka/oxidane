@@ -481,43 +481,50 @@ export default function PlansPage() {
             {/* Features */}
             <div className="px-4 py-3">
               <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                Features ({plan.features.length})
+                Features ({plan.features?.length || 0})
               </div>
               <div className="space-y-1 max-h-32 overflow-y-auto">
-                {plan.features.slice(0, 4).map(feature => (
-                  <div key={feature.id} className="flex items-center text-sm text-gray-700">
-                    <svg className="w-4 h-4 text-green-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span className="truncate">{feature.name}</span>
-                  </div>
-                ))}
-                {plan.features.length > 4 && (
-                  <div className="text-xs text-gray-500 pl-6">
-                    +{plan.features.length - 4} more
-                  </div>
-                )}
-                {plan.features.length === 0 && (
-                  <div className="text-sm text-gray-400">No features assigned</div>
+                {plan.features && plan.features.length > 0 ? (
+                  <>
+                    {plan.features.slice(0, 4).map(feature => (
+                      <div key={feature.id} className="flex items-center text-sm text-gray-700">
+                        <svg className="w-4 h-4 text-green-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        <span className="truncate">{feature.name}</span>
+                      </div>
+                    ))}
+                    {plan.features.length > 4 && (
+                      <div className="text-xs text-gray-500 pl-6">
+                        +{plan.features.length - 4} more
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-xs text-gray-500">No features assigned</div>
                 )}
               </div>
             </div>
 
             {/* Telegram Groups */}
-            {plan.telegram_groups.length > 0 && (
-              <div className="px-4 py-3 border-t border-gray-100">
-                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                  Telegram Access
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {plan.telegram_groups.map(group => (
-                    <span key={group.id} className="inline-flex items-center bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded">
-                      💬 {group.name}
-                    </span>
-                  ))}
-                </div>
+            <div className="px-4 py-3 border-t border-gray-200">
+              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                Telegram Groups ({plan.telegram_groups?.length || 0})
               </div>
-            )}
+              <div className="space-y-1">
+                {plan.telegram_groups && plan.telegram_groups.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {plan.telegram_groups.map(group => (
+                      <span key={group.id} className="inline-flex items-center bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded">
+                        💬 {group.name}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-xs text-gray-500">No groups assigned</div>
+                )}
+              </div>
+            </div>
 
             {/* Status & Actions */}
             <div className="px-4 py-3 bg-gray-50 border-t border-gray-100">
