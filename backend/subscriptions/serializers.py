@@ -213,7 +213,8 @@ class PricingPlanSerializer(serializers.ModelSerializer):
             {
                 'id': str(g.id),
                 'name': g.name,
-                'group_id': g.group_id,
+                'chat_id': g.chat_id,
+                'group_key': g.group_key,
                 'invite_link': g.invite_link,
                 'is_active': g.is_active,
             }
