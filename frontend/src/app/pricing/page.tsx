@@ -2,12 +2,47 @@
 
 import { useState, useEffect } from 'react';
 import PricingCards from '@/components/PricingCards';
-import { PricingPlan } from '@/types/pricing';
+
+// Type matching the PricingCards component
+interface Feature {
+  id: string;
+  key: string;
+  name: string;
+  description: string;
+  icon: string;
+  category: string;
+  sort_order: number;
+}
+
+interface PricingPlan {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  billing_period: 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'lifetime';
+  billing_period_display: string;
+  trial_days: number;
+  is_featured: boolean;
+  is_active: boolean;
+  sort_order: number;
+  price: number;
+  base_price: number;
+  features: Feature[];
+  limits: any;
+}
 
 export default function PricingPage() {
   const [selectedPlan, setSelectedPlan] = useState<PricingPlan | null>(null);
   const [showCouponInput, setShowCouponInput] = useState(false);
   const [couponCode, setCouponCode] = useState('');
+  const [currency, setCurrency] = useState('USD');
+
+  const currencies = [
+    { code: 'USD', symbol: '$', name: 'US Dollar' },
+    { code: 'NGN', symbol: '₦', name: 'Nigerian Naira' },
+    { code: 'GBP', symbol: '£', name: 'British Pound' },
+    { code: 'EUR', symbol: '€', name: 'Euro' },
+  ];
 
   const handlePlanSelect = (plan: PricingPlan) => {
     setSelectedPlan(plan);
@@ -51,6 +86,27 @@ export default function PricingPage() {
 
       {/* Pricing Cards */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        {/* Currency Selector */}
+        <div className="flex justify-center mb-8">
+          <div className="bg-white rounded-lg shadow-sm p-4 inline-flex items-center space-x-3">
+            <label htmlFor="currency-select" className="text-sm font-medium text-gray-700">
+              Currency:
+            </label>
+            <select
+              id="currency-select"
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000ABE] focus:border-transparent text-sm font-medium"
+            >
+              {currencies.map((curr) => (
+                <option key={curr.code} value={curr.code}>
+                  {curr.symbol} {curr.name} ({curr.code})
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
         {/* Category Tabs */}
         <div className="flex justify-center mb-12">
           <div className="flex bg-gray-100 rounded-lg p-1">
@@ -72,6 +128,7 @@ export default function PricingPage() {
         <PricingCards 
           onPlanSelect={handlePlanSelect}
           selectedPlanId={selectedPlan?.id}
+          currency={currency}
         />
 
         {/* Coupon Section */}
