@@ -108,6 +108,22 @@ class PricingPlanSerializer(serializers.ModelSerializer):
     subscription_count = serializers.SerializerMethodField()
     revenue_total = serializers.SerializerMethodField()
     
+    # Nested serializers for reading (GET requests)
+    features = serializers.SerializerMethodField()
+    telegram_groups = serializers.SerializerMethodField()
+    
+    # Write-only fields for creating/updating (POST/PUT requests)
+    feature_ids = serializers.ListField(
+        child=serializers.UUIDField(),
+        write_only=True,
+        required=False
+    )
+    telegram_group_ids = serializers.ListField(
+        child=serializers.UUIDField(),
+        write_only=True,
+        required=False
+    )
+    
     class Meta:
         model = SubscriptionPlan
         fields = [
@@ -116,6 +132,7 @@ class PricingPlanSerializer(serializers.ModelSerializer):
             'is_active', 'is_featured', 'sort_order',
             'price_display', 'monthly_equivalent', 'has_trial', 'feature_count',
             'subscription_count', 'revenue_total',
+            'features', 'telegram_groups', 'feature_ids', 'telegram_group_ids',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'slug']
@@ -169,6 +186,48 @@ class PricingPlanSerializer(serializers.ModelSerializer):
         active_subs = self.get_subscription_count(obj)
         # Estimate: active_subs * base_price
         return float(active_subs * obj.base_price)
+    
+    def get_features(self, obj):
+        """Get list of features with their details"""
+        from subscriptions.serializers import FeatureSerializer
+        return FeatureSerializer(obj.features.all(), many=True).data
+    
+    def get_telegram_groups(self, obj):
+        """Get list of telegram groups with their details"""
+        from telegram_bot.serializers import TelegramGroupSerializer
+        return TelegramGroupSerializer(obj.telegram_groups.all(), many=True).data
+    
+    def create(self, validated_data):
+        """Handle creation with feature_ids and telegram_group_ids"""
+        feature_ids = validated_data.pop('feature_ids', [])
+        telegram_group_ids = validated_data.pop('telegram_group_ids', [])
+        
+        plan = SubscriptionPlan.objects.create(**validated_data)
+        
+        if feature_ids:
+            plan.features.set(feature_ids)
+        if telegram_group_ids:
+            plan.telegram_groups.set(telegram_group_ids)
+        
+        return plan
+    
+    def update(self, instance, validated_data):
+        """Handle update with feature_ids and telegram_group_ids"""
+        feature_ids = validated_data.pop('feature_ids', None)
+        telegram_group_ids = validated_data.pop('telegram_group_ids', None)
+        
+        # Update regular fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        
+        # Update many-to-many relationships if provided
+        if feature_ids is not None:
+            instance.features.set(feature_ids)
+        if telegram_group_ids is not None:
+            instance.telegram_groups.set(telegram_group_ids)
+        
+        return instance
 
 class FeatureSerializer(serializers.ModelSerializer):
     """
@@ -1083,9 +1142,13 @@ class TelegramConfigurationSerializer(serializers.ModelSerializer):
         
         # Set bot token if provided (marks as disconnected)
         if bot_token is not None:
-            instance.set_bot_token(bot_token)
-        else:
-            instance.save()
+            instance.bot_token = bot_token
+            # Encrypt the bot token before saving
+            instance.encrypt_field('bot_token')
+            instance.is_connected = False
+            instance.connection_error = ''
+        
+        instance.save()
         
         return instance
     
@@ -1100,9 +1163,13 @@ class TelegramConfigurationSerializer(serializers.ModelSerializer):
         
         # Set bot token if provided (marks as disconnected)
         if bot_token is not None:
-            instance.set_bot_token(bot_token)
-        else:
-            instance.save()
+            instance.bot_token = bot_token
+            # Encrypt the bot token before saving
+            instance.encrypt_field('bot_token')
+            instance.is_connected = False
+            instance.connection_error = ''
+        
+        instance.save()
         
         return instance
 
@@ -1801,20 +1868,17 @@ class EmailConfigurationSerializer(serializers.ModelSerializer):
         # Get or create singleton
         instance = EmailConfiguration.get_instance()
         
-        # Update fields
+        # Update non-password fields first
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         
-        # Update SMTP password if provided
-        if smtp_password is not None:
-            instance.smtp_password = smtp_password
-            # Note: Encryption will be handled before save
-        
-        # Encrypt password before saving
-        if smtp_password:
-            instance.encrypt_field('smtp_password')
-        
+        # Save non-password fields first
         instance.save()
+        
+        # Update and encrypt SMTP password if provided
+        if smtp_password:
+            instance.smtp_password = smtp_password
+            instance.encrypt_field('smtp_password')  # This calls save() internally
         
         return instance
     
@@ -1830,15 +1894,13 @@ class EmailConfigurationSerializer(serializers.ModelSerializer):
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         
-        # Update SMTP password if provided
-        if smtp_password is not None:
-            instance.smtp_password = smtp_password
-        
-        # Encrypt password BEFORE saving
-        if smtp_password:
-            instance.encrypt_field('smtp_password')
-        
+        # Save non-password fields first
         instance.save()
+        
+        # Update and encrypt SMTP password if provided
+        if smtp_password:
+            instance.smtp_password = smtp_password
+            instance.encrypt_field('smtp_password')  # This calls save() internally
         
         return instance
 
