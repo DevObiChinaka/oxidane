@@ -1,9 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useUserAuth } from '../contexts/UserAuthContext';
+import Navigation from '../components/Navigation';
+import Footer from '../components/Footer';
 import PricingCards from '@/components/PricingCards';
+import { type Currency } from '@/lib/utils/currency';
 
-// Type matching the PricingCards component
 interface Feature {
   id: string;
   key: string;
@@ -32,237 +36,245 @@ interface PricingPlan {
 }
 
 export default function PricingPage() {
+  const router = useRouter();
+  const { isAuthenticated } = useUserAuth();
   const [selectedPlan, setSelectedPlan] = useState<PricingPlan | null>(null);
-  const [showCouponInput, setShowCouponInput] = useState(false);
-  const [couponCode, setCouponCode] = useState('');
-  const [currency, setCurrency] = useState('USD');
-
-  const currencies = [
-    { code: 'USD', symbol: '$', name: 'US Dollar' },
-    { code: 'NGN', symbol: '₦', name: 'Nigerian Naira' },
-    { code: 'GBP', symbol: '£', name: 'British Pound' },
-    { code: 'EUR', symbol: '€', name: 'Euro' },
-  ];
+  const [currency, setCurrency] = useState<Currency>('USD');
 
   const handlePlanSelect = (plan: PricingPlan) => {
     setSelectedPlan(plan);
-    // Here you would typically redirect to checkout or open a modal
-
+    
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      // Redirect to login with plan and redirect params preserved
+      router.push(`/auth/login?redirect=/checkout&plan=${plan.id}&source=pricing`);
+    } else {
+      // User is authenticated - go to checkout
+      router.push(`/checkout?plan=${plan.id}`);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Hero Section */}
-      <div className="bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="text-center">
-            <h1 className="text-4xl lg:text-6xl font-bold text-gray-900 mb-6">
-              Choose Your
-              <span className="block bg-gradient-to-r from-[#00B38F] to-[#000ABE] bg-clip-text text-transparent">
-                Trading Plan
-              </span>
-            </h1>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
-              Join thousands of successful traders with our comprehensive forex education 
-              and premium signals. Choose the plan that fits your trading journey.
-            </p>
-            <div className="flex justify-center items-center space-x-4 text-sm text-gray-500">
-              <div className="flex items-center">
-                <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                <span>Cancel Anytime</span>
-              </div>
-              <div className="flex items-center">
-                <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
-                <span>Instant Access</span>
-              </div>
-              <div className="flex items-center">
-                <div className="w-2 h-2 bg-purple-500 rounded-full mr-2"></div>
-                <span>Premium Support</span>
-              </div>
-            </div>
-          </div>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-[#000856] via-[#002A5C] to-[#004A42]">
+      <Navigation />
+      {/* Background Elements */}
+      <div className="absolute inset-0 opacity-8">
+        <div className="absolute inset-0" style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+        }}></div>
       </div>
 
-      {/* Pricing Cards */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        {/* Currency Selector */}
-        <div className="flex justify-center mb-8">
-          <div className="bg-white rounded-lg shadow-sm p-4 inline-flex items-center space-x-3">
-            <label htmlFor="currency-select" className="text-sm font-medium text-gray-700">
-              Currency:
-            </label>
-            <select
-              id="currency-select"
-              value={currency}
-              onChange={(e) => setCurrency(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#000ABE] focus:border-transparent text-sm font-medium"
-            >
-              {currencies.map((curr) => (
-                <option key={curr.code} value={curr.code}>
-                  {curr.symbol} {curr.name} ({curr.code})
-                </option>
-              ))}
-            </select>
+      {/* Glow Effects */}
+      <div className="absolute inset-0">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#00B38F]/5 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#000ABE]/5 rounded-full blur-3xl"></div>
+      </div>
+
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        {/* Header */}
+        <div className="text-center mb-16">
+          <div className="inline-flex items-center px-4 py-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-full text-sm font-medium text-white/90 mb-6">
+            <div className="w-2 h-2 bg-[#00B38F] rounded-full mr-2 animate-pulse"></div>
+            Simple, Transparent Pricing
           </div>
-        </div>
-
-        {/* Category Tabs */}
-        <div className="flex justify-center mb-12">
-          <div className="flex bg-gray-100 rounded-lg p-1">
-            <button className="px-6 py-3 text-sm font-medium text-white bg-[#000ABE] rounded-md">
-              All Plans
-            </button>
-            <button className="px-6 py-3 text-sm font-medium text-gray-500 hover:text-gray-900">
-              Signals Only
-            </button>
-            <button className="px-6 py-3 text-sm font-medium text-gray-500 hover:text-gray-900">
-              Mentorship
-            </button>
-            <button className="px-6 py-3 text-sm font-medium text-gray-500 hover:text-gray-900">
-              VIP Access
-            </button>
-          </div>
-        </div>
-
-        <PricingCards 
-          onPlanSelect={handlePlanSelect}
-          selectedPlanId={selectedPlan?.id}
-          currency={currency}
-        />
-
-        {/* Coupon Section */}
-        <div className="mt-16 text-center">
-          <button
-            onClick={() => setShowCouponInput(!showCouponInput)}
-            className="text-[#000ABE] hover:text-[#000ABE]/80 text-sm font-medium"
-          >
-            Have a coupon code? Click here to apply
-          </button>
           
-          {showCouponInput && (
-            <div className="mt-4 max-w-md mx-auto">
-              <div className="flex">
-                <input
-                  type="text"
-                  placeholder="Enter coupon code"
-                  value={couponCode}
-                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-[#000ABE] focus:border-transparent"
-                />
-                <button className="px-6 py-2 bg-[#000ABE] text-white rounded-r-lg hover:bg-[#000ABE]/90 transition-colors">
-                  Apply
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6">
+            Choose Your
+            <span className="block bg-gradient-to-r from-[#00B38F] to-[#00B39F] bg-clip-text text-transparent mt-2">
+              Trading Plan
+            </span>
+          </h1>
+          
+          <p className="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto mb-8">
+            Professional forex education and signals. All plans include full access to our platform. Cancel anytime.
+          </p>
 
-      {/* Features Section */}
-      <div className="bg-white py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Currency Selector */}
+          <div className="flex justify-center mb-8">
+            <div className="inline-flex items-center gap-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg p-1">
+              <button
+                onClick={() => setCurrency('USD')}
+                className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${
+                  currency === 'USD'
+                    ? 'bg-[#00B38F] text-white shadow-md'
+                    : 'text-gray-300 hover:text-white'
+                }`}
+              >
+                🇺🇸 USD
+              </button>
+              <button
+                onClick={() => setCurrency('NGN')}
+                className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${
+                  currency === 'NGN'
+                    ? 'bg-[#00B38F] text-white shadow-md'
+                    : 'text-gray-300 hover:text-white'
+                }`}
+              >
+                🇳🇬 NGN
+              </button>
+            </div>
+          </div>
+
+          {/* Trust Badges */}
+          <div className="flex flex-wrap justify-center items-center gap-6 text-sm text-gray-400">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-[#00B38F]" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <span>Instant Access</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-[#00B38F]" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <span>Cancel Anytime</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-[#00B38F]" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <span>24/7 Support</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Pricing Cards */}
+        <div className="mb-20">
+          <PricingCards 
+            onPlanSelect={handlePlanSelect}
+            selectedPlanId={selectedPlan?.id}
+            currency={currency}
+          />
+        </div>
+
+        {/* Features Grid */}
+        <div className="mt-24 pt-16 border-t border-white/10">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              Why Choose OxiWorld?
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              Everything You Need to Succeed
             </h2>
-            <p className="text-lg text-gray-600">
-              Professional trading education and signals trusted by thousands
+            <p className="text-lg text-gray-300">
+              All plans include access to our complete platform
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[
+              {
+                icon: (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                ),
+                title: 'Live Trading Signals',
+                description: 'Real-time forex signals with entry/exit points'
+              },
+              {
+                icon: (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                ),
+                title: 'Premium Courses',
+                description: 'Comprehensive forex education library'
+              },
+              {
+                icon: (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                ),
+                title: 'Exclusive Community',
+                description: 'Private Telegram groups with experts'
+              },
+              {
+                icon: (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                ),
+                title: 'Market Analysis',
+                description: 'Daily market insights and forecasts'
+              },
+              {
+                icon: (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                ),
+                title: 'Risk Management',
+                description: 'Professional risk management tools'
+              },
+              {
+                icon: (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                ),
+                title: '24/7 Support',
+                description: 'Round-the-clock customer support'
+              }
+            ].map((feature, index) => (
+              <div 
+                key={index} 
+                className="flex items-start gap-4 p-6 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 hover:bg-white/10 transition-all duration-300"
+              >
+                <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-gradient-to-br from-[#00B38F] to-[#00B39F] flex items-center justify-center text-white">
+                  {feature.icon}
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-1">
+                    {feature.title}
+                  </h3>
+                  <p className="text-sm text-gray-400">
+                    {feature.description}
+                  </p>
+                </div>
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Live Trading Signals</h3>
-              <p className="text-gray-600">
-                Real-time forex signals with entry and exit points, delivered directly to your Telegram
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Expert Education</h3>
-              <p className="text-gray-600">
-                Comprehensive forex education from market psychology to advanced strategies
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zM7 8H5v2h2V8zm2 0h2v2H9V8zm6 0h-2v2h2V8z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">24/7 Community</h3>
-              <p className="text-gray-600">
-                Join our exclusive Telegram groups with direct access to professional traders
-              </p>
-            </div>
+            ))}
           </div>
         </div>
-      </div>
 
-      {/* FAQ Section */}
-      <div className="bg-gray-50 py-16">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* FAQ Section */}
+        <div className="mt-24 pt-16 border-t border-white/10">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              Frequently Asked Questions
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              Common Questions
             </h2>
           </div>
 
-          <div className="space-y-8">
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                How quickly do I get access after payment?
-              </h3>
-              <p className="text-gray-600">
-                Access is instant! Once your payment is confirmed, you'll receive Telegram invite 
-                links within minutes and can start receiving signals immediately.
-              </p>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Can I cancel my subscription anytime?
-              </h3>
-              <p className="text-gray-600">
-                Yes, you can cancel your subscription at any time. You'll continue to have access 
-                until the end of your current billing period.
-              </p>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Do you offer refunds?
-              </h3>
-              <p className="text-gray-600">
-                We offer a 7-day money-back guarantee for monthly and yearly plans. One-time 
-                purchases are final unless there are technical issues.
-              </p>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                What's the difference between Signal and VIP plans?
-              </h3>
-              <p className="text-gray-600">
-                Signal plans include trading signals and basic support. VIP plans include everything 
-                plus exclusive community access, 1-on-1 sessions, and advanced strategies.
-              </p>
-            </div>
+          <div className="max-w-3xl mx-auto space-y-4">
+            {[
+              {
+                q: 'How quickly do I get access?',
+                a: 'Access is instant! Once payment is confirmed, you receive Telegram invite links within minutes.'
+              },
+              {
+                q: 'Can I cancel anytime?',
+                a: 'Yes, cancel your subscription anytime. You\'ll retain access until the end of your billing period.'
+              },
+              {
+                q: 'Do you offer refunds?',
+                a: 'We offer a 7-day money-back guarantee for all subscription plans.'
+              },
+              {
+                q: 'What payment methods do you accept?',
+                a: 'We accept all major credit cards, PayPal, and bank transfers for enterprise plans.'
+              }
+            ].map((faq, index) => (
+              <div 
+                key={index}
+                className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-6 hover:bg-white/10 transition-all duration-300"
+              >
+                <h3 className="text-lg font-semibold text-white mb-2">{faq.q}</h3>
+                <p className="text-gray-300">{faq.a}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
+
+      <Footer />
     </div>
   );
 }

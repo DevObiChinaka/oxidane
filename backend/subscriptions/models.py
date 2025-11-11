@@ -847,6 +847,46 @@ class SubscriptionPlan(models.Model):
                 features_dict[category] = []
             features_dict[category].append(feature)
         return features_dict
+    
+    def get_price_in_currency(self, currency_code='USD'):
+        """
+        Get plan price in specified currency.
+        Uses ExchangeRate model for conversion from USD base price.
+        
+        Args:
+            currency_code: Currency code (USD, NGN, EUR, GBP, etc.)
+            
+        Returns:
+            Decimal: Price in specified currency, or None if unsupported
+        """
+        if currency_code == 'USD':
+            return self.base_price
+        
+        try:
+            # Get exchange rate (USD -> target currency)
+            exchange_rate = ExchangeRate.objects.filter(
+                base_currency='USD',
+                target_currency=currency_code
+            ).first()
+            
+            if not exchange_rate:
+                # Currency not supported
+                return None
+            
+            # Convert USD to target currency
+            converted_price = self.base_price * exchange_rate.rate
+            
+            # Round to 2 decimal places
+            return converted_price.quantize(Decimal('0.01'))
+            
+        except Exception:
+            # Fallback to USD if conversion fails
+            return self.base_price
+    
+    @property
+    def currency(self):
+        """Default currency for this plan (always USD as base)"""
+        return 'USD'
 
 
 class Coupon(models.Model):

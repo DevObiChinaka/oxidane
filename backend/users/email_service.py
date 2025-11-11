@@ -17,8 +17,25 @@ class EmailTemplateService:
     """Service class for processing and sending email templates"""
     
     def __init__(self):
-        self.default_from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@oxiworld.com')
-        self.company_name = getattr(settings, 'COMPANY_NAME', 'OxiWorld')
+        # Try to get email configuration from database (singleton)
+        try:
+            from subscriptions.models import EmailConfiguration
+            email_config = EmailConfiguration.get_instance()
+            
+            if email_config.is_enabled and email_config.from_email:
+                # Use database configuration
+                self.default_from_email = email_config.from_email
+                self.company_name = email_config.from_name or 'OxiWorld'
+            else:
+                # Fallback to settings.py
+                self.default_from_email = getattr(settings, 'EMAIL_HOST_USER', 'noreply@oxiworld.com')
+                self.company_name = getattr(settings, 'COMPANY_NAME', 'OxiWorld')
+        except Exception as e:
+            # If EmailConfiguration doesn't exist or fails, use settings.py
+            logger.warning(f"Could not load EmailConfiguration, using settings.py: {e}")
+            self.default_from_email = getattr(settings, 'EMAIL_HOST_USER', 'noreply@oxiworld.com')
+            self.company_name = getattr(settings, 'COMPANY_NAME', 'OxiWorld')
+        
         self.support_email = getattr(settings, 'SUPPORT_EMAIL', 'support@oxiworld.com')
     
     def get_template(self, template_type, template_name=None):
@@ -114,8 +131,15 @@ class EmailTemplateService:
             # Get template
             template = self.get_template(template_type, template_name)
             if not template:
-                raise ValueError(f"No template found for type: {template_type}" + 
-                               (f" with name: {template_name}" if template_name else ""))
+                # Use fallback email instead of raising error
+                logger.warning(f"No template found for type: {template_type}, using fallback")
+                return self._send_fallback_email(
+                    template_type=template_type,
+                    recipient_email=recipient_email,
+                    user=user,
+                    custom_vars=custom_vars,
+                    test_mode=test_mode
+                )
             
             # Prepare variables
             variables = self.prepare_variables(user, subscription, payment, custom_vars)
@@ -236,6 +260,150 @@ class EmailTemplateService:
         text = re.sub(r'<[^>]+>', '', html_content)
         text = re.sub(r'\s+', ' ', text).strip()
         return text
+    
+    def _send_fallback_email(self, template_type, recipient_email, user=None, custom_vars=None, test_mode=False):
+        """Send a fallback email when no template exists"""
+        logger.info(f"Sending fallback email for type: {template_type}")
+        
+        # Prepare user info
+        first_name = 'there'
+        if user:
+            first_name = user.first_name or user.username or 'there'
+        
+        # Build fallback subject and content based on template type
+        if template_type in ['user_login_otp', 'email_verification']:
+            otp_code = custom_vars.get('verification_code') or custom_vars.get('otp_code', '------')
+            subject = f"🔐 {self.company_name} - Email Verification Code"
+            
+            html_content = f"""
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>{subject}</title>
+            </head>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; text-align: center; margin-bottom: 30px;">
+                    <h1 style="color: white; margin: 0;">🔐 {self.company_name}</h1>
+                </div>
+                
+                <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                    <h2 style="color: #333;">Hi {first_name}!</h2>
+                    <p>Your verification code is:</p>
+                    
+                    <div style="background: #f8f9ff; border: 2px solid #667eea; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+                        <h1 style="color: #667eea; font-size: 36px; margin: 0; letter-spacing: 8px; font-family: 'Courier New', monospace;">{otp_code}</h1>
+                    </div>
+                    
+                    <p>This code will expire in <strong>10 minutes</strong>.</p>
+                    <p>If you didn't request this code, please ignore this email.</p>
+                </div>
+                
+                <div style="text-align: center; color: #666; font-size: 12px; margin-top: 30px;">
+                    <p>© {datetime.now().year} {self.company_name}. All rights reserved.</p>
+                </div>
+            </body>
+            </html>
+            """
+            
+            text_content = f"""
+{subject}
+
+Hi {first_name}!
+
+Your verification code is: {otp_code}
+
+This code will expire in 10 minutes.
+
+If you didn't request this code, please ignore this email.
+
+© {datetime.now().year} {self.company_name}. All rights reserved.
+            """
+        
+        elif template_type == 'welcome':
+            subject = f"🎉 Welcome to {self.company_name}!"
+            
+            html_content = f"""
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>{subject}</title>
+            </head>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; text-align: center; margin-bottom: 30px;">
+                    <h1 style="color: white; margin: 0;">🎉 Welcome to {self.company_name}!</h1>
+                </div>
+                
+                <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                    <h2 style="color: #333;">Hi {first_name}!</h2>
+                    <p>Welcome to {self.company_name}! We're excited to have you on board.</p>
+                    <p>Your account has been successfully created and verified.</p>
+                    
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="http://localhost:3000/dashboard" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+                            Get Started →
+                        </a>
+                    </div>
+                    
+                    <p>If you have any questions, feel free to contact us at <a href="mailto:{self.support_email}">{self.support_email}</a>.</p>
+                </div>
+                
+                <div style="text-align: center; color: #666; font-size: 12px; margin-top: 30px;">
+                    <p>© {datetime.now().year} {self.company_name}. All rights reserved.</p>
+                </div>
+            </body>
+            </html>
+            """
+            
+            text_content = f"""
+{subject}
+
+Hi {first_name}!
+
+Welcome to {self.company_name}! We're excited to have you on board.
+
+Your account has been successfully created and verified.
+
+Get started: http://localhost:3000/dashboard
+
+If you have any questions, feel free to contact us at {self.support_email}.
+
+© {datetime.now().year} {self.company_name}. All rights reserved.
+            """
+        
+        else:
+            # Generic fallback
+            subject = f"{self.company_name} - Notification"
+            html_content = f"<p>Hi {first_name},</p><p>This is a notification from {self.company_name}.</p>"
+            text_content = f"Hi {first_name},\n\nThis is a notification from {self.company_name}."
+        
+        # Send the email (skip in test mode)
+        if not test_mode:
+            try:
+                # Format from_email properly
+                # Check if default_from_email already has a name in it (e.g., "Name <email@domain.com>")
+                if '<' in self.default_from_email and '>' in self.default_from_email:
+                    # Already formatted, use as-is
+                    from_email = self.default_from_email
+                else:
+                    # Just an email address, add company name
+                    from_email = f"{self.company_name} <{self.default_from_email}>"
+                
+                send_mail(
+                    subject=subject,
+                    message=text_content,
+                    from_email=from_email,
+                    recipient_list=[recipient_email],
+                    html_message=html_content,
+                    fail_silently=False
+                )
+                logger.info(f"Fallback email sent successfully to {recipient_email}")
+                return True
+            except Exception as e:
+                logger.error(f"Failed to send fallback email: {str(e)}")
+                return False
+        else:
+            logger.info(f"Test mode: Fallback email preview generated")
+            return True
     
     def preview_email(self, template_id, sample_data=None):
         """Preview email with sample data"""

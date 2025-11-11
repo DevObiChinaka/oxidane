@@ -44,7 +44,7 @@ export default function UserDashboard() {
       }
 
       // Fetch user profile data
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/auth/profile/`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/profile/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -75,7 +75,7 @@ export default function UserDashboard() {
 
   const fetchSubscriptionData = async (token: string) => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/subscriptions/my-subscriptions/`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/subscriptions/my-subscriptions/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -112,7 +112,7 @@ export default function UserDashboard() {
 
   const fetchEnrolledCoursesCount = async (token: string) => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/courses/enrolled/`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/courses/enrolled/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -278,8 +278,10 @@ export default function UserDashboard() {
                     <span className="text-xs text-gray-500 mt-1">Explore library</span>
                   </button>
 
-                  <button
-                    onClick={() => router.push('/pricing')}
+                  <a
+                    href="/pricing"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="flex flex-col items-start p-5 rounded-lg bg-white border border-gray-200 hover:border-gray-300 transition-colors text-left"
                   >
                     <div className="w-8 h-8 rounded flex items-center justify-center bg-gray-50 mb-3">
@@ -288,8 +290,8 @@ export default function UserDashboard() {
                       </svg>
                     </div>
                     <span className="text-sm font-medium text-gray-900">View Plans</span>
-                    <span className="text-xs text-gray-500 mt-1">Upgrade access</span>
-                  </button>
+                    <span className="text-xs text-gray-500 mt-1">Upgrade membership</span>
+                  </a>
 
                   <button
                     onClick={() => router.push('/profile')}
@@ -357,15 +359,17 @@ export default function UserDashboard() {
                           <span className="text-sm">24/7 Support</span>
                         </div>
                       </div>
-                      <button
-                        onClick={() => router.push('/pricing')}
+                      <a
+                        href="/pricing"
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="inline-flex items-center px-6 py-3 bg-[#00B38F] text-white font-medium text-sm rounded-lg hover:bg-[#00A87D] transition-colors"
                       >
                         <span>View Subscription Plans</span>
                         <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                         </svg>
-                      </button>
+                      </a>
                     </div>
                     
                     {/* Graduation Cap Icon */}

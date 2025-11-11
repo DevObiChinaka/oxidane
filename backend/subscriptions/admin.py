@@ -14,6 +14,7 @@ import json
 import csv
 
 from .models import (
+    SubscriptionPlan, Subscription, BillingProfile,
     Coupon, ReferralCode, Referral, ReferralCredit,
     PaymentConfiguration, EmailConfiguration, TelegramConfiguration, TelegramGroup,
     ExchangeRate
@@ -31,6 +32,522 @@ from .models import (
 # - SignalSubscription → Subscription
 # - TelegramGroupManagement → TelegramGroup
 # ============================================================================
+
+
+# ============================================================================
+# SUBSCRIPTION PLAN & SUBSCRIPTION ADMIN (Phase 2)
+# ============================================================================
+
+@admin.register(SubscriptionPlan)
+class SubscriptionPlanAdmin(admin.ModelAdmin):
+    """Enhanced admin interface for subscription plans with course management"""
+    list_display = [
+        'name_display',
+        'billing_period',
+        'price_display',
+        'course_count',
+        'subscriber_count',
+        'trial_display',
+        'status_display',
+        'sort_order',
+        'created_at'
+    ]
+    list_filter = [
+        'billing_period',
+        'is_active',
+        'is_featured',
+        'created_at'
+    ]
+    search_fields = ['name', 'description', 'slug']
+    prepopulated_fields = {'slug': ('name',)}
+    ordering = ['sort_order', 'base_price']
+    readonly_fields = [
+        'id', 'created_at', 'updated_at',
+        'course_list_display', 'subscriber_list_display',
+        'monthly_equivalent_display'
+    ]
+    
+    # Phase 2: M2M widget for features (courses managed from Course admin)
+    filter_horizontal = ['features']
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': (
+                'name',
+                'slug',
+                'description'
+            )
+        }),
+        ('Pricing', {
+            'fields': (
+                'base_price',
+                'billing_period',
+                'monthly_equivalent_display',
+                'trial_days'
+            ),
+            'description': 'Base price is in USD and auto-converted to other currencies'
+        }),
+        ('Features & Courses', {
+            'fields': (
+                'features',
+                'course_list_display'
+            ),
+            'description': 'Select features included in this plan. Courses are managed from the Course admin page.'
+        }),
+        ('Plan Settings', {
+            'fields': (
+                'is_active',
+                'is_featured',
+                'sort_order',
+                'limits'
+            )
+        }),
+        ('Integration', {
+            'fields': ('paystack_plan_code',),
+            'classes': ('collapse',)
+        }),
+        ('Statistics', {
+            'fields': ('subscriber_list_display',),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('id', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def name_display(self, obj):
+        """Display plan name with featured badge"""
+        if obj.is_featured:
+            return format_html(
+                '<strong>{}</strong> <span style="background: #ffd700; color: #000; '
+                'padding: 2px 6px; border-radius: 3px; font-size: 10px;">★ FEATURED</span>',
+                obj.name
+            )
+        return obj.name
+    name_display.short_description = 'Plan Name'
+    name_display.admin_order_field = 'name'
+    
+    def price_display(self, obj):
+        """Display price with billing period"""
+        return format_html(
+            '<strong style="color: #28a745; font-size: 14px;">{}</strong>',
+            obj.get_price_display()
+        )
+    price_display.short_description = 'Price'
+    price_display.admin_order_field = 'base_price'
+    
+    def monthly_equivalent_display(self, obj):
+        """Show monthly equivalent for comparison"""
+        if obj.billing_period == 'monthly':
+            return 'N/A (already monthly)'
+        
+        monthly_eq = obj.get_monthly_equivalent()
+        savings_percent = 0
+        
+        if obj.billing_period == 'yearly':
+            monthly_single = obj.base_price / 12
+            savings_percent = ((monthly_eq - monthly_single) / monthly_eq * 100) if monthly_eq > 0 else 0
+        
+        return format_html(
+            '<strong>${:.2f}/mo</strong> equivalent{}',
+            monthly_eq,
+            f' (saves {savings_percent:.0f}%)' if savings_percent > 0 else ''
+        )
+    monthly_equivalent_display.short_description = 'Monthly Equivalent'
+    
+    def course_count(self, obj):
+        """Display count of courses in plan with link"""
+        count = obj.courses.count()
+        if count > 0:
+            return format_html(
+                '<span style="background: #007bff; color: white; padding: 3px 8px; '
+                'border-radius: 12px; font-weight: bold;">{}</span>',
+                count
+            )
+        return format_html(
+            '<span style="color: #6c757d;">0</span>'
+        )
+    course_count.short_description = 'Courses'
+    
+    def course_list_display(self, obj):
+        """Display list of courses in this plan"""
+        courses = obj.courses.filter(status='published').order_by('order', 'title')
+        
+        if not courses.exists():
+            return format_html(
+                '<em style="color: #6c757d;">No courses assigned to this plan yet. '
+                'Use the "Courses" field above to add courses.</em>'
+            )
+        
+        course_items = []
+        for course in courses:
+            url = reverse('admin:courses_course_change', args=[course.id])
+            course_items.append(
+                f'<li><a href="{url}" target="_blank">{course.title}</a> '
+                f'<span style="color: #6c757d;">({course.get_difficulty_level_display()})</span></li>'
+            )
+        
+        return format_html(
+            '<div style="max-height: 200px; overflow-y: auto; padding: 10px; '
+            'background: #f8f9fa; border-radius: 4px;">'
+            '<strong>Courses in this plan ({}):</strong>'
+            '<ol style="margin: 10px 0 0 0; padding-left: 20px;">{}</ol>'
+            '</div>',
+            courses.count(),
+            format_html(''.join(course_items))
+        )
+    course_list_display.short_description = 'Courses in Plan'
+    
+    def subscriber_count(self, obj):
+        """Display active subscriber count"""
+        count = Subscription.objects.filter(
+            plan=obj,
+            status='active'
+        ).count()
+        
+        if count > 0:
+            return format_html(
+                '<span style="background: #28a745; color: white; padding: 3px 8px; '
+                'border-radius: 12px; font-weight: bold;">{}</span>',
+                count
+            )
+        return format_html('<span style="color: #6c757d;">0</span>')
+    subscriber_count.short_description = 'Active Subscribers'
+    
+    def subscriber_list_display(self, obj):
+        """Display list of active subscribers"""
+        subscriptions = Subscription.objects.filter(
+            plan=obj,
+            status='active'
+        ).select_related('billing_profile__user')[:10]
+        
+        if not subscriptions.exists():
+            return format_html('<em style="color: #6c757d;">No active subscribers</em>')
+        
+        total_count = Subscription.objects.filter(plan=obj, status='active').count()
+        
+        sub_items = []
+        for sub in subscriptions:
+            user_url = reverse('admin:accounts_customuser_change', args=[sub.billing_profile.user.id])
+            sub_items.append(
+                f'<li><a href="{user_url}" target="_blank">{sub.billing_profile.user.email}</a> '
+                f'<span style="color: #6c757d;">(ends: {sub.end_date.strftime("%Y-%m-%d")})</span></li>'
+            )
+        
+        more_text = f'<li><em>... and {total_count - 10} more</em></li>' if total_count > 10 else ''
+        
+        return format_html(
+            '<div style="max-height: 250px; overflow-y: auto; padding: 10px; '
+            'background: #f8f9fa; border-radius: 4px;">'
+            '<strong>Active Subscribers ({}):</strong>'
+            '<ol style="margin: 10px 0 0 0; padding-left: 20px;">{}{}</ol>'
+            '</div>',
+            total_count,
+            format_html(''.join(sub_items)),
+            format_html(more_text)
+        )
+    subscriber_list_display.short_description = 'Active Subscribers'
+    
+    def trial_display(self, obj):
+        """Display trial period"""
+        if obj.trial_days > 0:
+            return format_html(
+                '<span style="background: #17a2b8; color: white; padding: 2px 6px; '
+                'border-radius: 3px;">{} days</span>',
+                obj.trial_days
+            )
+        return format_html('<span style="color: #6c757d;">No trial</span>')
+    trial_display.short_description = 'Trial'
+    
+    def status_display(self, obj):
+        """Display plan status"""
+        if obj.is_active:
+            return format_html(
+                '<span style="color: #28a745; font-weight: bold;">● Active</span>'
+            )
+        return format_html(
+            '<span style="color: #dc3545;">● Inactive</span>'
+        )
+    status_display.short_description = 'Status'
+    status_display.admin_order_field = 'is_active'
+    
+    def get_queryset(self, request):
+        """Optimize queryset with prefetch"""
+        qs = super().get_queryset(request)
+        return qs.prefetch_related('courses', 'features')
+    
+    actions = ['activate_plans', 'deactivate_plans', 'mark_as_featured', 'unmark_as_featured']
+    
+    def activate_plans(self, request, queryset):
+        """Bulk activate plans"""
+        updated = queryset.update(is_active=True)
+        self.message_user(request, f'Successfully activated {updated} plan(s).')
+    activate_plans.short_description = "Activate selected plans"
+    
+    def deactivate_plans(self, request, queryset):
+        """Bulk deactivate plans"""
+        updated = queryset.update(is_active=False)
+        self.message_user(request, f'Successfully deactivated {updated} plan(s).')
+    deactivate_plans.short_description = "Deactivate selected plans"
+    
+    def mark_as_featured(self, request, queryset):
+        """Mark plans as featured"""
+        updated = queryset.update(is_featured=True)
+        self.message_user(request, f'Successfully marked {updated} plan(s) as featured.')
+    mark_as_featured.short_description = "Mark as featured"
+    
+    def unmark_as_featured(self, request, queryset):
+        """Unmark plans as featured"""
+        updated = queryset.update(is_featured=False)
+        self.message_user(request, f'Successfully unmarked {updated} plan(s) as featured.')
+    unmark_as_featured.short_description = "Remove featured status"
+
+
+@admin.register(Subscription)
+class SubscriptionAdmin(admin.ModelAdmin):
+    """Admin interface for user subscriptions"""
+    list_display = [
+        'id_short',
+        'user_display',
+        'plan_display',
+        'status_badge',
+        'period_display',
+        'amount_display',
+        'auto_renew_display',
+        'created_at'
+    ]
+    list_filter = [
+        'status',
+        'plan',
+        'auto_renew',
+        'currency',
+        'created_at',
+        'start_date',
+        'end_date'
+    ]
+    search_fields = [
+        'id',
+        'billing_profile__user__username',
+        'billing_profile__user__email',
+        'plan__name'
+    ]
+    readonly_fields = [
+        'id', 'created_at', 'updated_at',
+        'subscription_duration', 'time_remaining'
+    ]
+    date_hierarchy = 'created_at'
+    ordering = ['-created_at']
+    
+    fieldsets = (
+        ('Subscription Details', {
+            'fields': (
+                'id',
+                'billing_profile',
+                'plan',
+                'status'
+            )
+        }),
+        ('Period & Billing', {
+            'fields': (
+                'start_date',
+                'end_date',
+                'subscription_duration',
+                'time_remaining',
+                'amount_paid',
+                'currency',
+                'payment_method'
+            )
+        }),
+        ('Auto-Renewal', {
+            'fields': (
+                'auto_renew',
+                'next_billing_date'
+            )
+        }),
+        ('Cancellation', {
+            'fields': (
+                'cancelled_at',
+                'cancellation_reason'
+            ),
+            'classes': ('collapse',)
+        }),
+        ('Metadata', {
+            'fields': ('metadata',),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def id_short(self, obj):
+        """Display shortened ID"""
+        return format_html(
+            '<span style="font-family: monospace; font-size: 11px;">{}</span>',
+            str(obj.id)[:8]
+        )
+    id_short.short_description = 'ID'
+    
+    def user_display(self, obj):
+        """Display user with link"""
+        user_url = reverse('admin:accounts_customuser_change', args=[obj.billing_profile.user.id])
+        return format_html(
+            '<a href="{}">{}</a>',
+            user_url,
+            obj.billing_profile.user.email
+        )
+    user_display.short_description = 'User'
+    
+    def plan_display(self, obj):
+        """Display plan with link"""
+        plan_url = reverse('admin:subscriptions_subscriptionplan_change', args=[obj.plan.id])
+        return format_html(
+            '<a href="{}">{}</a>',
+            plan_url,
+            obj.plan.name
+        )
+    plan_display.short_description = 'Plan'
+    
+    def status_badge(self, obj):
+        """Display status with color coding"""
+        colors = {
+            'active': '#28a745',
+            'cancelled': '#dc3545',
+            'expired': '#6c757d',
+            'pending': '#ffc107',
+            'past_due': '#fd7e14'
+        }
+        color = colors.get(obj.status, '#6c757d')
+        return format_html(
+            '<span style="background: {}; color: white; padding: 3px 8px; '
+            'border-radius: 12px; font-weight: bold; text-transform: uppercase; '
+            'font-size: 10px;">{}</span>',
+            color,
+            obj.status
+        )
+    status_badge.short_description = 'Status'
+    status_badge.admin_order_field = 'status'
+    
+    def period_display(self, obj):
+        """Display subscription period"""
+        return format_html(
+            '<span style="font-size: 12px;">{}<br><span style="color: #6c757d;">to</span><br>{}</span>',
+            obj.start_date.strftime('%Y-%m-%d'),
+            obj.end_date.strftime('%Y-%m-%d')
+        )
+    period_display.short_description = 'Period'
+    
+    def amount_display(self, obj):
+        """Display amount paid"""
+        return format_html(
+            '<strong style="color: #28a745;">{} {}</strong>',
+            obj.currency,
+            obj.amount_paid
+        )
+    amount_display.short_description = 'Amount'
+    amount_display.admin_order_field = 'amount_paid'
+    
+    def auto_renew_display(self, obj):
+        """Display auto-renew status"""
+        if obj.auto_renew:
+            return format_html(
+                '<span style="color: #28a745;">✓ Yes</span>'
+            )
+        return format_html(
+            '<span style="color: #6c757d;">✗ No</span>'
+        )
+    auto_renew_display.short_description = 'Auto-Renew'
+    auto_renew_display.admin_order_field = 'auto_renew'
+    
+    def subscription_duration(self, obj):
+        """Calculate subscription duration"""
+        if obj.start_date and obj.end_date:
+            duration = obj.end_date - obj.start_date
+            days = duration.days
+            
+            if days >= 365:
+                years = days / 365.25
+                return f"{years:.1f} years ({days} days)"
+            elif days >= 30:
+                months = days / 30.44
+                return f"{months:.1f} months ({days} days)"
+            else:
+                return f"{days} days"
+        return 'N/A'
+    subscription_duration.short_description = 'Duration'
+    
+    def time_remaining(self, obj):
+        """Calculate time remaining"""
+        if obj.status == 'active' and obj.end_date:
+            now = timezone.now()
+            if obj.end_date > now:
+                remaining = obj.end_date - now
+                days = remaining.days
+                
+                if days > 30:
+                    return format_html(
+                        '<span style="color: #28a745;">{} days remaining</span>',
+                        days
+                    )
+                elif days > 7:
+                    return format_html(
+                        '<span style="color: #ffc107;">{} days remaining</span>',
+                        days
+                    )
+                else:
+                    return format_html(
+                        '<span style="color: #dc3545;">{} days remaining ⚠</span>',
+                        days
+                    )
+            else:
+                return format_html(
+                    '<span style="color: #dc3545;">Expired</span>'
+                )
+        return 'N/A'
+    time_remaining.short_description = 'Time Remaining'
+    
+    def get_queryset(self, request):
+        """Optimize queryset"""
+        qs = super().get_queryset(request)
+        return qs.select_related('billing_profile__user', 'plan', 'payment_method')
+    
+    actions = ['cancel_subscriptions', 'reactivate_subscriptions']
+    
+    def cancel_subscriptions(self, request, queryset):
+        """Bulk cancel subscriptions"""
+        active_subs = queryset.filter(status='active')
+        updated = active_subs.update(
+            status='cancelled',
+            cancelled_at=timezone.now(),
+            auto_renew=False
+        )
+        self.message_user(
+            request,
+            f'Successfully cancelled {updated} subscription(s).',
+            messages.WARNING
+        )
+    cancel_subscriptions.short_description = "Cancel selected subscriptions"
+    
+    def reactivate_subscriptions(self, request, queryset):
+        """Reactivate cancelled subscriptions"""
+        cancelled_subs = queryset.filter(status='cancelled')
+        count = 0
+        for sub in cancelled_subs:
+            if sub.end_date > timezone.now():
+                sub.status = 'active'
+                sub.cancelled_at = None
+                sub.save()
+                count += 1
+        
+        self.message_user(
+            request,
+            f'Successfully reactivated {count} subscription(s).',
+            messages.SUCCESS
+        )
+    reactivate_subscriptions.short_description = "Reactivate cancelled subscriptions"
+
 
 @admin.register(ReferralCode)
 class ReferralCodeAdmin(admin.ModelAdmin):

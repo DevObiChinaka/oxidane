@@ -74,9 +74,10 @@ class ExchangeRateService:
     DEFAULT_TIMEOUT = 10  # seconds
     MAX_RETRIES = 3
     RETRY_DELAY = 2  # seconds
+    CACHE_DURATION_HOURS = 1  # 1-hour cache for live rates
     
     # API Endpoints
-    EXCHANGERATE_API_URL = "https://api.exchangerate-api.io/v4/latest/{currency}"
+    EXCHANGERATE_API_URL = "https://open.er-api.com/v6/latest/{currency}"  # Free, supports NGN
     FIXER_API_URL = "http://data.fixer.io/api/latest"
     
     def __init__(self, base_currency: str = None):
@@ -134,6 +135,10 @@ class ExchangeRateService:
             rates = {}
             for currency, rate in data['rates'].items():
                 try:
+                    # Skip base currency (e.g., USD->USD = 1.0)
+                    if currency.upper() == base:
+                        continue
+                    
                     # Handle None or invalid values
                     if rate is None:
                         logger.warning(f"Skipping null rate for {currency}")

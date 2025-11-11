@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Receipt - {{ site_name }}</title>
+    <style>
+        /* Reset styles */
+        body, table, td, a {
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+        table, td {
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
+        }
+        img {
+            -ms-interpolation-mode: bicubic;
+            border: 0;
+            height: auto;
+            line-height: 100%;
+            outline: none;
+            text-decoration: none;
+        }
+        
+        /* Base styles */
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100% !important;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333333;
+        }
+        
+        /* Container */
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+        }
+        
+        /* Header */
+        .header {
+            background-color: #ffffff;
+            padding: 40px 30px 30px;
+            border-bottom: 3px solid #0066cc;
+        }
+        .header h1 {
+            margin: 0;
+            color: #333333;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .success-badge {
+            display: inline-block;
+            background-color: #10b981;
+            color: #ffffff;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        /* Content */
+        .content {
+            padding: 40px 30px;
+        }
+        .greeting {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 12px;
+            color: #333333;
+        }
+        .message {
+            font-size: 15px;
+            line-height: 24px;
+            color: #666666;
+            margin-bottom: 30px;
+        }
+        
+        /* Receipt box */
+        .receipt-box {
+            background-color: #fafafa;
+            border-radius: 6px;
+            padding: 24px;
+            margin-bottom: 30px;
+            border: 1px solid #e0e0e0;
+        }
+        .receipt-header {
+            font-size: 12px;
+            color: #999999;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+        
+        /* Plan info */
+        .plan-info {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .plan-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333333;
+            margin-bottom: 6px;
+        }
+        .plan-period {
+            font-size: 14px;
+            color: #999999;
+        }
+        
+        /* Details table */
+        .details-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .details-table tr {
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .details-table tr:last-child {
+            border-bottom: none;
+        }
+        .details-table td {
+            padding: 10px 0;
+            font-size: 14px;
+        }
+        .details-table .label {
+            color: #666666;
+            font-weight: 400;
+        }
+        .details-table .value {
+            text-align: right;
+            color: #333333;
+            font-weight: 500;
+        }
+        
+        /* Total row */
+        .total-row td {
+            padding-top: 14px !important;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .total-row .value {
+            color: #0066cc;
+            font-size: 18px;
+        }
+        
+        /* Subscription info */
+        .subscription-info {
+            background-color: #f0f7ff;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-left: 3px solid #0066cc;
+        }
+        .subscription-info h3 {
+            margin: 0 0 12px 0;
+            font-size: 15px;
+            color: #333333;
+            font-weight: 600;
+        }
+        .subscription-dates {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+        }
+        .date-item {
+            flex: 1;
+        }
+        .date-label {
+            font-size: 12px;
+            color: #999999;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .date-value {
+            font-size: 14px;
+            color: #333333;
+            font-weight: 600;
+        }
+        
+        /* Buttons */
+        .button-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 28px;
+            background-color: #0066cc;
+            color: #ffffff !important;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: 500;
+            font-size: 14px;
+            margin: 0 6px 8px;
+        }
+        .button-secondary {
+            background-color: #ffffff;
+            color: #0066cc !important;
+            border: 1px solid #0066cc;
+        }
+        
+        /* Features list */
+        .features {
+            margin: 30px 0;
+        }
+        .features h3 {
+            font-size: 15px;
+            color: #333333;
+            margin-bottom: 14px;
+            font-weight: 600;
+        }
+        .feature-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #666666;
+        }
+        .feature-icon {
+            width: 18px;
+            height: 18px;
+            background-color: #10b981;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            color: #ffffff;
+            font-size: 11px;
+            flex-shrink: 0;
+        }
+        
+        /* Footer */
+        .footer {
+            background-color: #fafafa;
+            padding: 30px;
+            text-align: center;
+            border-top: 1px solid #e0e0e0;
+        }
+        .footer-text {
+            font-size: 13px;
+            color: #999999;
+            line-height: 20px;
+            margin-bottom: 6px;
+        }
+        .footer-links {
+            margin: 14px 0;
+        }
+        .footer-link {
+            color: #0066cc;
+            text-decoration: none;
+            font-size: 13px;
+            margin: 0 10px;
+        }
+        
+        /* Responsive */
+        @media only screen and (max-width: 600px) {
+            .content {
+                padding: 30px 20px;
+            }
+            .header {
+                padding: 30px 20px 20px;
+            }
+            .subscription-dates {
+                flex-direction: column;
+                gap: 12px;
+            }
+            .button {
+                display: block;
+                margin: 8px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#f5f5f5">
+        <tr>
+            <td align="center" style="padding: 40px 20px;">
+                <div class="email-container">
+                    
+                    <!-- Header -->
+                    <div class="header">
+                        <div class="success-badge">Payment Successful</div>
+                        <h1>Receipt from {{ site_name }}</h1>
+                    </div>
+                    
+                    <!-- Content -->
+                    <div class="content">
+                        <p class="greeting">Hi {{ user.first_name|default:user.email }},</p>
+                        <p class="message">
+                            Thank you for your payment. Your subscription to <strong>{{ plan.name }}</strong> is now active.
+                        </p>
+                        
+                        <!-- Receipt Box -->
+                        <div class="receipt-box">
+                            <div class="receipt-header">Payment Receipt</div>
+                            
+                            <!-- Plan Info -->
+                            <div class="plan-info">
+                                <div class="plan-name">{{ plan.name }}</div>
+                                <div class="plan-period">{{ plan.get_billing_period_display }} Subscription</div>
+                            </div>
+                            
+                            <!-- Details Table -->
+                            <table class="details-table">
+                                <tr>
+                                    <td class="label">Subscription</td>
+                                    <td class="value">{{ currency }} {{ amount }}</td>
+                                </tr>
+                                {% if processing_fee > 0 %}
+                                <tr>
+                                    <td class="label">Processing Fee</td>
+                                    <td class="value">{{ currency }} {{ processing_fee }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if payment.discount_amount > 0 %}
+                                <tr>
+                                    <td class="label">Discount</td>
+                                    <td class="value" style="color: #10b981;">-{{ currency }} {{ payment.discount_amount }}</td>
+                                </tr>
+                                {% endif %}
+                                <tr class="total-row">
+                                    <td class="label">Total Paid</td>
+                                    <td class="value">{{ currency }} {{ total_amount }}</td>
+                                </tr>
+                            </table>
+                            
+                            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+                                <table width="100%">
+                                    <tr>
+                                        <td style="font-size: 13px; color: #64748b;">Receipt Number</td>
+                                        <td style="text-align: right; font-size: 13px; color: #1a1a1a; font-weight: 500;">{{ invoice_number }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-size: 13px; color: #64748b;">Payment Date</td>
+                                        <td style="text-align: right; font-size: 13px; color: #1a1a1a; font-weight: 500;">{{ payment_date|date:"F d, Y" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-size: 13px; color: #64748b;">Payment Method</td>
+                                        <td style="text-align: right; font-size: 13px; color: #1a1a1a; font-weight: 500;">{{ payment.payment_method|default:"Card" }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-size: 13px; color: #64748b;">Reference</td>
+                                        <td style="text-align: right; font-size: 13px; color: #1a1a1a; font-weight: 500;">{{ reference }}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- Subscription Info -->
+                        {% if subscription %}
+                        <div class="subscription-info">
+                            <h3>Subscription Period</h3>
+                            <div class="subscription-dates">
+                                <div class="date-item">
+                                    <div class="date-label">Start Date</div>
+                                    <div class="date-value">{{ subscription.start_date|date:"M d, Y" }}</div>
+                                </div>
+                                <div class="date-item">
+                                    <div class="date-label">{% if plan.billing_period == 'lifetime' %}Active Until{% else %}Next Renewal{% endif %}</div>
+                                    <div class="date-value">
+                                        {% if plan.billing_period == 'lifetime' %}
+                                            Lifetime Access
+                                        {% else %}
+                                            {{ subscription.end_date|date:"M d, Y" }}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- What's Included -->
+                        {% if plan.features.all %}
+                        <div class="features">
+                            <h3>What's Included</h3>
+                            {% for feature in plan.features.all %}
+                            <div class="feature-item">
+                                <div class="feature-icon">✓</div>
+                                <span>{{ feature.name }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        
+                        <!-- CTA Buttons -->
+                        <div class="button-container">
+                            <a href="{{ site_url }}/dashboard" class="button">Go to Dashboard</a>
+                            <a href="{{ site_url }}/settings/subscription" class="button button-secondary">Manage Subscription</a>
+                        </div>
+                        
+                        <!-- Help Text -->
+                        <p style="font-size: 13px; color: #999999; text-align: center; margin-top: 30px;">
+                            Questions? Contact us at <a href="mailto:support@{{ site_name|lower }}.com" style="color: #0066cc; text-decoration: none;">support@{{ site_name|lower }}.com</a>
+                        </p>
+                    </div>
+                    
+                    <!-- Footer -->
+                    <div class="footer">
+                        <p class="footer-text">
+                            This is a receipt for your payment to {{ site_name }}.
+                        </p>
+                        
+                        <div class="footer-links">
+                            <a href="{{ site_url }}/help" class="footer-link">Help Center</a>
+                            <a href="{{ site_url }}/terms" class="footer-link">Terms</a>
+                            <a href="{{ site_url }}/privacy" class="footer-link">Privacy</a>
+                        </div>
+                        
+                        <p class="footer-text" style="margin-top: 16px;">
+                            © {{ payment_date|date:"Y" }} {{ site_name }}. All rights reserved.
+                        </p>
+                    </div>
+                    
+                </div>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

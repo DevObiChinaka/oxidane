@@ -32,15 +32,43 @@ def check_mentorship_access(user):
 
 
 def can_access_course(user, course):
-    """Check if user can access a course"""
-    # Free courses - must be enrolled to access
-    if course.course_type == 'free':
-        return CourseAccess.objects.filter(user=user, course=course).exists()
+    """
+    Check if user can access a course.
     
-    # Premium courses - need mentorship subscription
-    if course.course_type == 'premium':
-        return check_mentorship_access(user)
+    Access rules:
+    - Free courses: User must be enrolled (have CourseAccess record)
+    - Plan-based courses: User must have active subscription that includes the course
     
+    Args:
+        user: User instance
+        course: Course instance
+        
+    Returns:
+        bool: True if user can access the course
+    """
+    # Check if user has CourseAccess record (explicit enrollment)
+    has_course_access = CourseAccess.objects.filter(
+        user=user,
+        course=course
+    ).exists()
+    
+    if has_course_access:
+        return True
+    
+    # For plan-based courses, check if user has active subscription
+    if course.access_type == 'plan_based':
+        from subscriptions.models import Subscription
+        
+        # Check if user has active subscription to any plan that includes this course
+        has_valid_subscription = Subscription.objects.filter(
+            billing_profile__user=user,
+            status='active',
+            plan__courses=course
+        ).exists()
+        
+        return has_valid_subscription
+    
+    # Free courses require explicit enrollment
     return False
 
 
@@ -48,8 +76,12 @@ def can_access_course(user, course):
 def list_courses(request):
     """List all published courses"""
     try:
-        # Get all published courses
-        courses = Course.objects.filter(status='published').order_by('order', 'created_at')
+        # Get all published courses - Phase 2: optimized with prefetch
+        courses = Course.objects.filter(
+            status='published'
+        ).prefetch_related(
+            'required_plans'  # Prefetch for access_type == 'plan_based'
+        ).order_by('order', 'created_at')
         
         # Check if user is authenticated to provide enrollment info
         user = None
@@ -72,16 +104,14 @@ def list_courses(request):
             if user:
                 # Check if user has access
                 can_access = can_access_course(user, course)
+                is_enrolled = CourseAccess.objects.filter(user=user, course=course).exists()
                 
-                # Check if enrolled (for free courses) or has access (for premium)
-                if course.course_type == 'free':
-                    is_enrolled = CourseAccess.objects.filter(user=user, course=course).exists()
-                else:
-                    is_enrolled = can_access
-                    requires_subscription = not can_access
+                # Plan-based courses require subscription if not enrolled
+                if course.access_type == 'plan_based' and not can_access:
+                    requires_subscription = True
             else:
-                # Not authenticated
-                if course.course_type == 'premium':
+                # Anonymous users need subscription for plan-based courses
+                if course.access_type == 'plan_based':
                     requires_subscription = True
             
             # Get progress if enrolled
@@ -92,6 +122,18 @@ def list_courses(request):
                     progress_percentage = progress.completion_percentage
                 except CourseProgress.DoesNotExist:
                     pass
+            
+            # Phase 2: Add subscription integration fields
+            required_plans = []
+            if course.access_type == 'plan_based':
+                required_plans = [
+                    {
+                        'id': str(plan.id),
+                        'name': plan.name,
+                        'base_price': str(plan.base_price)
+                    }
+                    for plan in course.required_plans.all()
+                ]
             
             course_list.append({
                 'id': str(course.id),
@@ -108,6 +150,9 @@ def list_courses(request):
                 'can_access': can_access,
                 'requires_subscription': requires_subscription,
                 'progress_percentage': progress_percentage,
+                # Phase 2: Subscription integration fields
+                'access_type': course.access_type,
+                'required_plans': required_plans,
             })
         
         return JsonResponse({
@@ -123,9 +168,12 @@ def list_courses(request):
 def course_detail(request, slug):
     """Get detailed course information"""
     try:
-        # Get course
+        # Get course - Phase 2: optimized with prefetch
         try:
-            course = Course.objects.get(slug=slug, status='published')
+            course = Course.objects.prefetch_related('required_plans').get(
+                slug=slug,
+                status='published'
+            )
         except Course.DoesNotExist:
             return JsonResponse({'error': 'Course not found'}, status=404)
         
@@ -146,14 +194,14 @@ def course_detail(request, slug):
         
         if user:
             can_access = can_access_course(user, course)
+            is_enrolled = CourseAccess.objects.filter(user=user, course=course).exists()
             
-            if course.course_type == 'free':
-                is_enrolled = CourseAccess.objects.filter(user=user, course=course).exists()
-            else:
-                is_enrolled = can_access
-                requires_subscription = not can_access
+            # Plan-based courses require subscription if not enrolled
+            if course.access_type == 'plan_based' and not can_access:
+                requires_subscription = True
         else:
-            if course.course_type == 'premium':
+            # Anonymous users need subscription for plan-based courses
+            if course.access_type == 'plan_based':
                 requires_subscription = True
         
         # Get lessons
@@ -161,8 +209,8 @@ def course_detail(request, slug):
         lesson_list = []
         
         for lesson in lessons:
-            # Show lesson details if enrolled or if it's a preview
-            show_full_details = is_enrolled or lesson.is_preview
+            # Show lesson details if user has access (enrolled or subscription) or if it's a preview
+            show_full_details = can_access or lesson.is_preview
             
             lesson_data = {
                 'id': str(lesson.id),
@@ -182,8 +230,8 @@ def course_detail(request, slug):
                     'youtube_video_id': lesson.youtube_video_id,
                 })
                 
-                # Add progress if enrolled
-                if user and is_enrolled:
+                # Add progress if user has access
+                if user and can_access:
                     try:
                         progress = LessonProgress.objects.get(user=user, lesson=lesson)
                         lesson_data['completed'] = progress.completed
@@ -194,9 +242,9 @@ def course_detail(request, slug):
             
             lesson_list.append(lesson_data)
         
-        # Get progress if enrolled
+        # Get progress if user has access
         progress_data = None
-        if user and is_enrolled:
+        if user and can_access:
             try:
                 progress = CourseProgress.objects.get(user=user, course=course)
                 progress_data = {
@@ -208,6 +256,20 @@ def course_detail(request, slug):
                 }
             except CourseProgress.DoesNotExist:
                 pass
+        
+        # Phase 2: Get subscription info
+        required_plans = []
+        if course.access_type == 'plan_based':
+            required_plans = [
+                {
+                    'id': str(plan.id),
+                    'name': plan.name,
+                    'base_price': str(plan.base_price),
+                    'billing_period': plan.billing_period,
+                    'description': plan.description
+                }
+                for plan in course.required_plans.all()
+            ]
         
         return JsonResponse({
             'id': str(course.id),
@@ -228,6 +290,10 @@ def course_detail(request, slug):
             'progress': progress_data,
             'created_at': course.created_at.isoformat(),
             'published_at': course.published_at.isoformat() if course.published_at else None,
+            # Phase 2: Subscription integration fields
+            'access_type': course.access_type,
+            'required_plans': required_plans,
+            'is_accessible_by_user': course.is_accessible_by_user(user) if user else False,
         })
         
     except Exception as e:
@@ -237,7 +303,11 @@ def course_detail(request, slug):
 @csrf_exempt
 @require_http_methods(["POST"])
 def enroll_course(request, slug):
-    """Enroll user in a free course"""
+    """
+    Enroll user in a course.
+    - Free courses: Auto-enroll
+    - Plan-based courses: Check if user has active subscription that includes this course
+    """
     try:
         # Authenticate user
         auth_header = request.headers.get('Authorization', '')
@@ -253,39 +323,84 @@ def enroll_course(request, slug):
         
         # Get course
         try:
-            course = Course.objects.get(slug=slug, status='published')
+            course = Course.objects.prefetch_related('required_plans').get(slug=slug, status='published')
         except Course.DoesNotExist:
             return JsonResponse({'error': 'Course not found'}, status=404)
         
-        # Check if it's a free course
-        if course.course_type != 'free':
+        # Handle based on access_type
+        if course.access_type == 'free':
+            # Free courses: Auto-enroll
+            access, created = CourseAccess.objects.get_or_create(
+                user=user,
+                course=course,
+                defaults={'download_enabled': True}
+            )
+            
+            # Create course progress tracker
+            CourseProgress.objects.get_or_create(
+                user=user,
+                course=course
+            )
+            
             return JsonResponse({
-                'error': 'This is a premium course. Mentorship subscription required.',
-                'requires_subscription': True
-            }, status=403)
+                'message': 'Successfully enrolled in course' if created else 'Already enrolled',
+                'enrolled': True,
+                'course': {
+                    'id': str(course.id),
+                    'title': course.title,
+                    'slug': course.slug,
+                }
+            })
+            
+        elif course.access_type == 'plan_based':
+            # Plan-based courses: Check active subscription
+            from subscriptions.models import Subscription
+            
+            has_access = Subscription.objects.filter(
+                billing_profile__user=user,
+                status='active',
+                plan__courses=course
+            ).exists()
+            
+            if not has_access:
+                # Get required plan names for helpful error message
+                plan_names = list(course.required_plans.values_list('name', flat=True))
+                
+                return JsonResponse({
+                    'error': 'Subscription required to access this course',
+                    'requires_subscription': True,
+                    'required_plans': plan_names,
+                    'message': f'This course requires an active subscription to one of: {", ".join(plan_names)}. Visit /pricing to subscribe.'
+                }, status=403)
+            
+            # User has valid subscription - grant access
+            access, created = CourseAccess.objects.get_or_create(
+                user=user,
+                course=course,
+                defaults={'download_enabled': True}
+            )
+            
+            # Create course progress tracker
+            CourseProgress.objects.get_or_create(
+                user=user,
+                course=course
+            )
+            
+            return JsonResponse({
+                'message': 'Successfully enrolled in course' if created else 'Already enrolled',
+                'enrolled': True,
+                'course': {
+                    'id': str(course.id),
+                    'title': course.title,
+                    'slug': course.slug,
+                }
+            })
         
-        # Check if already enrolled
-        access, created = CourseAccess.objects.get_or_create(
-            user=user,
-            course=course,
-            defaults={'download_enabled': True}
-        )
-        
-        # Create course progress tracker
-        CourseProgress.objects.get_or_create(
-            user=user,
-            course=course
-        )
-        
+        # Unknown access_type
         return JsonResponse({
-            'message': 'Successfully enrolled in course' if created else 'Already enrolled',
-            'enrolled': True,
-            'course': {
-                'id': str(course.id),
-                'title': course.title,
-                'slug': course.slug,
-            }
-        })
+            'error': 'Invalid course access configuration',
+            'message': 'This course has an invalid access type. Please contact support.'
+        }, status=400)
         
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
@@ -293,7 +408,13 @@ def enroll_course(request, slug):
 
 @require_http_methods(["GET"])
 def enrolled_courses(request):
-    """Get list of courses user is enrolled in"""
+    """
+    Get list of courses user is enrolled in or has access to via subscription.
+    
+    Returns courses where user has:
+    1. Explicit enrollment (CourseAccess record)
+    2. Active subscription that includes the course
+    """
     try:
         # Authenticate user
         auth_header = request.headers.get('Authorization', '')
@@ -307,19 +428,18 @@ def enrolled_courses(request):
         except Exception as e:
             return JsonResponse({'error': 'Invalid or expired token'}, status=401)
         
-        # Check if user has mentorship access
-        has_mentorship = check_mentorship_access(user)
-        
         courses_list = []
+        course_ids_added = set()
         
-        # Get enrolled free courses
-        free_enrollments = CourseAccess.objects.filter(
+        # 1. Get explicitly enrolled courses (CourseAccess records)
+        enrollments = CourseAccess.objects.filter(
             user=user,
             course__status='published'
         ).select_related('course')
         
-        for enrollment in free_enrollments:
+        for enrollment in enrollments:
             course = enrollment.course
+            course_ids_added.add(str(course.id))
             
             # Get progress
             progress_percentage = 0
@@ -346,19 +466,27 @@ def enrolled_courses(request):
                 'lessons_completed': lessons_completed,
                 'progress_percentage': progress_percentage,
                 'enrolled_at': enrollment.access_granted_at.isoformat(),
+                'access_type': course.access_type,
             })
         
-        # If user has mentorship, add all premium courses
-        if has_mentorship:
-            premium_courses = Course.objects.filter(
-                status='published',
-                course_type='premium'
-            ).order_by('order', 'created_at')
+        # 2. Get courses accessible via active subscriptions
+        active_subscriptions = Subscription.objects.filter(
+            billing_profile__user=user,
+            status='active'
+        ).prefetch_related('plan__courses')
+        
+        for subscription in active_subscriptions:
+            # Get all courses included in this subscription plan
+            subscription_courses = subscription.plan.courses.filter(
+                status='published'
+            )
             
-            for course in premium_courses:
-                # Check if already in list (shouldn't happen but just in case)
-                if any(c['id'] == str(course.id) for c in courses_list):
+            for course in subscription_courses:
+                # Skip if already added (via explicit enrollment)
+                if str(course.id) in course_ids_added:
                     continue
+                
+                course_ids_added.add(str(course.id))
                 
                 # Get or create progress
                 progress_percentage = 0
@@ -370,7 +498,7 @@ def enrolled_courses(request):
                     progress_percentage = progress.completion_percentage
                     lessons_completed = progress.lessons_completed
                 except CourseProgress.DoesNotExist:
-                    # Create progress tracker for premium course
+                    # Auto-create progress tracker for subscription-based access
                     CourseProgress.objects.create(user=user, course=course)
                 
                 courses_list.append({
@@ -385,13 +513,14 @@ def enrolled_courses(request):
                     'total_lessons': total_lessons,
                     'lessons_completed': lessons_completed,
                     'progress_percentage': progress_percentage,
-                    'enrolled_at': None,  # Auto-enrolled via mentorship
+                    'enrolled_at': None,  # Access via subscription, not explicit enrollment
+                    'access_type': course.access_type,
+                    'subscription_plan': subscription.plan.name,
                 })
         
         return JsonResponse({
             'courses': courses_list,
             'total': len(courses_list),
-            'has_mentorship': has_mentorship
         })
         
     except Exception as e:

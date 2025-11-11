@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { formatCurrency, type Currency } from '@/lib/utils/currency';
+import { useCurrencyConverter } from '@/hooks/useCurrencyConverter';
 
-// Types matching backend API response
 interface Feature {
   id: string;
   key: string;
@@ -26,6 +27,8 @@ interface PricingPlan {
   sort_order: number;
   price: number;
   base_price: number;
+  currency: string;
+  base_price_usd?: number;
   features: Feature[];
   limits: any;
 }
@@ -33,7 +36,7 @@ interface PricingPlan {
 interface PricingCardsProps {
   onPlanSelect?: (plan: PricingPlan) => void;
   selectedPlanId?: string;
-  currency?: string;
+  currency?: Currency;
 }
 
 export default function PricingCards({ 
@@ -44,6 +47,19 @@ export default function PricingCards({
   const [plans, setPlans] = useState<PricingPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Live currency conversion hook
+  const { 
+    convert, 
+    loading: rateLoading, 
+    error: rateError, 
+    rate,
+    cached 
+  } = useCurrencyConverter({
+    fromCurrency: 'USD',
+    toCurrency: currency,
+    autoFetch: true
+  });
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -51,11 +67,9 @@ export default function PricingCards({
         setLoading(true);
         setError(null);
         
-        const queryParams = new URLSearchParams();
-        if (currency) queryParams.append('currency', currency);
-        
+        // Fetch plans in USD (base currency)
         const response = await fetch(
-          `http://127.0.0.1:8000/api/v1/subscriptions/plans/?${queryParams.toString()}`
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/v1/subscriptions/plans/`
         );
         
         if (!response.ok) {
@@ -63,7 +77,7 @@ export default function PricingCards({
         }
         
         const data = await response.json();
-        setPlans(data || []);
+        setPlans(data.results || data || []);
       } catch (err) {
         console.error('Error fetching plans:', err);
         setError(err instanceof Error ? err.message : 'Failed to load pricing plans');
@@ -73,43 +87,23 @@ export default function PricingCards({
     };
 
     fetchPlans();
-  }, [currency]);
-
-  const formatCurrency = (amount: number, currencyCode: string = 'USD') => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currencyCode,
-    }).format(amount);
-  };
-
-  const getBillingCycleColor = (cycle: string) => {
-    const colors = {
-      weekly: 'from-blue-500 to-blue-600',
-      monthly: 'from-purple-500 to-purple-600',
-      quarterly: 'from-green-500 to-green-600',
-      yearly: 'from-yellow-500 to-yellow-600',
-      lifetime: 'from-red-500 to-red-600'
-    };
-    return colors[cycle as keyof typeof colors] || 'from-gray-500 to-gray-600';
-  };
+  }, []); // Remove currency dependency - we handle conversion client-side
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="bg-white rounded-2xl shadow-lg animate-pulse">
-            <div className="p-8">
-              <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
-              <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded w-2/3 mb-6"></div>
-              <div className="h-8 bg-gray-200 rounded w-1/2 mb-6"></div>
-              <div className="space-y-3">
-                {[1, 2, 3, 4].map((j) => (
-                  <div key={j} className="h-4 bg-gray-200 rounded w-full"></div>
-                ))}
-              </div>
-              <div className="h-12 bg-gray-200 rounded mt-8"></div>
+          <div key={i} className="bg-white/10 backdrop-blur-md rounded-xl border border-white/20 p-6 animate-pulse">
+            <div className="h-6 bg-white/20 rounded w-24 mb-3"></div>
+            <div className="h-4 bg-white/20 rounded w-full mb-2"></div>
+            <div className="h-4 bg-white/20 rounded w-3/4 mb-6"></div>
+            <div className="h-10 bg-white/20 rounded w-32 mb-6"></div>
+            <div className="space-y-3">
+              {[1, 2, 3, 4].map((j) => (
+                <div key={j} className="h-4 bg-white/20 rounded w-full"></div>
+              ))}
             </div>
+            <div className="h-11 bg-white/20 rounded-lg mt-6"></div>
           </div>
         ))}
       </div>
@@ -118,19 +112,19 @@ export default function PricingCards({
 
   if (error) {
     return (
-      <div className="text-center py-12">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4">
-          <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="text-center py-12 px-4">
+        <div className="inline-flex items-center justify-center w-16 h-16 bg-red-50 rounded-full mb-4">
+          <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to Load Plans</h3>
-        <p className="text-gray-600 mb-4">{error}</p>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Unable to Load Plans</h3>
+        <p className="text-gray-600 mb-4 text-sm">{error}</p>
         <button
           onClick={() => window.location.reload()}
-          className="px-6 py-2 bg-[#000ABE] text-white rounded-lg hover:bg-[#000ABE]/90 transition-colors"
+          className="px-6 py-2.5 bg-[#00B38F] text-white rounded-lg hover:bg-[#00A87D] transition-colors text-sm font-medium"
         >
-          Retry
+          Try Again
         </button>
       </div>
     );
@@ -138,124 +132,144 @@ export default function PricingCards({
 
   if (plans.length === 0) {
     return (
-      <div className="text-center py-12">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
+      <div className="text-center py-12 px-4">
+        <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-50 rounded-full mb-4">
           <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
           </svg>
         </div>
         <h3 className="text-lg font-semibold text-gray-900 mb-2">No Plans Available</h3>
-        <p className="text-gray-600">Check back soon for new pricing options!</p>
+        <p className="text-gray-600 text-sm">Check back soon for pricing options</p>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-      {plans.map((plan) => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+      {/* Rate Error Banner */}
+      {rateError && currency !== 'USD' && (
+        <div className="col-span-full mb-4 p-3 bg-yellow-50/10 border border-yellow-400/30 rounded-lg">
+          <p className="text-sm text-yellow-200 text-center">
+            ⚠️ Currency conversion temporarily unavailable. Showing USD prices.
+          </p>
+        </div>
+      )}
+      
+      {/* Rate Info Banner */}
+      {rate && currency !== 'USD' && !rateLoading && !rateError && (
+        <div className="col-span-full mb-4 p-3 bg-white/5 border border-white/10 rounded-lg">
+          <p className="text-sm text-gray-300 text-center">
+            Exchange rate: 1 USD = {rate.toFixed(2)} {currency}
+            {cached && <span className="text-gray-400 ml-2">(updates hourly)</span>}
+          </p>
+        </div>
+      )}
+      
+      {plans.map((plan) => {
+        // Calculate converted price using live rates
+        const basePrice = plan.base_price || plan.price;
+        const displayPrice = currency === 'USD' ? basePrice : convert(basePrice);
+        
+        return (
         <div
           key={plan.id}
-          className={`relative bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 ${
-            selectedPlanId === plan.id ? 'ring-4 ring-[#000ABE] ring-opacity-50' : ''
-          } ${plan.is_featured ? 'border-2 border-yellow-400' : 'border border-gray-200'}`}
+          className={`relative bg-white/10 backdrop-blur-md rounded-xl border-2 transition-all duration-300 hover:shadow-lg hover:bg-white/15 ${
+            plan.is_featured 
+              ? 'border-[#00B38F]/50 shadow-md' 
+              : 'border-white/20 hover:border-[#00B38F]/30'
+          } ${selectedPlanId === plan.id ? 'ring-2 ring-[#00B38F] ring-offset-2 ring-offset-transparent' : ''}`}
         >
-          {/* Featured Badge */}
-          {plan.is_featured && (
-            <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-              <span className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg">
-                ⭐ Most Popular
-              </span>
-            </div>
-          )}
-
           {/* Trial Badge */}
           {plan.trial_days > 0 && (
-            <div className="absolute -top-4 right-4">
-              <span className="bg-gradient-to-r from-green-400 to-green-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
-                {plan.trial_days}-Day Free Trial
+            <div className="absolute -top-3 right-4">
+              <span className="inline-flex items-center px-3 py-1 bg-[#000ABE] text-white text-xs font-semibold rounded-full shadow-sm">
+                {plan.trial_days}-Day Trial
               </span>
             </div>
           )}
 
-          <div className="p-8">
-            {/* Plan Header */}
-            <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.name}</h3>
-              <p className="text-gray-600 text-sm leading-relaxed">{plan.description}</p>
-            </div>
+          <div className={`p-6 ${plan.trial_days > 0 ? 'pt-8' : ''}`}>
+            {/* Plan Name */}
+            <h3 className="text-lg font-bold text-white mb-1">{plan.name}</h3>
+            <p className="text-sm text-gray-300 mb-6 min-h-[40px]">{plan.description}</p>
 
-            {/* Pricing */}
-            <div className="text-center mb-8">
-              <div className="flex items-center justify-center">
-                <span className="text-4xl font-bold text-gray-900">
-                  {formatCurrency(plan.price, currency)}
-                </span>
-              </div>
-              <p className="text-gray-500 text-sm mt-1">
-                {plan.billing_period_display}
-              </p>
-            </div>
-
-            {/* Features */}
-            <div className="space-y-4 mb-8">
-              {plan.features && plan.features.length > 0 ? (
-                plan.features
-                  .sort((a, b) => a.sort_order - b.sort_order)
-                  .map((feature) => (
-                    <div key={feature.id} className="flex items-start">
-                      <div className="flex-shrink-0">
-                        <div className="flex items-center justify-center w-5 h-5 bg-green-100 rounded-full">
-                          {feature.icon ? (
-                            <span className="text-sm">{feature.icon}</span>
-                          ) : (
-                            <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                          )}
-                        </div>
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-gray-900 text-sm font-medium">{feature.name}</p>
-                        {feature.description && (
-                          <p className="text-gray-600 text-xs mt-1">{feature.description}</p>
-                        )}
-                      </div>
-                    </div>
-                  ))
+            {/* Price */}
+            <div className="mb-6">
+              {rateLoading && currency !== 'USD' ? (
+                <div className="h-12 bg-white/10 animate-pulse rounded"></div>
               ) : (
-                <div className="text-center text-gray-500 text-sm py-4">
-                  Contact us for plan details
-                </div>
+                <>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl font-bold text-white">
+                      {formatCurrency(displayPrice, currency).split('.')[0]}
+                    </span>
+                    {plan.billing_period !== 'lifetime' && (
+                      <span className="text-sm text-gray-400">
+                        /{plan.billing_period.replace('ly', '')}
+                      </span>
+                    )}
+                  </div>
+                  {plan.trial_days > 0 && (
+                    <p className="text-xs text-[#00B38F] font-medium mt-1">
+                      Start free for {plan.trial_days} days
+                    </p>
+                  )}
+                </>
               )}
             </div>
 
             {/* CTA Button */}
             <button
               onClick={() => onPlanSelect?.(plan)}
-              className={`w-full py-4 px-6 rounded-xl font-semibold text-white transition-all duration-300 ${
-                plan.is_featured
-                  ? `bg-gradient-to-r ${getBillingCycleColor(plan.billing_period)} hover:shadow-lg hover:scale-105`
-                  : `bg-gradient-to-r ${getBillingCycleColor(plan.billing_period)} hover:shadow-lg hover:scale-105`
-              }`}
+              className="w-full py-2.5 px-4 rounded-lg font-semibold text-sm transition-all duration-200 bg-gradient-to-r from-[#00B38F] to-[#00B39F] text-white hover:from-[#00A87D] hover:to-[#00A58D] shadow-sm"
             >
-              {plan.billing_period === 'lifetime' ? 'Get Lifetime Access' : 'Subscribe Now'}
+              {plan.trial_days > 0 ? 'Start Free Trial' : plan.billing_period === 'lifetime' ? 'Get Lifetime Access' : 'Get Started'}
             </button>
 
-            {/* Billing Period Badge */}
-            <div className="mt-4 text-center">
-              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                plan.billing_period === 'weekly' ? 'bg-blue-100 text-blue-800' :
-                plan.billing_period === 'monthly' ? 'bg-purple-100 text-purple-800' :
-                plan.billing_period === 'quarterly' ? 'bg-green-100 text-green-800' :
-                plan.billing_period === 'yearly' ? 'bg-yellow-100 text-yellow-800' :
-                'bg-red-100 text-red-800'
-              }`}>
-                {plan.billing_period_display}
-              </span>
+            {/* Features */}
+            <div className="mt-6 pt-6 border-t border-white/10">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-4">
+                What's included
+              </p>
+              <div className="space-y-3">
+                {plan.features && plan.features.length > 0 ? (
+                  plan.features
+                    .sort((a, b) => a.sort_order - b.sort_order)
+                    .slice(0, 6)
+                    .map((feature) => (
+                      <div key={feature.id} className="flex items-start gap-2.5">
+                        <svg 
+                          className="w-5 h-5 text-[#00B38F] flex-shrink-0 mt-0.5" 
+                          fill="currentColor" 
+                          viewBox="0 0 20 20"
+                        >
+                          <path 
+                            fillRule="evenodd" 
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" 
+                            clipRule="evenodd" 
+                          />
+                        </svg>
+                        <span className="text-sm text-gray-200 leading-tight">
+                          {feature.name}
+                        </span>
+                      </div>
+                    ))
+                ) : (
+                  <div className="text-center text-gray-400 text-sm py-2">
+                    Contact for details
+                  </div>
+                )}
+                {plan.features && plan.features.length > 6 && (
+                  <p className="text-xs text-gray-400 pl-7">
+                    + {plan.features.length - 6} more features
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

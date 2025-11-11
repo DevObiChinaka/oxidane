@@ -148,13 +148,19 @@ class CourseListSerializer(serializers.ModelSerializer):
     enrollment_count = serializers.SerializerMethodField()
     completion_rate = serializers.SerializerMethodField()
     
+    # Phase 1.6: Subscription integration
+    required_plan_count = serializers.SerializerMethodField()
+    
     class Meta:
         model = Course
         fields = [
             'id', 'title', 'slug', 'short_description', 'course_type',
             'difficulty_level', 'status', 'thumbnail', 'estimated_duration',
             'lesson_count', 'total_duration', 'enrollment_count', 
-            'completion_rate', 'created_at', 'updated_at', 'published_at'
+            'completion_rate', 'created_at', 'updated_at', 'published_at',
+            # Phase 1.6: Subscription fields
+            'access_type',
+            'required_plan_count',
         ]
     
     def get_total_duration(self, obj):
@@ -177,12 +183,20 @@ class CourseListSerializer(serializers.ModelSerializer):
         ).count()
         
         return round((completed / total_enrollments) * 100, 1)
+    
+    def get_required_plan_count(self, obj):
+        """Get number of plans that grant access to this course"""
+        return obj.required_plans.count()
 
 class CourseSerializer(serializers.ModelSerializer):
     lessons = LessonSerializer(many=True, read_only=True)
     lesson_count = serializers.SerializerMethodField()
     enrollment_count = serializers.SerializerMethodField()
     slug = serializers.SlugField(required=False)  # Make slug optional for creation
+    
+    # Phase 1.6: Subscription integration fields
+    required_plan_names = serializers.SerializerMethodField()
+    is_accessible_by_user = serializers.SerializerMethodField()
     
     class Meta:
         model = Course
@@ -191,7 +205,12 @@ class CourseSerializer(serializers.ModelSerializer):
             'course_type', 'difficulty_level', 'status', 'meta_title',
             'meta_description', 'keywords', 'thumbnail', 'trailer_video_url',
             'estimated_duration', 'order', 'lessons', 'lesson_count',
-            'enrollment_count', 'created_at', 'updated_at', 'published_at'
+            'enrollment_count', 'created_at', 'updated_at', 'published_at',
+            # Phase 1.6: Subscription fields
+            'access_type',
+            'required_plans',
+            'required_plan_names',
+            'is_accessible_by_user',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
     
@@ -200,6 +219,17 @@ class CourseSerializer(serializers.ModelSerializer):
     
     def get_enrollment_count(self, obj):
         return CourseProgress.objects.filter(course=obj).count()
+    
+    def get_required_plan_names(self, obj):
+        """Get list of plan names that grant access to this course"""
+        return [plan.name for plan in obj.required_plans.all()]
+    
+    def get_is_accessible_by_user(self, obj):
+        """Check if current user can access this course"""
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return obj.access_type == 'free'
+        return obj.is_accessible_by_user(request.user)
     
     def validate_slug(self, value):
         """Ensure slug is unique"""
@@ -259,11 +289,36 @@ class CourseAccessSerializer(serializers.ModelSerializer):
     course_title = serializers.CharField(source='course.title', read_only=True)
     course_type = serializers.CharField(source='course.course_type', read_only=True)
     
+    # Phase 1.6: Subscription integration fields
+    subscription_plan_name = serializers.CharField(
+        source='subscription_plan.name', 
+        read_only=True,
+        allow_null=True
+    )
+    is_access_valid = serializers.SerializerMethodField()
+    
     class Meta:
         model = CourseAccess
         fields = [
             'id', 'user_email', 'course_title', 'course_type',
             'access_granted_at', 'access_expires_at', 'download_enabled',
-            'is_active'
+            'is_active',
+            # Phase 1.6: New subscription fields
+            'access_granted_by',
+            'subscription_plan',
+            'subscription_plan_name',
+            'payment_reference',
+            'updated_at',
+            'is_access_valid',
         ]
-        read_only_fields = ['id', 'access_granted_at', 'is_active']
+        read_only_fields = [
+            'id', 
+            'access_granted_at', 
+            'is_active',
+            'updated_at',
+            'is_access_valid'
+        ]
+    
+    def get_is_access_valid(self, obj):
+        """Check if access is valid including subscription status"""
+        return obj.is_access_valid()

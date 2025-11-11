@@ -3671,3 +3671,202 @@ class SubscriptionDowngradeViewSet(viewsets.ViewSet):
                 'error': str(e),
                 'error_code': 'DOWNGRADE_FAILED'
             }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CurrencyConversionViewSet(viewsets.ViewSet):
+    """
+    ViewSet for live currency conversion
+    
+    Provides:
+    - convert: GET /currency/convert/?from=USD&to=NGN&amount=30
+    - rates: GET /currency/rates/?base=USD
+    
+    Uses smart caching with 1-hour expiry via ExchangeRateService
+    """
+    permission_classes = [AllowAny]
+    
+    def list(self, request):
+        """
+        Default list action - redirect to convert
+        """
+        return self.convert(request)
+    
+    @action(detail=False, methods=['get'], url_path='convert')
+    def convert(self, request):
+        """
+        Convert amount between currencies with live rates
+        
+        Query params:
+        - from: Source currency code (default: USD)
+        - to: Target currency code (default: NGN)
+        - amount: Amount to convert (default: 1)
+        
+        Returns:
+        {
+            "success": true,
+            "from_currency": "USD",
+            "to_currency": "NGN",
+            "from_amount": 30.0,
+            "to_amount": 43112.33,
+            "exchange_rate": 1437.0777,
+            "last_updated": "2025-11-11T14:58:28Z",
+            "cached": true
+        }
+        """
+        from .services import ExchangeRateService
+        from datetime import datetime
+        
+        # Get query parameters
+        from_currency = request.query_params.get('from', 'USD').upper()
+        to_currency = request.query_params.get('to', 'NGN').upper()
+        
+        try:
+            amount = Decimal(request.query_params.get('amount', '1'))
+        except (ValueError, InvalidOperation):
+            return Response({
+                'success': False,
+                'error': 'Invalid amount value',
+                'error_code': 'INVALID_AMOUNT'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Validate currencies
+        if len(from_currency) != 3 or len(to_currency) != 3:
+            return Response({
+                'success': False,
+                'error': 'Currency codes must be 3 characters (e.g., USD, NGN)',
+                'error_code': 'INVALID_CURRENCY_CODE'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Same currency
+        if from_currency == to_currency:
+            return Response({
+                'success': True,
+                'from_currency': from_currency,
+                'to_currency': to_currency,
+                'from_amount': float(amount),
+                'to_amount': float(amount),
+                'exchange_rate': 1.0,
+                'last_updated': datetime.utcnow().isoformat() + 'Z',
+                'cached': False
+            })
+        
+        try:
+            # Use ExchangeRateService for conversion
+            service = ExchangeRateService()
+            converted_amount = service.convert_amount(
+                amount=amount,
+                from_currency=from_currency,
+                to_currency=to_currency
+            )
+            
+            if converted_amount is None:
+                return Response({
+                    'success': False,
+                    'error': f'Exchange rate not available for {from_currency} → {to_currency}',
+                    'error_code': 'RATE_NOT_AVAILABLE',
+                    'fallback': 'Please use USD for pricing'
+                }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            
+            # Get the rate for response
+            rate = service.get_rate(from_currency, to_currency)
+            
+            # Get the ExchangeRate model to check cache age
+            from .models import ExchangeRate
+            rate_obj = ExchangeRate.objects.filter(
+                base_currency=from_currency,
+                target_currency=to_currency
+            ).first()
+            
+            last_updated = rate_obj.last_updated if rate_obj else datetime.utcnow()
+            
+            return Response({
+                'success': True,
+                'from_currency': from_currency,
+                'to_currency': to_currency,
+                'from_amount': float(amount),
+                'to_amount': float(converted_amount),
+                'exchange_rate': float(rate) if rate else None,
+                'last_updated': last_updated.isoformat(),
+                'cached': rate_obj is not None
+            })
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': f'Conversion failed: {str(e)}',
+                'error_code': 'CONVERSION_ERROR'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @action(detail=False, methods=['get'], url_path='rates')
+    def rates(self, request):
+        """
+        Get all available exchange rates for a base currency
+        
+        Query params:
+        - base: Base currency code (default: USD)
+        
+        Returns:
+        {
+            "success": true,
+            "base_currency": "USD",
+            "rates": {
+                "NGN": 1437.0777,
+                "EUR": 0.8649,
+                "GBP": 0.7592,
+                ...
+            },
+            "count": 164,
+            "last_updated": "2025-11-11T14:58:28Z"
+        }
+        """
+        from .services import ExchangeRateService
+        from .models import ExchangeRate
+        from datetime import datetime
+        
+        base_currency = request.query_params.get('base', 'USD').upper()
+        
+        # Validate base currency
+        if len(base_currency) != 3:
+            return Response({
+                'success': False,
+                'error': 'Currency code must be 3 characters (e.g., USD)',
+                'error_code': 'INVALID_CURRENCY_CODE'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            # Get rates from database
+            rate_objects = ExchangeRate.objects.filter(base_currency=base_currency)
+            
+            if not rate_objects.exists():
+                # No rates in cache, fetch from API
+                service = ExchangeRateService()
+                rates_dict = service.fetch_rates_from_exchangerate_api(base_currency)
+                
+                # Update database
+                service.bulk_update_rates(base_currency, rates_dict)
+                
+                # Re-fetch from database
+                rate_objects = ExchangeRate.objects.filter(base_currency=base_currency)
+            
+            # Build rates dictionary
+            rates = {}
+            latest_update = None
+            for rate_obj in rate_objects:
+                rates[rate_obj.target_currency] = float(rate_obj.rate)
+                if latest_update is None or rate_obj.last_updated > latest_update:
+                    latest_update = rate_obj.last_updated
+            
+            return Response({
+                'success': True,
+                'base_currency': base_currency,
+                'rates': rates,
+                'count': len(rates),
+                'last_updated': latest_update.isoformat() if latest_update else datetime.utcnow().isoformat()
+            })
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': f'Failed to fetch rates: {str(e)}',
+                'error_code': 'FETCH_RATES_ERROR'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -52,7 +52,7 @@ export default function SettingsPage() {
         return;
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/auth/profile/`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/profile/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -81,7 +81,7 @@ export default function SettingsPage() {
       
       if (!token) return;
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/auth/get-notifications/`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/get-notifications/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -128,7 +128,7 @@ export default function SettingsPage() {
     try {
       const token = localStorage.getItem('access_token');
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/auth/change-password/`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/change-password/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -165,7 +165,7 @@ export default function SettingsPage() {
     try {
       const token = localStorage.getItem('access_token');
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/auth/update-notifications/`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/update-notifications/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

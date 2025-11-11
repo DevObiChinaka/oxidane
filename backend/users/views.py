@@ -500,7 +500,10 @@ def resend_verification_otp(request):
 def login(request):
     """
     Standards-compliant login: Only allow verified and active users to login
+    Returns JWT tokens for authentication
     """
+    from rest_framework_simplejwt.tokens import RefreshToken
+    
     try:
         data = json.loads(request.body)
         email = data.get('email')
@@ -516,6 +519,7 @@ def login(request):
                 # User exists but email not verified
                 return JsonResponse({
                     'error': 'Email not verified',
+                    'code': 'EMAIL_NOT_VERIFIED',
                     'requires_verification': True,
                     'email': user.email,
                     'message': 'Please verify your email address before signing in.'
@@ -524,10 +528,15 @@ def login(request):
             if not user.is_active:
                 return JsonResponse({
                     'error': 'Account not activated',
+                    'code': 'ACCOUNT_INACTIVE',
                     'requires_verification': True,
                     'email': user.email,
                     'message': 'Your account is not active. Please verify your email address.'
                 }, status=403)
+            
+            # Generate JWT tokens
+            refresh = RefreshToken.for_user(user)
+            access_token = str(refresh.access_token)
             
             # Send sign-in notification email
             send_signin_notification_email(user, {'method': 'Email & Password'})
@@ -535,16 +544,33 @@ def login(request):
             return JsonResponse({
                 'message': 'Login successful',
                 'success': True,
+                'token': access_token,
+                'refresh': str(refresh),
                 'user': {
                     'id': str(user.id),
                     'email': user.email,
-                    'name': f"{user.first_name} {user.last_name}".strip(),
+                    'username': user.username,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
+                    'full_name': f"{user.first_name} {user.last_name}".strip(),
+                    'avatar': user.avatar,
                     'is_email_verified': user.is_email_verified,
                     'is_active': user.is_active,
                 }
             })
         else:
-            return JsonResponse({'error': 'Invalid email or password'}, status=401)
+            # Check if user exists to provide better error message
+            user_exists = User.objects.filter(email=email).exists()
+            if user_exists:
+                return JsonResponse({
+                    'error': 'Incorrect password. Please try again.',
+                    'code': 'INVALID_PASSWORD'
+                }, status=401)
+            else:
+                return JsonResponse({
+                    'error': 'No account found with this email address.',
+                    'code': 'ACCOUNT_NOT_FOUND'
+                }, status=401)
             
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)

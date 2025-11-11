@@ -5,6 +5,7 @@ from django.utils import timezone
 import secrets
 import random
 import json
+from datetime import timedelta
 
 class User(AbstractUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -20,6 +21,60 @@ class User(AbstractUser):
     password_reset_otp = models.CharField(max_length=6, blank=True, null=True)
     password_reset_otp_expires = models.DateTimeField(blank=True, null=True)
     telegram_user_id = models.BigIntegerField(null=True, blank=True, unique=True, help_text="Telegram user ID for bot operations")
+    
+    # Subscription Integration (Phase 1.1)
+    SUBSCRIPTION_STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('trialing', 'Trial Period'),
+        ('past_due', 'Past Due'),
+        ('cancelled', 'Cancelled'),
+        ('expired', 'Expired'),
+        ('none', 'No Subscription'),
+    ]
+    
+    current_plan = models.ForeignKey(
+        'subscriptions.SubscriptionPlan',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='subscribed_users',
+        help_text='Current active subscription plan'
+    )
+    subscription_status = models.CharField(
+        max_length=20,
+        choices=SUBSCRIPTION_STATUS_CHOICES,
+        default='none',
+        db_index=True,
+        help_text='Current subscription status'
+    )
+    subscription_start_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='When the current subscription period started'
+    )
+    subscription_end_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text='When the current subscription period ends'
+    )
+    trial_end_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='When the trial period ends (if in trial)'
+    )
+    trial_used = models.BooleanField(
+        default=False,
+        help_text='Whether user has already used their trial period'
+    )
+    
+    # Usage tracking
+    usage_stats = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='Track feature usage (e.g., {"signals_viewed": 10, "courses_enrolled": 2})'
+    )
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -102,6 +157,243 @@ class User(AbstractUser):
             self.save()
             return True
         return False
+
+    # ========================================================================
+    # Subscription Helper Methods (Phase 1.1)
+    # ========================================================================
+    
+    def has_feature(self, feature_key):
+        """
+        Check if user has access to a specific feature based on their subscription plan.
+        
+        Args:
+            feature_key (str): The unique key of the feature to check (e.g., 'view_premium_signals')
+        
+        Returns:
+            bool: True if user has access to the feature, False otherwise
+        
+        Examples:
+            >>> user.has_feature('view_premium_signals')
+            True
+            >>> user.has_feature('telegram_vip_group')
+            False
+        """
+        # No plan = no premium features
+        if not self.current_plan:
+            return False
+        
+        # Check if subscription is active
+        if not self.is_subscription_active():
+            return False
+        
+        # Check if plan has the feature
+        return self.current_plan.features.filter(
+            key=feature_key,
+            is_active=True
+        ).exists()
+    
+    def can_access_course(self, course):
+        """
+        Check if user can access a specific course based on their subscription plan.
+        
+        Args:
+            course: Course model instance
+        
+        Returns:
+            bool: True if user can access the course, False otherwise
+        
+        Note:
+            This method will be fully implemented in Task 1.3 when Enrollment model is created.
+            For now, it provides basic plan-based access control.
+        """
+        # Check if course is free (will work with both old and new models)
+        if hasattr(course, 'access_type') and course.access_type == 'free':
+            return True
+        
+        # Backward compatibility: check old course_type field
+        if hasattr(course, 'course_type') and course.course_type == 'free':
+            return True
+        
+        # Check if user's plan grants access
+        if not self.current_plan or not self.is_subscription_active():
+            return False
+        
+        # If course has required_plans (will be added in Task 1.2)
+        if hasattr(course, 'required_plans'):
+            required_plans = course.required_plans.all()
+            if not required_plans.exists():
+                # No specific plans required = accessible to any paid plan
+                return True
+            # Check if user's plan is in required plans
+            return required_plans.filter(id=self.current_plan.id).exists()
+        
+        # Default: premium courses require active subscription
+        return True
+    
+    def get_plan_limits(self):
+        """
+        Get usage limits from the user's current subscription plan.
+        
+        Returns:
+            dict: Plan limits (e.g., {"max_signals": 100, "max_courses": 5}) or empty dict
+        
+        Examples:
+            >>> user.get_plan_limits()
+            {'max_signals': 100, 'max_courses': 5, 'max_telegram_groups': 3}
+        """
+        if not self.current_plan:
+            return {}
+        
+        return self.current_plan.limits or {}
+    
+    def is_subscription_active(self):
+        """
+        Check if user's subscription is currently active.
+        
+        Returns:
+            bool: True if subscription is active or in trial period
+        
+        Note:
+            Active means: status is 'active' or 'trialing' AND hasn't expired
+        """
+        if self.subscription_status not in ['active', 'trialing']:
+            return False
+        
+        # Check trial period
+        if self.subscription_status == 'trialing':
+            if not self.trial_end_date:
+                return False
+            return timezone.now() < self.trial_end_date
+        
+        # Check subscription end date
+        if self.subscription_status == 'active':
+            if not self.subscription_end_date:
+                # Lifetime or no end date = always active
+                return True
+            return timezone.now() < self.subscription_end_date
+        
+        return False
+    
+    def get_accessible_courses(self):
+        """
+        Get all courses the user can currently access.
+        
+        Returns:
+            QuerySet: Course objects the user can access
+        
+        Note:
+            This method will be fully implemented in Task 1.3 when Enrollment model is created.
+            For now, it returns free courses only.
+        """
+        from courses.models import Course
+        
+        # For now, return free courses only
+        # Full implementation will be added in Task 1.3 with Enrollment model
+        if hasattr(Course, 'access_type'):
+            return Course.objects.filter(access_type='free')
+        else:
+            # Backward compatibility
+            return Course.objects.filter(course_type='free')
+    
+    def start_trial(self, plan):
+        """
+        Start a trial period for a subscription plan.
+        
+        Args:
+            plan: SubscriptionPlan instance
+        
+        Returns:
+            bool: True if trial started successfully
+        
+        Raises:
+            ValueError: If user has already used their trial
+        """
+        if self.trial_used:
+            raise ValueError("User has already used their trial period")
+        
+        if plan.trial_days <= 0:
+            raise ValueError("This plan does not offer a trial period")
+        
+        self.current_plan = plan
+        self.subscription_status = 'trialing'
+        self.subscription_start_date = timezone.now()
+        self.trial_end_date = timezone.now() + timedelta(days=plan.trial_days)
+        self.trial_used = True
+        self.save()
+        
+        return True
+    
+    def activate_subscription(self, plan, duration_days=None):
+        """
+        Activate a paid subscription for a plan.
+        
+        Args:
+            plan: SubscriptionPlan instance
+            duration_days (int, optional): Duration in days. If None, use plan's billing period
+        
+        Returns:
+            bool: True if activated successfully
+        """
+        self.current_plan = plan
+        self.subscription_status = 'active'
+        self.subscription_start_date = timezone.now()
+        
+        # Calculate end date based on billing period or custom duration
+        if duration_days:
+            self.subscription_end_date = timezone.now() + timedelta(days=duration_days)
+        elif plan.billing_period == 'lifetime':
+            self.subscription_end_date = None  # No end date
+        else:
+            # Calculate based on billing period
+            period_days = {
+                'weekly': 7,
+                'monthly': 30,
+                'quarterly': 90,
+                'yearly': 365,
+            }
+            days = period_days.get(plan.billing_period, 30)
+            self.subscription_end_date = timezone.now() + timedelta(days=days)
+        
+        # Clear trial if it was active
+        if self.subscription_status == 'trialing':
+            self.trial_end_date = None
+        
+        self.save()
+        return True
+    
+    def cancel_subscription(self):
+        """
+        Cancel the user's subscription.
+        Subscription remains active until end date.
+        
+        Returns:
+            bool: True if cancelled successfully
+        """
+        if self.subscription_status in ['active', 'trialing', 'past_due']:
+            self.subscription_status = 'cancelled'
+            self.save()
+            return True
+        return False
+    
+    def track_usage(self, feature_key, increment=1):
+        """
+        Track usage of a feature.
+        
+        Args:
+            feature_key (str): Feature being used (e.g., 'signals_viewed')
+            increment (int): Amount to increment (default: 1)
+        """
+        if not self.usage_stats:
+            self.usage_stats = {}
+        
+        current_value = self.usage_stats.get(feature_key, 0)
+        self.usage_stats[feature_key] = current_value + increment
+        self.save(update_fields=['usage_stats', 'updated_at'])
+    
+    def reset_usage_stats(self):
+        """Reset all usage statistics to zero."""
+        self.usage_stats = {}
+        self.save(update_fields=['usage_stats', 'updated_at'])
 
 class OAuthProvider(models.Model):
     PROVIDER_CHOICES = [

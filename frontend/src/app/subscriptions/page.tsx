@@ -59,7 +59,7 @@ export default function SubscriptionsPage() {
   const fetchSubscriptions = async () => {
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/subscriptions/my-subscriptions/`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/subscriptions/my-subscriptions/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -86,7 +86,7 @@ export default function SubscriptionsPage() {
     setCancellingId(subscriptionId);
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/subscriptions/${subscriptionId}/cancel/`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/subscriptions/${subscriptionId}/cancel/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -111,7 +111,7 @@ export default function SubscriptionsPage() {
   const toggleAutoRenewal = async (subscriptionId: string, currentValue: boolean) => {
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/subscriptions/${subscriptionId}/auto-renewal/`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/subscriptions/${subscriptionId}/auto-renewal/`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,

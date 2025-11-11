@@ -10,8 +10,16 @@ from .api_views import (
     CouponViewSet as APICouponViewSet, ReferralCodeViewSet, ReferralStatsViewSet,
     TelegramConfigurationViewSet, TelegramGroupViewSet, PaymentConfigurationViewSet,
     EmailConfigurationViewSet, SetupStatusViewSet, PublicPricingViewSet, ValidateCouponViewSet,
-    ValidateReferralViewSet, SubscriptionUpgradeViewSet, SubscriptionDowngradeViewSet
+    ValidateReferralViewSet, SubscriptionUpgradeViewSet, SubscriptionDowngradeViewSet,
+    CurrencyConversionViewSet
 )  # Phase 0.5 - Tasks 0.5.20-0.5.36
+from .views import (
+    InitializePaymentView, VerifyPaymentView, PaymentHistoryView,
+    InvoiceDownloadView, paystack_webhook, stripe_webhook
+)  # Phase 2.1 - Payment API Endpoints
+from .views.telegram_webhook import (
+    telegram_webhook, set_telegram_webhook, get_webhook_info
+)  # Phase 2.2 - Telegram Auto-Add Webhook
 
 app_name = 'subscriptions'
 
@@ -45,6 +53,7 @@ v1_router.register(r'subscriptions/validate-coupon', ValidateCouponViewSet, base
 v1_router.register(r'subscriptions/validate-referral', ValidateReferralViewSet, basename='v1-validate-referral')
 v1_router.register(r'subscriptions', SubscriptionUpgradeViewSet, basename='v1-subscription-upgrade')
 v1_router.register(r'subscriptions', SubscriptionDowngradeViewSet, basename='v1-subscription-downgrade')
+v1_router.register(r'currency', CurrencyConversionViewSet, basename='v1-currency')  # Live currency conversion
 
 urlpatterns = [
     # Admin API endpoints for pricing management
@@ -72,6 +81,33 @@ urlpatterns = [
     
     # Telegram Verification Callback (Bot-only, uses X-Bot-Secret header)
     path('billing/telegram/verify-callback/', billing_views.telegram_verify_callback, name='telegram_verify_callback'),
+    
+    # ============================================================================
+    # PAYMENT API ENDPOINTS - Phase 2.1 (November 10, 2025)
+    # ============================================================================
+    
+    # Payment Initialization & Verification
+    path('payments/initialize/', InitializePaymentView.as_view(), name='initialize_payment'),
+    path('payments/verify/', VerifyPaymentView.as_view(), name='verify_payment'),
+    
+    # Payment Webhooks (CSRF exempt)
+    path('payments/webhook/paystack/', paystack_webhook, name='paystack_webhook'),
+    path('payments/webhook/stripe/', stripe_webhook, name='stripe_webhook'),
+    
+    # Payment History & Invoices
+    path('payments/history/', PaymentHistoryView.as_view(), name='payment_history'),
+    path('payments/<int:payment_id>/invoice/', InvoiceDownloadView.as_view(), name='payment_invoice'),
+    
+    # ============================================================================
+    # TELEGRAM AUTO-ADD WEBHOOKS - Phase 2.2 (November 10, 2025)
+    # ============================================================================
+    
+    # Telegram Webhook (receives join request updates)
+    path('telegram/webhook/', telegram_webhook, name='telegram_webhook'),
+    
+    # Webhook Management (admin endpoints)
+    path('telegram/set-webhook/', set_telegram_webhook, name='set_telegram_webhook'),
+    path('telegram/webhook-info/', get_webhook_info, name='get_telegram_webhook_info'),
     
     # ============================================================================
     # ADMIN ENDPOINTS - DEPRECATED (Phase 0.4)

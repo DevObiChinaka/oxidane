@@ -63,7 +63,7 @@ export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps)
     setEmailValidation(prev => ({ ...prev, isChecking: true }));
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/auth/check-email/`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/check-email/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: emailToCheck }),
@@ -215,7 +215,8 @@ export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps)
     }
 
     try {
-      const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+      const endpoint = isLogin ? `${apiUrl}/auth/login/` : `${apiUrl}/auth/register/`;
       const body = isLogin
         ? { email, password }
         : { email, password, first_name: firstName, last_name: lastName };
@@ -251,20 +252,33 @@ export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps)
       }
 
       if (isLogin) {
-        // New OTP flow for login
+        // Check if this is the new OTP-required flow or direct login with tokens
         if (data.requires_otp && data.session_token) {
+          // New OTP flow for login
           setEmailForVerification(email);
           setShowOtpVerification(true);
           setSuccess(data.message || 'Verification code sent to your email. Please enter it to complete sign-in.');
-          // Store session token for OTP verification (you may need to add state for this)
+          // Store session token for OTP verification
           sessionStorage.setItem('login_session_token', data.session_token);
           // Reset countdown timers
           setOtpExpiresIn(600); // 10 minutes
           setResendCooldown(0);
-        } else {
-          // Old flow fallback (shouldn't happen with new backend)
+        } else if (data.token) {
+          // Direct login successful - tokens returned
+          localStorage.setItem('access_token', data.token);
+          if (data.refresh) {
+            localStorage.setItem('refresh_token', data.refresh);
+          }
           setSuccess('Login successful! Redirecting...');
-          window.location.href = '/dashboard';
+          setTimeout(() => {
+            window.location.href = '/dashboard';
+          }, 1500);
+        } else {
+          // Old flow fallback (shouldn't happen with updated backend)
+          setSuccess('Login successful! Redirecting...');
+          setTimeout(() => {
+            window.location.href = '/dashboard';
+          }, 1500);
         }
       } else {
         // Registration: Show OTP verification screen
@@ -312,7 +326,7 @@ export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps)
       
       if (sessionToken) {
         // Resend login OTP
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/auth/resend-login-otp/`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/resend-login-otp/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ session_token: sessionToken }),
@@ -330,7 +344,7 @@ export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps)
         }
       } else {
         // Resend registration OTP
-        const response = await fetch('/api/auth/resend-otp', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/resend-verification-otp/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: emailForVerification }),
@@ -396,7 +410,7 @@ export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps)
       
       if (sessionToken) {
         // Login OTP verification
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/auth/verify-login-otp/`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/verify-login-otp/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
@@ -439,7 +453,7 @@ export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps)
         }
       } else {
         // Registration OTP verification
-        const response = await fetch('/api/auth/verify-otp', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/verify-email-otp/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: emailForVerification, otp }),

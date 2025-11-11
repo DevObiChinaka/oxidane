@@ -158,7 +158,7 @@ export default function VideoPlayerPage() {
       }
 
       // Verify token is valid
-      const profileResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/auth/profile/`, {
+      const profileResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/profile/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -402,20 +402,29 @@ export default function VideoPlayerPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#000856] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#00B38F]"></div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-[#00B38F] mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading course...</p>
+        </div>
       </div>
     );
   }
 
   if (error || !course || !currentLesson) {
     return (
-      <div className="min-h-screen bg-[#000856] flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-white mb-4">{error || 'Content not available'}</h2>
+          <div className="w-16 h-16 mx-auto mb-4 bg-rose-100 rounded-full flex items-center justify-center">
+            <svg className="w-8 h-8 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">{error || 'Content not available'}</h2>
+          <p className="text-gray-600 mb-6">We couldn't load this content</p>
           <button
             onClick={() => router.push('/courses')}
-            className="px-6 py-3 bg-[#00B38F] hover:bg-[#00A87D] text-white rounded-lg transition-all"
+            className="px-6 py-3 bg-gradient-to-r from-[#00B38F] to-[#00A87D] hover:from-[#00C99F] hover:to-[#00B38F] text-white rounded-lg transition-all shadow-lg"
           >
             Back to Courses
           </button>
@@ -425,49 +434,54 @@ export default function VideoPlayerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#000856]">
-      <div className="flex flex-col lg:flex-row h-screen">
-        {/* Main Video Area */}
+    <div className="min-h-screen bg-gray-50">
+      <div className="flex flex-col lg:flex-row">
+        {/* Main Content Area */}
         <div className="flex-1 flex flex-col">
-          {/* Video Player */}
-          <div className="bg-black aspect-video lg:h-[60vh] m-4 rounded-xl shadow-lg overflow-hidden relative">
-            {getVideoPlayer()}
+          
+          {/* Video Player Container */}
+          <div className="bg-gray-50 px-4 py-6 lg:px-8 lg:py-8">
+            <div className="max-w-7xl mx-auto">
+              <div className="aspect-video w-full bg-black rounded-xl overflow-hidden shadow-2xl">
+                {getVideoPlayer()}
+              </div>
+            </div>
             
             {/* Auto-Advance Notification */}
             {showAutoAdvanceNotification && (
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-6">
-                <div className="max-w-2xl mx-auto bg-slate-800/95 backdrop-blur-sm rounded-lg p-4 border border-[#00B38F]/30 shadow-lg">
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-6">
+                <div className="max-w-2xl mx-auto bg-white/95 backdrop-blur-md rounded-xl p-5 shadow-2xl border border-gray-200">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="relative">
-                        <svg className="w-10 h-10 transform -rotate-90">
+                    <div className="flex items-center space-x-4">
+                      <div className="relative flex-shrink-0">
+                        <svg className="w-12 h-12 transform -rotate-90">
                           <circle
-                            cx="20"
-                            cy="20"
-                            r="16"
-                            stroke="#334155"
-                            strokeWidth="3"
+                            cx="24"
+                            cy="24"
+                            r="20"
+                            stroke="#E5E7EB"
+                            strokeWidth="4"
                             fill="none"
                           />
                           <circle
-                            cx="20"
-                            cy="20"
-                            r="16"
-                            stroke="#00B38F"
-                            strokeWidth="3"
+                            cx="24"
+                            cy="24"
+                            r="20"
+                            stroke="#10b981"
+                            strokeWidth="4"
                             fill="none"
-                            strokeDasharray={`${2 * Math.PI * 16}`}
-                            strokeDashoffset={`${2 * Math.PI * 16 * (1 - autoAdvanceCountdown / 5)}`}
+                            strokeDasharray={`${2 * Math.PI * 20}`}
+                            strokeDashoffset={`${2 * Math.PI * 20 * (1 - autoAdvanceCountdown / 5)}`}
                             className="transition-all duration-1000 ease-linear"
                           />
                         </svg>
-                        <span className="absolute inset-0 flex items-center justify-center text-white text-sm font-bold">
+                        <span className="absolute inset-0 flex items-center justify-center text-gray-900 text-base font-bold">
                           {autoAdvanceCountdown}
                         </span>
                       </div>
                       <div>
-                        <p className="text-white font-medium">Next lesson starting soon...</p>
-                        <p className="text-slate-400 text-sm">Auto-advancing in {autoAdvanceCountdown} seconds</p>
+                        <p className="text-gray-900 font-semibold text-base">Next lesson starting soon</p>
+                        <p className="text-gray-600 text-sm">Automatically advancing in {autoAdvanceCountdown} seconds</p>
                       </div>
                     </div>
                     <button
@@ -475,7 +489,7 @@ export default function VideoPlayerPage() {
                         setShowAutoAdvanceNotification(false);
                         setAutoAdvanceCountdown(5);
                       }}
-                      className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-all text-sm font-medium"
+                      className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded-lg transition-all text-sm font-medium shadow-sm"
                     >
                       Cancel
                     </button>
@@ -485,154 +499,223 @@ export default function VideoPlayerPage() {
             )}
           </div>
 
-          {/* Video Info */}
-          <div className="flex-1 p-6 overflow-y-auto">
-            <div className="max-w-4xl">
-              {/* Breadcrumb */}
-              <div className="flex items-center space-x-2 text-sm text-slate-400 mb-4">
+          {/* Content Section */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              
+              {/* Breadcrumb Navigation */}
+              <nav className="flex items-center space-x-2 text-sm text-gray-600 mb-6">
                 <button
                   onClick={() => router.push('/courses')}
-                  className="hover:text-white transition-colors"
+                  className="hover:text-[#00B38F] transition-colors font-medium"
                 >
                   Courses
                 </button>
-                <span>/</span>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
                 <button
                   onClick={() => router.push(`/courses/${course.slug}`)}
-                  className="hover:text-white transition-colors"
+                  className="hover:text-[#00B38F] transition-colors font-medium"
                 >
                   {course.title}
                 </button>
-                <span>/</span>
-                <span className="text-white">Lesson {currentLesson.order}</span>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+                <span className="text-gray-900 font-medium">Lesson {currentLesson.order}</span>
+              </nav>
+
+              {/* Lesson Header */}
+              <div className="mb-8">
+                <div className="flex items-start justify-between gap-4 mb-6">
+                  <h1 className="text-4xl font-bold text-gray-900 leading-tight flex-1">
+                    {currentLesson.title}
+                  </h1>
+                  <span className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-semibold rounded-lg whitespace-nowrap">
+                    {currentLesson.duration}
+                  </span>
+                </div>
+
+                {/* Action Button */}
+                <div className="flex items-center space-x-4">
+                  {!currentLesson.is_completed ? (
+                    <button
+                      onClick={handleMarkComplete}
+                      disabled={marking}
+                      className="px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-3 font-semibold text-base"
+                    >
+                      {marking ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                          <span>Marking Complete...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                          </svg>
+                          <span>Mark as Complete</span>
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    <div className="inline-flex items-center space-x-3 px-8 py-4 bg-emerald-50 border-2 border-emerald-500 text-emerald-700 rounded-lg shadow-sm">
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      <span className="font-semibold text-base">Completed</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {/* Lesson Title */}
-              <h1 className="text-3xl font-bold text-white mb-4">{currentLesson.title}</h1>
-
-              {/* Lesson Actions */}
-              <div className="flex items-center space-x-4 mb-6">
-                {!currentLesson.is_completed && (
-                  <button
-                    onClick={handleMarkComplete}
-                    disabled={marking}
-                    className="px-6 py-3 bg-[#00B38F] hover:bg-[#00A87D] text-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-                  >
-                    {marking ? (
-                      <>
-                        <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
-                        <span>Marking...</span>
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                        <span>Mark as Complete</span>
-                      </>
-                    )}
-                  </button>
-                )}
-                {currentLesson.is_completed && (
-                  <div className="flex items-center space-x-2 text-[#00B38F]">
-                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              {/* About This Lesson */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+                <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                  <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center mr-3">
+                    <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <span className="font-medium">Completed</span>
                   </div>
-                )}
-              </div>
-
-              {/* Lesson Description */}
-              <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6">
-                <h2 className="text-xl font-bold text-white mb-4">About This Lesson</h2>
-                <p className="text-slate-300 whitespace-pre-line">{currentLesson.description}</p>
+                  About This Lesson
+                </h2>
+                <p className="text-gray-600 leading-relaxed whitespace-pre-line">{currentLesson.description}</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Sidebar - Lesson List */}
-        <div className="lg:w-96 bg-slate-900/50 backdrop-blur-sm border-l border-slate-700/50 overflow-y-auto">
-          <div className="p-6">
-            {/* Course Progress */}
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-2">
-                <h2 className="text-lg font-bold text-white">Course Progress</h2>
-                <span className="text-sm font-medium text-[#00B38F]">
+        {/* Sidebar - Course Progress & Lessons */}
+        <div className="lg:w-[420px] bg-white border-l border-gray-200 overflow-y-auto flex-shrink-0">
+          <div className="sticky top-0 bg-white border-b border-gray-200 p-6 z-10">
+            <h2 className="text-xl font-bold text-gray-900 mb-6">Course Progress</h2>
+            
+            {/* Progress Stats */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-semibold text-gray-600">Completion</span>
+                <span className="text-3xl font-bold text-emerald-600">
                   {course.progress_percentage || 0}%
                 </span>
               </div>
-              <div className="h-2 bg-slate-700/50 rounded-full overflow-hidden mb-2">
+              <div className="h-3 bg-gray-200 rounded-full overflow-hidden mb-3">
                 <div
-                  className="h-full bg-gradient-to-r from-[#00B38F] to-[#00D4A3] rounded-full transition-all"
+                  className="h-full bg-emerald-600 rounded-full transition-all duration-500"
                   style={{ width: `${course.progress_percentage || 0}%` }}
                 />
               </div>
-              <p className="text-xs text-slate-400">
+              <p className="text-sm text-gray-600 font-medium">
                 {course.lessons_completed || 0} of {course.total_lessons} lessons completed
               </p>
             </div>
+          </div>
 
-            {/* Lessons List */}
-            <div>
-              <h3 className="text-sm font-medium text-slate-400 mb-3">LESSONS</h3>
-              <div className="space-y-2">
-                {course.lessons.map((lesson) => (
-                  <button
-                    key={lesson.id}
-                    onClick={() => selectLesson(lesson)}
-                    className={`w-full text-left p-4 rounded-lg border transition-all ${
-                      currentLesson.id === lesson.id
-                        ? 'bg-[#00B38F]/20 border-[#00B38F] text-white'
-                        : lesson.is_completed
-                        ? 'bg-slate-800/50 border-slate-700/50 text-slate-300 hover:border-slate-600'
-                        : 'bg-slate-800/30 border-slate-700/30 text-slate-400 hover:border-slate-600'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <span className="text-xs font-medium">Lesson {lesson.order}</span>
-                      <div className="flex items-center space-x-2">
-                        {lesson.is_preview && (
-                          <span className="px-2 py-0.5 bg-[#00B38F]/20 text-[#00B38F] text-xs rounded-full">
-                            Preview
-                          </span>
-                        )}
-                        {lesson.is_completed && (
-                          <svg className="w-4 h-4 text-[#00B38F]" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                          </svg>
-                        )}
-                      </div>
-                    </div>
-                    <h4 className="font-medium mb-1">{lesson.title}</h4>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs">{lesson.duration}</span>
-                      {currentLesson.id === lesson.id && (
-                        <svg className="w-4 h-4 text-[#00B38F]" fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
-                        </svg>
+          {/* Lessons List */}
+          <div className="p-6">
+            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">LESSONS</h3>
+            <div className="space-y-3">
+              {course.lessons.map((lesson) => (
+                <button
+                  key={lesson.id}
+                  onClick={() => selectLesson(lesson)}
+                  className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
+                    currentLesson.id === lesson.id
+                      ? 'bg-emerald-50 border-emerald-500 shadow-sm'
+                      : lesson.is_completed
+                      ? 'bg-emerald-50/30 border-emerald-200 hover:border-emerald-300'
+                      : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center space-x-2">
+                      <span className={`text-xs font-bold px-2.5 py-1 rounded-md ${
+                        currentLesson.id === lesson.id
+                          ? 'bg-emerald-600 text-white'
+                          : lesson.is_completed
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : 'bg-gray-100 text-gray-700'
+                      }`}>
+                        {lesson.order}
+                      </span>
+                      {lesson.is_preview && (
+                        <span className="px-2.5 py-1 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-md">
+                          Free
+                        </span>
                       )}
                     </div>
-                  </button>
-                ))}
-              </div>
+                    <div className="flex items-center space-x-2">
+                      {currentLesson.id === lesson.id && (
+                        <div className="w-5 h-5 bg-emerald-600 rounded-full flex items-center justify-center">
+                          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                          </svg>
+                        </div>
+                      )}
+                      {lesson.is_completed && (
+                        <div className="w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center">
+                          <svg className="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <h4 className={`font-semibold mb-1 text-sm ${
+                    currentLesson.id === lesson.id ? 'text-gray-900' : 'text-gray-700'
+                  }`}>
+                    {lesson.title}
+                  </h4>
+                  <span className={`text-xs flex items-center font-medium ${
+                    currentLesson.id === lesson.id ? 'text-emerald-700' : 'text-gray-500'
+                  }`}>
+                    <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {lesson.duration}
+                  </span>
+                </button>
+              ))}
             </div>
 
-            {/* Quick Actions */}
-            <div className="mt-6 pt-6 border-t border-slate-700/50">
-              <button
-                onClick={() => router.push(`/courses/${course.slug}`)}
-                className="w-full px-4 py-3 bg-slate-800/50 hover:bg-slate-800 text-white rounded-lg transition-all mb-2"
-              >
-                Course Details
-              </button>
-              <button
-                onClick={() => router.push('/my-courses')}
-                className="w-full px-4 py-3 bg-slate-800/50 hover:bg-slate-800 text-white rounded-lg transition-all"
-              >
-                My Courses
-              </button>
+            {/* Course Details */}
+            <div className="mt-8 pt-6 border-t-2 border-gray-200">
+              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">COURSE DETAILS</h3>
+              <div className="space-y-2">
+                <button
+                  onClick={() => router.push(`/courses/${course.slug}`)}
+                  className="w-full flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-emerald-500 hover:bg-emerald-50 transition-all group"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="w-9 h-9 bg-emerald-100 rounded-lg flex items-center justify-center">
+                      <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <span className="font-semibold text-gray-900 text-sm">Course Overview</span>
+                  </div>
+                  <svg className="w-4 h-4 text-gray-400 group-hover:text-emerald-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+
+                <button
+                  onClick={() => router.push('/my-courses')}
+                  className="w-full flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-emerald-500 hover:bg-emerald-50 transition-all group"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="w-9 h-9 bg-emerald-100 rounded-lg flex items-center justify-center">
+                      <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                      </svg>
+                    </div>
+                    <span className="font-semibold text-gray-900 text-sm">My Courses</span>
+                  </div>
+                  <svg className="w-4 h-4 text-gray-400 group-hover:text-emerald-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -640,53 +723,44 @@ export default function VideoPlayerPage() {
 
       {/* Course Completion Modal */}
       {showCompletionModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl max-w-md w-full p-8 border border-[#00B38F]/30 shadow-2xl animate-in fade-in zoom-in duration-300">
-            {/* Close Button */}
-            <button
-              onClick={() => {
-                setShowCompletionModal(false);
-                router.push(`/courses/${slug}`);
-              }}
-              className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors"
-            >
-              <XMarkIcon className="w-6 h-6" />
-            </button>
-
-            {/* Trophy Icon */}
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-8 shadow-2xl animate-in zoom-in duration-300">
+            
+            {/* Trophy Animation */}
             <div className="flex justify-center mb-6">
               <div className="relative">
-                <div className="absolute inset-0 bg-[#00B38F]/30 blur-2xl rounded-full animate-pulse" />
-                <div className="relative bg-gradient-to-br from-[#00B38F] to-[#00D4A3] p-6 rounded-full">
-                  <TrophyIcon className="w-16 h-16 text-white" />
+                <div className="w-32 h-32 bg-emerald-600 rounded-full flex items-center justify-center shadow-xl">
+                  <TrophyIcon className="w-20 h-20 text-white" />
                 </div>
               </div>
             </div>
 
-            {/* Congratulations Text */}
+            {/* Success Message */}
             <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-white mb-3">
+              <h2 className="text-3xl font-bold text-gray-900 mb-3">
                 Congratulations! 🎉
               </h2>
-              <p className="text-lg text-slate-300 mb-2">
-                You've completed
+              <p className="text-lg text-gray-600 mb-2">
+                You've successfully completed
               </p>
-              <p className="text-xl font-semibold text-[#00B38F]">
+              <p className="text-xl font-bold text-emerald-600">
                 {course?.title}
               </p>
             </div>
 
-            {/* Stats */}
-            <div className="bg-slate-800/50 rounded-lg p-4 mb-6 border border-slate-700/50">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-slate-400">Lessons Completed</span>
-                <span className="text-white font-semibold">{course?.total_lessons}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-400">Course Progress</span>
-                <div className="flex items-center space-x-2">
-                  <CheckCircleIcon className="w-5 h-5 text-[#00B38F]" />
-                  <span className="text-[#00B38F] font-semibold">100%</span>
+            {/* Stats Card */}
+            <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 mb-8 border border-gray-200">
+              <div className="grid grid-cols-2 gap-6">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-gray-900 mb-1">{course?.total_lessons}</div>
+                  <div className="text-sm text-gray-600">Lessons Completed</div>
+                </div>
+                <div className="text-center">
+                  <div className="flex items-center justify-center space-x-2 mb-1">
+                    <CheckCircleIcon className="w-7 h-7 text-emerald-600" />
+                    <span className="text-3xl font-bold text-emerald-600">100%</span>
+                  </div>
+                  <div className="text-sm text-gray-600">Course Progress</div>
                 </div>
               </div>
             </div>
@@ -698,7 +772,7 @@ export default function VideoPlayerPage() {
                   setShowCompletionModal(false);
                   router.push('/courses');
                 }}
-                className="w-full px-6 py-3 bg-gradient-to-r from-[#00B38F] to-[#00D4A3] hover:from-[#00A380] hover:to-[#00C494] text-white font-medium rounded-lg transition-all shadow-lg hover:shadow-[#00B38F]/25"
+                className="w-full px-6 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl"
               >
                 Explore More Courses
               </button>
@@ -707,11 +781,22 @@ export default function VideoPlayerPage() {
                   setShowCompletionModal(false);
                   router.push(`/courses/${slug}`);
                 }}
-                className="w-full px-6 py-3 bg-slate-700/50 hover:bg-slate-700 text-white font-medium rounded-lg transition-all border border-slate-600/50"
+                className="w-full px-6 py-4 bg-gray-100 hover:bg-gray-200 text-gray-900 font-semibold rounded-lg transition-all"
               >
-                View Course Details
+                Back to Course Details
               </button>
             </div>
+
+            {/* Close button */}
+            <button
+              onClick={() => {
+                setShowCompletionModal(false);
+                router.push(`/courses/${slug}`);
+              }}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <XMarkIcon className="w-6 h-6" />
+            </button>
           </div>
         </div>
       )}
@@ -719,11 +804,15 @@ export default function VideoPlayerPage() {
       {/* Completed Toast Notification */}
       {showCompletedToast && (
         <div className="fixed top-6 right-6 z-50 animate-in slide-in-from-top duration-300">
-          <div className="bg-gradient-to-r from-[#00B38F] to-[#00D4A3] text-white px-6 py-4 rounded-lg shadow-2xl flex items-center space-x-3 border border-white/20">
-            <CheckCircleIcon className="w-6 h-6 flex-shrink-0" />
+          <div className="bg-white border-l-4 border-emerald-500 shadow-xl rounded-lg px-6 py-4 flex items-center space-x-3 max-w-md">
+            <div className="flex-shrink-0">
+              <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
+                <CheckCircleIcon className="w-6 h-6 text-emerald-600" />
+              </div>
+            </div>
             <div>
-              <p className="font-semibold">Lesson Completed! ✨</p>
-              <p className="text-sm text-white/90">Great job! Moving to next lesson...</p>
+              <p className="font-semibold text-gray-900">Lesson Completed! ✨</p>
+              <p className="text-sm text-gray-600">Great job! Moving to next lesson...</p>
             </div>
           </div>
         </div>

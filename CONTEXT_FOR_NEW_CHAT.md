@@ -4,6 +4,43 @@
 
 ---
 
+## 🎯 **CRITICAL: UNDERSTAND THE PROJECT**
+
+**THIS IS NOT A COURSE MARKETPLACE OR LMS!**
+
+**This is:** Enterprise White-Label SaaS Platform for Forex Trading Signal Providers
+
+### **Business Model:**
+1. **Primary Product:** Trading signals delivered via Telegram groups
+2. **Secondary Product:** Educational mentorship courses (bundled with subscriptions)
+3. **Revenue Model:** Subscription plans (NOT individual course sales)
+4. **Target Market:** Forex educators selling to traders
+
+### **How It Works:**
+```
+Admin creates subscription plans:
+├── "Weekly Signals" ($29/week) → Access to Telegram signal groups
+├── "Monthly Signals" ($99/month) → Access to Telegram signal groups  
+├── "VIP Signals" ($199/month) → Premium Telegram groups + bonus courses
+└── "Mentorship Package" ($499/lifetime) → ALL courses + VIP signals
+
+User subscribes → Gets:
+1. ✅ Access to plan's Telegram groups (signals)
+2. ✅ Access to plan's included courses (education)
+3. ✅ Duration: As long as subscription active
+```
+
+### **Key Principles:**
+- ❌ Users do NOT buy individual courses
+- ✅ Users buy subscription PLANS
+- ✅ Plans INCLUDE courses as benefits
+- ✅ Courses are locked behind subscriptions (except free intro courses)
+- ✅ Admin assigns courses to plans
+- ✅ Same course can be included in multiple plans
+- ✅ Access lasts only while subscription is active
+
+---
+
 ## 📋 CURRENT PROJECT STATUS
 
 **Project:** Enterprise Subscription Management Platform (White-Label SaaS)  
@@ -11,7 +48,7 @@
 **Start Date:** November 1, 2025 ✅  
 **Target Launch:** December 13, 2025  
 **Total Duration:** 150 hours (~20 days)  
-**Current Phase:** Phase 0.5 Complete ✅ (100% - 46/46 tasks) | Ready for Phase 1.0! 🎉
+**Current Phase:** Phase 2 (View Layer & Enrollment Logic) - IN PROGRESS (1/6 tasks, 17%)
 
 ---
 
@@ -42,12 +79,21 @@ PROJECT DETAILS:
 - Next.js + TypeScript frontend
 - 150-hour roadmap (20 days)
 
-CURRENT STATUS (as of November 8, 2025):
+CURRENT STATUS (as of November 9, 2025):
 ✅ PHASE 0: COMPLETE (Infrastructure setup)
    - PostgreSQL 18.0 configured (database: oxidane, user: oxidane, password: 1Halloween.)
    - Redis Cloud configured and tested (redis-13905.c323.us-east-1-2.ec2.redns.redis-cloud.com:13905)
    - Branch 'mySaaS' created and pushed
    - All dependencies installed
+
+✅ PHASE 1: COMPLETE (Core Models Integration)
+   - 7/7 tasks complete
+   - 107/107 tests passing
+   - 4 migrations applied
+   - User, Course, CourseAccess models integrated with subscription system
+   - Django admin enhanced with subscription management
+   - API serializers updated with subscription fields
+   - Zero breaking changes - fully backward compatible
    - Encryption key generated: hLwK0race8TsEQFV8WySAOX7aWvCOqMgl8Nw5TopAFE=
    - Telegram Admin ID: 1741840281
 
@@ -68,31 +114,108 @@ CURRENT STATUS (as of November 8, 2025):
       - ✅ Task 0.5.46: Public Pricing Page (currency selector + real API)
    ✅ 1291/1291 tests passing (100%)
    ✅ 26 migrations applied
+
+✅ FRONTEND COURSE PAGES REDESIGNED (November 9, 2025):
+   ✅ Course Detail Page (frontend/src/app/courses/[slug]/page.tsx)
+      - White theme with emerald accents
+      - 10-second video preview with auto-stop
+      - YouTube IFrame API integration
+      - Clean professional design
+   ✅ Video Watch Page (frontend/src/app/courses/[slug]/watch/page.tsx)
+      - Matching white theme design
+      - Solid emerald-600 colors (no gradients)
+      - Centered video player with proper spacing
+      - Three-state lesson list (active/completed/incomplete)
+      - All functionality preserved (auto-advance, progress tracking)
+
+� PHASE 2: IN PROGRESS (View Layer & Enrollment Logic - 1/6 tasks, 17%)
+   ✅ Task 2.1: Course List View Updates (14/14 tests passing)
+      - Updated list_courses and course_detail views
+      - Exposed access_type, required_plans, direct_purchase_price
+      - Query optimization with prefetch_related
+      - Created test_views_subscription.py (14 tests)
    
-   🎯 READY FOR PHASE 1.0: User Dashboard & Authentication
-
+   ⏳ NEXT: Task 2.2 - Course Detail View Enhancements
+   
+   CRITICAL UNDERSTANDING:
+   - ❌ direct_purchase is DEPRECATED (kept for backward compatibility only)
+   - ✅ Only 2 active access types: 'free' and 'plan_based'
+   - ✅ Users subscribe to PLANS, not individual courses
+   - ✅ Plans include courses as bundled benefits
+   - ✅ Course.required_plans → Which plans unlock this course
+   - ✅ SubscriptionPlan.courses → Which courses this plan includes (reverse relation)
+   
 Please read:
-1. COMPLETE_DEVELOPMENT_ROADMAP.md (full roadmap)
-2. CONTEXT_FOR_NEW_CHAT.md (this file)
-3. PHASE_0.5_STATUS.md (Phase 0.5 completion summary)
+1. ENTERPRISE_PLATFORM_ROADMAP.md (master roadmap - READ FIRST!)
+2. CONTEXT_FOR_NEW_CHAT.md (this file - especially BUSINESS MODEL section)
+3. PHASE1_COMPLETE.md (Phase 1 technical details)
+4. PHASE_0.5_STATUS.md (Phase 0.5 completion summary)
 
-What should I do next?
+What should I work on next?
 ```
 
 ### **Step 2: Reference Key Files**
 
 Always mention these files so Copilot can read them:
-- `ENTERPRISE_PLATFORM_ROADMAP.md` - Complete roadmap (this is the master reference)
-- `backend/subscriptions/models.py` - Existing models
-- `backend/oxidane/settings.py` - Django settings
-- `frontend/src/app/pricing/page.tsx` - Current pricing page
+- `ENTERPRISE_PLATFORM_ROADMAP.md` - Complete roadmap (**READ THIS FIRST!**)
+- `CONTEXT_FOR_NEW_CHAT.md` - Business model and current status
+- `backend/subscriptions/models.py` - SubscriptionPlan model
+- `backend/courses/models.py` - Course, CourseAccess models
+- `backend/courses/views.py` - Current view implementations
 
-### **Step 3: Check Current Progress**
+### **Step 3: When Unclear - READ ROADMAP FIRST**
 
-Use Copilot's todo list feature:
+**BEFORE asking questions about the project:**
+1. Read ENTERPRISE_PLATFORM_ROADMAP.md
+2. Read CONTEXT_FOR_NEW_CHAT.md (especially "CRITICAL: UNDERSTAND THE PROJECT")
+3. Then ask specific questions
+
+**This is NOT:**
+- ❌ A course marketplace (users don't buy courses)
+- ❌ An LMS like Udemy or Teachable
+- ❌ Individual course sales platform
+
+**This IS:**
+- ✅ White-label SaaS for signal providers
+- ✅ Subscription-based access to bundled content
+- ✅ Telegram automation + course education combo
+- ✅ B2B product (sold to educators, not students)
+
+---
+
+## ⚠️ **DEPRECATED FIELDS (Keep for Backward Compatibility)**
+
+### **Course Model - Direct Purchase Fields:**
+```python
+# DEPRECATED: These fields exist but are NOT actively used
+# Kept to avoid migration complexity and for potential future use
+
+Course.access_type choices:
+  - 'free' ✅ ACTIVE (intro/marketing courses)
+  - 'plan_based' ✅ ACTIVE (requires subscription)
+  - 'direct_purchase' ⚠️ DEPRECATED (not used in current business model)
+
+Course.direct_purchase_price ⚠️ DEPRECATED
+  - Field exists in database
+  - Not exposed in active APIs
+  - Not used in enrollment logic
+  - Kept for backward compatibility only
 ```
-Show me the todo list and mark task [X] as completed
-```
+
+### **Why Deprecated, Not Deleted:**
+1. ✅ Already in database (4 migrations applied in Phase 1)
+2. ✅ Removing requires complex data migration
+3. ✅ May be useful for future features (lifetime deals, Black Friday sales)
+4. ✅ Doesn't interfere with current functionality
+5. ✅ Marked clearly in code comments
+
+### **Phase 2 Implementation Rules:**
+- ❌ DO NOT create "Buy Course" buttons
+- ❌ DO NOT handle direct purchase payments
+- ❌ DO NOT expose `direct_purchase_price` in new UIs
+- ✅ DO show "Subscribe to Access" CTAs
+- ✅ DO check if user's active plan includes course
+- ✅ DO redirect to `/pricing` for non-subscribers
 
 ---
 

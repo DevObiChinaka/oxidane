@@ -50,23 +50,25 @@ export default function Navigation() {
               >
                 Education
               </Link>
-              <Link 
-                href="/market-analysis" 
+              <a 
+                href="/pricing" 
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-white/80 hover:text-white font-medium transition-colors duration-200 px-3 py-2"
               >
-                Market Analysis
+                Pricing
+              </a>
+              <Link 
+                href="/signals" 
+                className="text-white/80 hover:text-white font-medium transition-colors duration-200 px-3 py-2"
+              >
+                Signals
               </Link>
               <Link 
                 href="/mentorship" 
                 className="text-white/80 hover:text-white font-medium transition-colors duration-200 px-3 py-2"
               >
                 Mentorship
-              </Link>
-              <Link 
-                href="/signals" 
-                className="text-white/80 hover:text-white font-medium transition-colors duration-200 px-3 py-2"
-              >
-                Signals
               </Link>
               <Link 
                 href="/about" 
@@ -152,12 +154,21 @@ export default function Navigation() {
               >
                 Education
               </Link>
-              <Link 
-                href="/market-analysis" 
+              <a 
+                href="/pricing" 
+                target="_blank"
+                rel="noopener noreferrer"
                 className="block px-3 py-2 text-gray-300 hover:text-white font-medium rounded-md hover:bg-slate-700"
                 onClick={() => setIsMenuOpen(false)}
               >
-                Market Analysis
+                Pricing
+              </a>
+              <Link 
+                href="/signals" 
+                className="block px-3 py-2 text-gray-300 hover:text-white font-medium rounded-md hover:bg-slate-700"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Signals
               </Link>
               <Link 
                 href="/mentorship" 
@@ -165,13 +176,6 @@ export default function Navigation() {
                 onClick={() => setIsMenuOpen(false)}
               >
                 Mentorship
-              </Link>
-              <Link 
-                href="/signals" 
-                className="block px-3 py-2 text-gray-300 hover:text-white font-medium rounded-md hover:bg-slate-700"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Signals
               </Link>
               <Link 
                 href="/about" 

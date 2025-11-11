@@ -22,7 +22,7 @@ export default function VerifyEmailPage() {
     // Verify the token with the backend
     const verifyEmail = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/auth/verify-email/`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/verify-email/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

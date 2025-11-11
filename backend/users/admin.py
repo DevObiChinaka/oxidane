@@ -1,19 +1,60 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.utils.html import format_html
+from django.utils import timezone
 from .models import User, OAuthProvider, EmailTemplate, UserPreferences
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
-    list_display = ('email', 'first_name', 'last_name', 'is_email_verified', 'is_staff', 'is_active', 'created_at')
-    list_filter = ('is_email_verified', 'is_staff', 'is_active', 'created_at')
+    list_display = (
+        'email',
+        'first_name',
+        'last_name',
+        'current_plan',  # NEW: Subscription integration
+        'subscription_status',  # NEW: Subscription integration
+        'is_email_verified',
+        'is_staff',
+        'is_active',
+        'created_at'
+    )
+    list_filter = (
+        'is_email_verified',
+        'is_staff',
+        'is_active',
+        'subscription_status',  # NEW: Subscription integration
+        'current_plan',  # NEW: Subscription integration
+        'created_at'
+    )
     search_fields = ('email', 'first_name', 'last_name')
     ordering = ('-created_at',)
-    readonly_fields = ('id', 'created_at', 'updated_at', 'email_verification_expires', 'password_reset_expires')
+    readonly_fields = (
+        'id',
+        'created_at',
+        'updated_at',
+        'email_verification_expires',
+        'password_reset_expires',
+        'subscription_start_date',  # NEW: Make read-only
+        'subscription_end_date',  # NEW: Make read-only
+        'trial_end_date',  # NEW: Make read-only
+    )
     
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
         ('Personal info', {'fields': ('first_name', 'last_name', 'avatar')}),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
+        ('Subscription Information', {  # NEW: Subscription integration
+            'fields': (
+                'current_plan',
+                'subscription_status',
+                'subscription_start_date',
+                'subscription_end_date',
+                'trial_end_date',
+                'subscription_tier',
+                'usage_limits',
+            ),
+            'classes': ('collapse',),
+            'description': 'User subscription and access information'
+        }),
         ('Email Verification', {'fields': ('is_email_verified', 'email_verification_token', 'email_verification_expires')}),
         ('Password Reset', {'fields': ('password_reset_token', 'password_reset_expires')}),
         ('Important dates', {'fields': ('last_login', 'created_at', 'updated_at')}),
@@ -25,6 +66,35 @@ class UserAdmin(BaseUserAdmin):
             'fields': ('email', 'first_name', 'last_name', 'password1', 'password2'),
         }),
     )
+    
+    actions = ['start_trial', 'cancel_subscription']  # NEW: Custom actions
+    
+    # Custom admin actions
+    def start_trial(self, request, queryset):
+        """Start trial for selected users"""
+        count = 0
+        for user in queryset:
+            if user.subscription_status != 'trial':
+                user.start_trial(duration_days=14)
+                count += 1
+        self.message_user(
+            request,
+            f'{count} user(s) started on 14-day trial.'
+        )
+    start_trial.short_description = 'Start 14-day trial for selected users'
+    
+    def cancel_subscription(self, request, queryset):
+        """Cancel subscription for selected users"""
+        count = 0
+        for user in queryset:
+            if user.subscription_status == 'active':
+                user.cancel_subscription()
+                count += 1
+        self.message_user(
+            request,
+            f'{count} subscription(s) canceled.'
+        )
+    cancel_subscription.short_description = 'Cancel subscription for selected users'
 
 @admin.register(OAuthProvider)
 class OAuthProviderAdmin(admin.ModelAdmin):

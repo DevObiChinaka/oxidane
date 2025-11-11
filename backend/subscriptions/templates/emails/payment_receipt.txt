@@ -1,0 +1,61 @@
+{{ site_name }} - Payment Receipt
+================================================================================
+
+PAYMENT SUCCESSFUL
+
+Hi {{ user.first_name|default:user.email }},
+
+Thank you for your payment. Your subscription to {{ plan.name }} is now active.
+
+--------------------------------------------------------------------------------
+PAYMENT DETAILS
+--------------------------------------------------------------------------------
+
+Plan:               {{ plan.name }}
+Billing Period:     {{ plan.get_billing_period_display }}
+
+Subscription:       {{ currency }} {{ amount }}
+{% if processing_fee > 0 %}Processing Fee:     {{ currency }} {{ processing_fee }}{% endif %}
+{% if payment.discount_amount > 0 %}Discount:           -{{ currency }} {{ payment.discount_amount }}{% endif %}
+--------------------------------------------------------------------------------
+TOTAL PAID:         {{ currency }} {{ total_amount }}
+================================================================================
+
+Receipt Number:     {{ invoice_number }}
+Payment Date:       {{ payment_date|date:"F d, Y" }}
+Payment Method:     {{ payment.payment_method|default:"Card" }}
+Reference:          {{ reference }}
+
+{% if subscription %}
+--------------------------------------------------------------------------------
+SUBSCRIPTION PERIOD
+--------------------------------------------------------------------------------
+
+Start Date:         {{ subscription.start_date|date:"M d, Y" }}
+{% if plan.billing_period == 'lifetime' %}Active Until:       Lifetime Access{% else %}Next Renewal:       {{ subscription.end_date|date:"M d, Y" }}{% endif %}
+
+{% endif %}
+{% if plan.features.all %}
+--------------------------------------------------------------------------------
+WHAT'S INCLUDED
+--------------------------------------------------------------------------------
+{% for feature in plan.features.all %}
+• {{ feature.name }}
+{% endfor %}
+{% endif %}
+--------------------------------------------------------------------------------
+
+View your dashboard: {{ site_url }}/dashboard
+Manage subscription: {{ site_url }}/settings/subscription
+
+Questions? Contact us at support@{{ site_name|lower }}.com
+
+--------------------------------------------------------------------------------
+
+This is a receipt for your payment to {{ site_name }}.
+
+Help Center: {{ site_url }}/help
+Terms: {{ site_url }}/terms
+Privacy: {{ site_url }}/privacy
+
+© {{ payment_date|date:"Y" }} {{ site_name }}. All rights reserved.
