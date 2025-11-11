@@ -31,6 +31,14 @@ export default function TelegramVerification({
       setLoading(true);
       setError('');
       
+      // Check if auth token exists before making API call
+      if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('user_auth_token');
+        if (!token) {
+          throw new Error('Please log in to verify your Telegram account');
+        }
+      }
+      
       const data = await generateTelegramCode();
       
       setVerificationCode(data.verification_code);
@@ -67,10 +75,15 @@ export default function TelegramVerification({
     }
   }, [onVerified]);
 
-  // Auto-generate code on mount
+  // Auto-generate code on mount with delay to ensure auth is ready
   useEffect(() => {
     if (autoStart) {
-      generateCode();
+      // Add 200ms delay to ensure localStorage auth token is set
+      const timer = setTimeout(() => {
+        generateCode();
+      }, 200);
+      
+      return () => clearTimeout(timer);
     }
   }, [autoStart, generateCode]);
 
