@@ -34,12 +34,15 @@ export default function TelegramVerification({
       // Check if auth token exists before making API call
       if (typeof window !== 'undefined') {
         const token = localStorage.getItem('user_auth_token');
+        console.log('Token check:', token ? 'Token exists' : 'No token');
         if (!token) {
           throw new Error('Please log in to verify your Telegram account');
         }
       }
       
+      console.log('Calling generateTelegramCode...');
       const data = await generateTelegramCode();
+      console.log('Telegram code generated:', data);
       
       setVerificationCode(data.verification_code);
       setBotUrl(data.bot_url);
@@ -50,6 +53,7 @@ export default function TelegramVerification({
       const now = Date.now();
       setTimeLeft(Math.max(0, Math.floor((expires - now) / 1000)));
     } catch (err) {
+      console.error('Telegram verification error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to generate verification code';
       setError(errorMessage);
       onError?.(errorMessage);

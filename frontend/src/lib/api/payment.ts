@@ -351,6 +351,12 @@ export async function generateTelegramCode(): Promise<{
   bot_url: string;
   expires_at: string;
 }> {
+  console.log('🔐 Generating Telegram code...');
+  console.log('API URL:', `${API_BASE_URL}/billing/telegram/generate-code/`);
+  
+  const token = getAuthToken();
+  console.log('Auth token:', token ? `${token.substring(0, 20)}...` : 'NO TOKEN');
+  
   const response = await fetch(
     `${API_BASE_URL}/billing/telegram/generate-code/`,
     {
@@ -359,11 +365,17 @@ export async function generateTelegramCode(): Promise<{
     }
   );
 
+  console.log('Response status:', response.status);
+  console.log('Response ok:', response.ok);
+
   if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Error response:', errorText);
     await handleApiError(response);
   }
 
   const data = await response.json();
+  console.log('Success data:', data);
   return data;
 }
 
