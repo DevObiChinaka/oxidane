@@ -1,45 +1,58 @@
 #!/usr/bin/env python
 import os
+import sys
 import django
 
 # Setup Django environment
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'oxidane.settings')
 django.setup()
 
-from subscriptions.models import CouponCode
+from subscriptions.models import Coupon
+from datetime import datetime
 
 # Check all coupon codes in database
-print("=== All Coupon Codes in Database ===")
-coupons = CouponCode.objects.all()
+print("\n" + "="*70)
+print("  EXISTING COUPONS IN DATABASE")
+print("="*70 + "\n")
+
+coupons = Coupon.objects.all()
 
 if not coupons.exists():
-    print("No coupon codes found in database.")
+    print("❌ No coupons found in database.")
+    print("\nWould you like to create test coupons?\n")
 else:
-    print(f"Found {coupons.count()} coupon code(s):")
+    print(f"Found {coupons.count()} coupon(s):")
     print()
     
-    for coupon in coupons:
-        print(f"ID: {coupon.id}")
-        print(f"Code: {coupon.code}")
-        print(f"Description: {coupon.description}")
-        print(f"Discount Type: {coupon.discount_type}")
-        print(f"Discount Value: {coupon.discount_value}")
-        print(f"Is Active: {coupon.is_active}")
-        print(f"Valid From: {coupon.valid_from}")
-        print(f"Valid Until: {coupon.valid_until}")
-        print(f"Usage Limit: {coupon.usage_limit}")
-        print(f"Usage Count: {coupon.usage_count}")
-        print(f"Created At: {coupon.created_at}")
-        print("-" * 50)
+    for idx, coupon in enumerate(coupons, 1):
+        print(f"{idx}. CODE: {coupon.code}")
+        print(f"   Type: {coupon.discount_type}")
+        print(f"   Value: {coupon.discount_value}{'%' if coupon.discount_type == 'percentage' else ' USD'}")
+        print(f"   Valid From: {coupon.valid_from.strftime('%Y-%m-%d %H:%M')}")
+        print(f"   Valid Until: {coupon.valid_until.strftime('%Y-%m-%d %H:%M') if coupon.valid_until else 'No expiry'}")
+        print(f"   Max Uses: {coupon.max_uses if coupon.max_uses else 'Unlimited'}")
+        print(f"   Current Uses: {coupon.current_uses}")
+        print(f"   Active: {'✅ Yes' if coupon.is_active else '❌ No'}")
+        
+        # Check if valid now
+        now = datetime.now(coupon.valid_from.tzinfo)
+        is_valid_time = coupon.valid_from <= now and (not coupon.valid_until or coupon.valid_until >= now)
+        is_valid_uses = not coupon.max_uses or coupon.current_uses < coupon.max_uses
+        
+        if coupon.is_active and is_valid_time and is_valid_uses:
+            print(f"   Status: ✅ READY TO USE")
+        else:
+            reasons = []
+            if not coupon.is_active:
+                reasons.append("inactive")
+            if not is_valid_time:
+                reasons.append("expired/not started")
+            if not is_valid_uses:
+                reasons.append("max uses reached")
+            print(f"   Status: ❌ NOT USABLE ({', '.join(reasons)})")
+        
+        print()
 
-# Check specifically for SUMMER2025
-print("\n=== Checking for SUMMER2025 ===")
-try:
-    summer_coupon = CouponCode.objects.get(code="SUMMER2025")
-    print("Found SUMMER2025 coupon:")
-    print(f"  ID: {summer_coupon.id}")
-    print(f"  Active: {summer_coupon.is_active}")
-    print(f"  Valid From: {summer_coupon.valid_from}")
-    print(f"  Valid Until: {summer_coupon.valid_until}")
-except CouponCode.DoesNotExist:
-    print("SUMMER2025 coupon not found in database.")
+print("="*70)
+print()
