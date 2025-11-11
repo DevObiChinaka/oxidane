@@ -119,11 +119,7 @@ export interface PaymentHistoryResponse {
  */
 const getAuthToken = (): string | null => {
   if (typeof window === 'undefined') return null;
-  
-  // Try multiple token keys (different auth contexts use different keys)
-  return localStorage.getItem('user_auth_token') 
-    || localStorage.getItem('access_token')
-    || null;
+  return localStorage.getItem('user_auth_token');
 };
 
 /**

@@ -33,7 +33,7 @@ export default function TelegramVerification({
       
       // Check if auth token exists before making API call
       if (typeof window !== 'undefined') {
-        const token = localStorage.getItem('user_auth_token') || localStorage.getItem('access_token');
+        const token = localStorage.getItem('user_auth_token');
         console.log('Token check:', token ? 'Token exists' : 'No token');
         if (!token) {
           throw new Error('Please log in to verify your Telegram account');
@@ -55,7 +55,18 @@ export default function TelegramVerification({
     } catch (err) {
       console.error('Telegram verification error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to generate verification code';
-      setError(errorMessage);
+      
+      // Check if token expired
+      if (errorMessage.includes('token') && errorMessage.includes('expired')) {
+        setError('Your session has expired. Please log in again.');
+        // Clear expired token
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('user_auth_token');
+        }
+      } else {
+        setError(errorMessage);
+      }
+      
       onError?.(errorMessage);
     } finally {
       setLoading(false);
