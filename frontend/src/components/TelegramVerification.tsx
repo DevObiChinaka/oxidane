@@ -33,7 +33,7 @@ export default function TelegramVerification({
       
       // Check if auth token exists before making API call
       if (typeof window !== 'undefined') {
-        const token = localStorage.getItem('user_auth_token');
+        const token = localStorage.getItem('user_auth_token') || localStorage.getItem('access_token');
         console.log('Token check:', token ? 'Token exists' : 'No token');
         if (!token) {
           throw new Error('Please log in to verify your Telegram account');
