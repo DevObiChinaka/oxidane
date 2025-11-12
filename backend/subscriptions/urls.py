@@ -16,7 +16,8 @@ from .api_views import (
 )  # Phase 0.5 - Tasks 0.5.20-0.5.36
 from .views import (
     InitializePaymentView, VerifyPaymentView, PaymentHistoryView,
-    InvoiceDownloadView, paystack_webhook, stripe_webhook
+    InvoiceDownloadView, paystack_webhook, stripe_webhook,
+    CheckSubscriptionConflictView
 )  # Phase 2.1 - Payment API Endpoints
 from .views.payment_method_views import (
     save_payment_method, list_payment_methods, 
@@ -102,6 +103,7 @@ urlpatterns = [
     # Payment Initialization & Verification
     path('payments/initialize/', InitializePaymentView.as_view(), name='initialize_payment'),
     path('payments/verify/', VerifyPaymentView.as_view(), name='verify_payment'),
+    path('payments/check-conflict/', CheckSubscriptionConflictView.as_view(), name='check_subscription_conflict'),
     
     # Payment Webhooks (CSRF exempt)
     path('payments/webhook/paystack/', paystack_webhook, name='paystack_webhook'),

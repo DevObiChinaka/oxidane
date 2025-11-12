@@ -116,6 +116,30 @@ class InitializePaymentView(APIView):
                 }
             )
             
+            # Check for existing active recurring subscriptions (lifetime exempted)
+            if plan.billing_period != 'lifetime':
+                existing_recurring = Subscription.objects.filter(
+                    billing_profile=billing_profile,
+                    status='active',
+                    plan__billing_period__in=['weekly', 'monthly', 'quarterly', 'yearly']
+                ).exclude(
+                    plan__billing_period='lifetime'
+                ).select_related('plan').first()
+                
+                if existing_recurring:
+                    return Response({
+                        'success': False,
+                        'error': 'Active subscription exists',
+                        'message': f'You already have an active {existing_recurring.plan.get_billing_period_display()} subscription ({existing_recurring.plan.name}). Please cancel it before purchasing a new plan.',
+                        'existing_plan': {
+                            'id': str(existing_recurring.plan.id),
+                            'name': existing_recurring.plan.name,
+                            'billing_period': existing_recurring.plan.billing_period,
+                            'end_date': existing_recurring.end_date.isoformat() if existing_recurring.end_date else None
+                        },
+                        'conflict': True
+                    }, status=status.HTTP_409_CONFLICT)
+            
             # Validate Telegram connection for plans with Telegram groups
             if plan.telegram_groups.filter(is_active=True).exists():
                 if not billing_profile.telegram_user_id:
@@ -934,4 +958,99 @@ class InvoiceDownloadView(APIView):
             return Response({
                 'success': False,
                 'error': 'An error occurred while generating invoice'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class CheckSubscriptionConflictView(APIView):
+    """
+    Check if user has active subscription that conflicts with purchasing a new plan
+    
+    GET /api/payments/check-conflict/?plan_id=123
+    
+    Returns:
+        {
+            "can_purchase": false,
+            "conflict": true,
+            "existing_subscription": {
+                "plan_name": "Monthly Signals",
+                "billing_period": "monthly",
+                "end_date": "2025-12-10"
+            },
+            "message": "You already have an active monthly subscription..."
+        }
+    """
+    
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        try:
+            plan_id = request.query_params.get('plan_id')
+            
+            if not plan_id:
+                return Response({
+                    'success': False,
+                    'error': 'plan_id is required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Validate plan
+            try:
+                plan = SubscriptionPlan.objects.get(id=plan_id, is_active=True)
+            except SubscriptionPlan.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'error': 'Invalid subscription plan'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # Get user's billing profile
+            try:
+                billing_profile = BillingProfile.objects.get(user=request.user)
+            except BillingProfile.DoesNotExist:
+                # No billing profile = no subscriptions = can purchase
+                return Response({
+                    'can_purchase': True,
+                    'conflict': False
+                }, status=status.HTTP_200_OK)
+            
+            # Lifetime plans are always allowed (one-time purchases)
+            if plan.billing_period == 'lifetime':
+                return Response({
+                    'can_purchase': True,
+                    'conflict': False,
+                    'message': 'Lifetime plans can always be purchased'
+                }, status=status.HTTP_200_OK)
+            
+            # Check for existing active recurring subscriptions
+            existing_recurring = Subscription.objects.filter(
+                billing_profile=billing_profile,
+                status='active',
+                plan__billing_period__in=['weekly', 'monthly', 'quarterly', 'yearly']
+            ).select_related('plan').first()
+            
+            if existing_recurring:
+                return Response({
+                    'can_purchase': False,
+                    'conflict': True,
+                    'existing_subscription': {
+                        'id': str(existing_recurring.id),
+                        'plan_id': str(existing_recurring.plan.id),
+                        'plan_name': existing_recurring.plan.name,
+                        'billing_period': existing_recurring.plan.billing_period,
+                        'billing_period_display': existing_recurring.plan.get_billing_period_display(),
+                        'end_date': existing_recurring.end_date.date().isoformat() if existing_recurring.end_date else None,
+                        'auto_renew': existing_recurring.auto_renew
+                    },
+                    'message': f'You already have an active {existing_recurring.plan.get_billing_period_display()} subscription ({existing_recurring.plan.name}). Please cancel it before purchasing a new plan.'
+                }, status=status.HTTP_200_OK)
+            
+            # No conflicts - can purchase
+            return Response({
+                'can_purchase': True,
+                'conflict': False
+            }, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            logger.error(f"Conflict check error: {str(e)}", exc_info=True)
+            return Response({
+                'success': False,
+                'error': 'An error occurred while checking subscription conflict'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
