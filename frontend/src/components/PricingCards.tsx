@@ -21,7 +21,6 @@ interface PricingPlan {
   description: string;
   billing_period: 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'lifetime';
   billing_period_display: string;
-  trial_days: number;
   is_featured: boolean;
   is_active: boolean;
   sort_order: number;

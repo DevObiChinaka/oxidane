@@ -24,7 +24,6 @@ interface PricingPlan {
   price: number;
   base_price: number;
   currency: string;
-  trial_days: number;
 }
 
 // Declare Paystack globally

@@ -12,7 +12,7 @@ interface SendEmailModalProps {
 }
 
 interface SendEmailData {
-  recipientType: 'all_users' | 'active_subscribers' | 'trial_users' | 'inactive_users' | 'specific_users';
+  recipientType: 'all_users' | 'active_subscribers' | 'inactive_users' | 'specific_users';
   specificUsers?: string[];
   scheduleType: 'now' | 'later';
   scheduledDate?: string;
@@ -78,7 +78,6 @@ export default function SendEmailModal({ template, isOpen, onClose, onSend }: Se
         // Use mock data as fallback
         const mockUsers: User[] = [
           { id: '1', email: 'admin@oxiworld.com', first_name: 'Admin', last_name: 'User', subscription_status: 'active' },
-          { id: '2', email: 'user@oxiworld.com', first_name: 'Test', last_name: 'User', subscription_status: 'trial' },
           { id: '3', email: 'inactive@oxiworld.com', first_name: 'Inactive', last_name: 'User', subscription_status: 'inactive' }
         ];
         setUsers(mockUsers);
@@ -88,7 +87,6 @@ export default function SendEmailModal({ template, isOpen, onClose, onSend }: Se
       // Fallback to mock data if API fails
       const mockUsers: User[] = [
         { id: '1', email: 'admin@oxiworld.com', first_name: 'Admin', last_name: 'User', subscription_status: 'active' },
-        { id: '2', email: 'user@oxiworld.com', first_name: 'Test', last_name: 'User', subscription_status: 'trial' },
         { id: '3', email: 'inactive@oxiworld.com', first_name: 'Inactive', last_name: 'User', subscription_status: 'inactive' }
       ];
       setUsers(mockUsers);
@@ -112,12 +110,6 @@ export default function SendEmailModal({ template, isOpen, onClose, onSend }: Se
           u.subscription_status === 'active' || 
           (u.active_signal_subscriptions_count && u.active_signal_subscriptions_count > 0) ||
           u.is_active === true
-        ).length;
-        break;
-      case 'trial_users':
-        count = users.filter(u => 
-          u.subscription_status === 'trial' ||
-          (u.subscription_status !== 'active' && u.is_active === true)
         ).length;
         break;
       case 'inactive_users':
@@ -236,12 +228,6 @@ export default function SendEmailModal({ template, isOpen, onClose, onSend }: Se
                       ).length}</span>
                     </div>
                     <div className="text-blue-700">
-                      🆓 Trial Users: <span className="font-medium">{users.filter(u => 
-                        u.subscription_status === 'trial' ||
-                        (u.subscription_status !== 'active' && u.is_active === true)
-                      ).length}</span>
-                    </div>
-                    <div className="text-blue-700">
                       😴 Inactive Users: <span className="font-medium">{users.filter(u => 
                         u.subscription_status === 'inactive' || 
                         u.is_active === false ||
@@ -268,15 +254,6 @@ export default function SendEmailModal({ template, isOpen, onClose, onSend }: Se
                       u.subscription_status === 'active' || 
                       (u.active_signal_subscriptions_count && u.active_signal_subscriptions_count > 0) ||
                       u.is_active === true
-                    ).length
-                  },
-                  { 
-                    value: 'trial_users', 
-                    label: 'Trial Users', 
-                    description: 'Users currently on trial',
-                    count: users.filter(u => 
-                      u.subscription_status === 'trial' ||
-                      (u.subscription_status !== 'active' && u.is_active === true)
                     ).length
                   },
                   { 

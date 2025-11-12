@@ -31,7 +31,6 @@ interface SubscriptionPlan {
   description: string;
   base_price: string;
   billing_period: 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'lifetime';
-  trial_days: number;
   is_active: boolean;
   is_featured: boolean;
   sort_order: number;
@@ -48,7 +47,6 @@ interface PlanFormData {
   description: string;
   base_price: string;
   billing_period: string;
-  trial_days: number;
   is_active: boolean;
   is_featured: boolean;
   sort_order: number;
@@ -78,7 +76,6 @@ export default function PlansPage() {
     description: '',
     base_price: '',
     billing_period: 'monthly',
-    trial_days: 0,
     is_active: true,
     is_featured: false,
     sort_order: 0,
@@ -148,7 +145,6 @@ export default function PlansPage() {
         description: plan.description,
         base_price: plan.base_price,
         billing_period: plan.billing_period,
-        trial_days: plan.trial_days,
         is_active: plan.is_active,
         is_featured: plan.is_featured,
         sort_order: plan.sort_order,
@@ -164,7 +160,6 @@ export default function PlansPage() {
         description: '',
         base_price: '',
         billing_period: 'monthly',
-        trial_days: 0,
         is_active: true,
         is_featured: false,
         sort_order: 0,
@@ -206,9 +201,8 @@ export default function PlansPage() {
       const payload = {
         name: formData.name,
         description: formData.description,
-        base_price: parseFloat(formData.base_price),
+        base_price: formData.base_price,
         billing_period: formData.billing_period,
-        trial_days: formData.trial_days,
         is_active: formData.is_active,
         is_featured: formData.is_featured,
         sort_order: formData.sort_order,
@@ -679,19 +673,6 @@ export default function PlansPage() {
                       <option value="yearly">Yearly</option>
                       <option value="lifetime">Lifetime</option>
                     </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-2">
-                      Trial Days
-                    </label>
-                    <input
-                      type="number"
-                      value={formData.trial_days}
-                      onChange={(e) => setFormData({ ...formData, trial_days: parseInt(e.target.value) || 0 })}
-                      className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#00B38F] focus:border-transparent text-gray-900"
-                      placeholder="0"
-                    />
                   </div>
 
                   <div>
