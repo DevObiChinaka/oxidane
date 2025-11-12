@@ -103,7 +103,6 @@ class PricingPlanSerializer(serializers.ModelSerializer):
     """
     price_display = serializers.SerializerMethodField()
     monthly_equivalent = serializers.SerializerMethodField()
-    has_trial = serializers.SerializerMethodField()
     feature_count = serializers.SerializerMethodField()
     subscription_count = serializers.SerializerMethodField()
     revenue_total = serializers.SerializerMethodField()
@@ -130,7 +129,7 @@ class PricingPlanSerializer(serializers.ModelSerializer):
             'id', 'name', 'slug', 'description', 'base_price', 'billing_period',
             'limits', 'paystack_plan_code',
             'is_active', 'is_featured', 'sort_order',
-            'price_display', 'monthly_equivalent', 'has_trial', 'feature_count',
+            'price_display', 'monthly_equivalent', 'feature_count',
             'subscription_count', 'revenue_total',
             'features', 'telegram_groups', 'feature_ids', 'telegram_group_ids',
             'created_at', 'updated_at'
