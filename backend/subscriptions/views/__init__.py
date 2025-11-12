@@ -8,6 +8,7 @@ from .payment_views import (
     VerifyPaymentView,
     PaymentHistoryView,
     InvoiceDownloadView,
+    CheckSubscriptionConflictView,
     paystack_webhook,
     stripe_webhook,
 )
@@ -17,6 +18,7 @@ __all__ = [
     'VerifyPaymentView',
     'PaymentHistoryView',
     'InvoiceDownloadView',
+    'CheckSubscriptionConflictView',
     'paystack_webhook',
     'stripe_webhook',
 ]

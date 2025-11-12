@@ -56,7 +56,7 @@ interface PlanFormData {
   telegram_group_ids: string[];
 }
 
-const CURRENCIES = ['USD', 'NGN', 'GBP', 'EUR', 'GHS', 'ZAR'];
+const CURRENCIES = ['USD', 'NGN'];
 
 export default function PlansPage() {
   const router = useRouter();
