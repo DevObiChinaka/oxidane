@@ -13,14 +13,13 @@ class PricingPlanSerializer(serializers.ModelSerializer):
     subscription_count = serializers.SerializerMethodField()
     revenue_total = serializers.SerializerMethodField()
     feature_count = serializers.SerializerMethodField()
-    has_trial = serializers.SerializerMethodField()
 
     class Meta:
         model = SubscriptionPlan
         fields = [
             'id', 'name', 'slug', 'description', 
             'base_price', 'billing_period', 'price_display', 'monthly_equivalent',
-            'trial_days', 'has_trial', 'is_active', 'is_featured',
+            'is_active', 'is_featured',
             'sort_order', 'limits', 'stripe_price_id',
             'feature_count', 'subscription_count', 'revenue_total', 
             'created_at', 'updated_at'
@@ -34,9 +33,6 @@ class PricingPlanSerializer(serializers.ModelSerializer):
         """Get monthly equivalent price for comparison"""
         return float(obj.get_monthly_equivalent())
     
-    def get_has_trial(self, obj):
-        """Check if plan has trial"""
-        return obj.has_trial()
     
     def get_feature_count(self, obj):
         """Get number of features in plan"""

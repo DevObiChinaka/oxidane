@@ -126,8 +126,14 @@ export default function PlansPage() {
         setTelegramGroups(groupsData.results || groupsData);
       }
 
-      // Note: Exchange rates are managed by backend automatically
-      // No need to fetch them separately
+      // Load exchange rates for currency conversion
+      const ratesRes = await fetch('http://127.0.0.1:8000/api/v1/currency/rates/?base=USD');
+      if (ratesRes.ok) {
+        const ratesData = await ratesRes.json();
+        if (ratesData.success && ratesData.rates) {
+          setExchangeRates(ratesData.rates);
+        }
+      }
 
     } catch (err: any) {
       console.error('Failed to load data:', err);
@@ -406,7 +412,7 @@ export default function PlansPage() {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span>Prices stored in USD, converted using live exchange rates</span>
+            <span>Prices stored in USD, converted to {selectedCurrency} using live exchange rates</span>
           </div>
         </div>
       </div>
