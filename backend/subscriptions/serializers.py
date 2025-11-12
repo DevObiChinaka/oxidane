@@ -142,6 +142,25 @@ class PricingPlanSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Base price must be positive.")
         return value
     
+    def validate_name(self, value):
+        """Validate plan name is unique"""
+        # Get the instance being updated (if any)
+        instance = getattr(self, 'instance', None)
+        
+        # Check for existing plan with same name
+        queryset = SubscriptionPlan.objects.filter(name__iexact=value.strip())
+        
+        # Exclude current instance when updating
+        if instance:
+            queryset = queryset.exclude(pk=instance.pk)
+        
+        if queryset.exists():
+            raise serializers.ValidationError(
+                f"A plan with the name '{value}' already exists. Please choose a different name."
+            )
+        
+        return value.strip()
+    
     def get_price_display(self, obj):
         """Get formatted price with currency"""
         return f"${obj.base_price:.2f}"

@@ -147,6 +147,7 @@ export default function PlansPage() {
   };
 
   const handleOpenModal = (plan?: SubscriptionPlan) => {
+    setError(null); // Clear any previous errors
     if (plan) {
       setEditingPlan(plan);
       setFormData({
@@ -184,6 +185,7 @@ export default function PlansPage() {
   const handleCloseModal = () => {
     setShowModal(false);
     setEditingPlan(null);
+    setError(null); // Clear errors when closing modal
   };
 
   const handleSave = async () => {
@@ -238,7 +240,21 @@ export default function PlansPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || errorData.error || 'Failed to save plan');
+        
+        // Handle validation errors
+        if (errorData.name) {
+          throw new Error(Array.isArray(errorData.name) ? errorData.name[0] : errorData.name);
+        }
+        if (errorData.base_price) {
+          throw new Error(Array.isArray(errorData.base_price) ? errorData.base_price[0] : errorData.base_price);
+        }
+        if (errorData.slug) {
+          throw new Error(Array.isArray(errorData.slug) ? errorData.slug[0] : errorData.slug);
+        }
+        
+        // Handle general errors
+        const errorMessage = errorData.detail || errorData.error || errorData.message || 'Failed to save plan';
+        throw new Error(errorMessage);
       }
 
       await loadData();
@@ -632,6 +648,25 @@ export default function PlansPage() {
                   </svg>
                 </button>
               </div>
+              {/* Error display in modal */}
+              {error && (
+                <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-3">
+                  <div className="flex items-start gap-2">
+                    <svg className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                    <p className="text-sm text-red-800 font-medium">{error}</p>
+                    <button 
+                      onClick={() => setError(null)} 
+                      className="ml-auto text-red-500 hover:text-red-700"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50">
