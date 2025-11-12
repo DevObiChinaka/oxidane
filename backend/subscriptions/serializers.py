@@ -128,7 +128,7 @@ class PricingPlanSerializer(serializers.ModelSerializer):
         model = SubscriptionPlan
         fields = [
             'id', 'name', 'slug', 'description', 'base_price', 'billing_period',
-            'trial_days', 'limits', 'paystack_plan_code',
+            'limits', 'paystack_plan_code',
             'is_active', 'is_featured', 'sort_order',
             'price_display', 'monthly_equivalent', 'has_trial', 'feature_count',
             'subscription_count', 'revenue_total',
@@ -141,12 +141,6 @@ class PricingPlanSerializer(serializers.ModelSerializer):
         """Validate base_price is positive"""
         if value < 0:
             raise serializers.ValidationError("Base price must be positive.")
-        return value
-    
-    def validate_trial_days(self, value):
-        """Validate trial_days is non-negative"""
-        if value < 0:
-            raise serializers.ValidationError("Trial days cannot be negative.")
         return value
     
     def get_price_display(self, obj):
@@ -316,11 +310,11 @@ class PublicPricingPlanSerializer(serializers.ModelSerializer):
         model = SubscriptionPlan
         fields = [
             'id', 'name', 'slug', 'description', 'billing_period', 'billing_period_display',
-            'trial_days', 'is_featured', 'is_active', 'sort_order', 'price', 'base_price',
+            'is_featured', 'is_active', 'sort_order', 'price', 'base_price',
             'features', 'limits'
         ]
         read_only_fields = ['id', 'name', 'slug', 'description', 'billing_period', 
-                            'billing_period_display', 'trial_days', 'is_featured', 'is_active',
+                            'billing_period_display', 'is_featured', 'is_active',
                             'sort_order', 'price', 'base_price', 'features', 'limits']
     
     def get_price(self, obj):
@@ -344,7 +338,7 @@ class NestedSubscriptionPlanSerializer(serializers.ModelSerializer):
         model = SubscriptionPlan
         fields = [
             'id', 'name', 'slug', 'description', 'base_price', 'billing_period',
-            'trial_days', 'is_active', 'is_featured', 'features', 'feature_count'
+            'is_active', 'is_featured', 'features', 'feature_count'
         ]
         read_only_fields = ['id', 'slug']
     
