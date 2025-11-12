@@ -70,6 +70,9 @@ export default function PlansPage() {
   const [saving, setSaving] = useState(false);
   const [selectedCurrency, setSelectedCurrency] = useState('USD');
   const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [planToDelete, setPlanToDelete] = useState<SubscriptionPlan | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const [formData, setFormData] = useState<PlanFormData>({
     name: '',
@@ -248,17 +251,28 @@ export default function PlansPage() {
     }
   };
 
-  const handleDelete = async (planId: string) => {
-    if (!confirm('Are you sure you want to delete this plan?')) return;
+  const handleOpenDeleteModal = (plan: SubscriptionPlan) => {
+    setPlanToDelete(plan);
+    setShowDeleteModal(true);
+  };
+
+  const handleCloseDeleteModal = () => {
+    setShowDeleteModal(false);
+    setPlanToDelete(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!planToDelete) return;
 
     try {
+      setDeleting(true);
       const token = localStorage.getItem('access_token');
       if (!token) {
         router.push('/admin/login');
         return;
       }
 
-      const response = await fetch(`http://127.0.0.1:8000/api/admin/plans/${planId}/`, {
+      const response = await fetch(`http://127.0.0.1:8000/api/admin/plans/${planToDelete.id}/`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -270,9 +284,12 @@ export default function PlansPage() {
       }
 
       await loadData();
+      handleCloseDeleteModal();
     } catch (err: any) {
       console.error('Failed to delete plan:', err);
       setError(err.message || 'Failed to delete plan');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -565,7 +582,7 @@ export default function PlansPage() {
                   Clone
                 </button>
                 <button
-                  onClick={() => handleDelete(plan.id)}
+                  onClick={() => handleOpenDeleteModal(plan)}
                   className="px-3 py-1.5 bg-white border border-red-300 text-red-600 text-xs font-medium rounded hover:bg-red-50 transition-colors"
                 >
                   Delete
@@ -869,6 +886,46 @@ export default function PlansPage() {
                 )}
                 <span>{saving ? 'Saving...' : (editingPlan ? 'Update Plan' : 'Create Plan')}</span>
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && planToDelete && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full mb-4">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">
+                Delete Subscription Plan
+              </h3>
+              <p className="text-sm text-gray-600 text-center mb-6">
+                Are you sure you want to delete <span className="font-semibold text-gray-900">{planToDelete.name}</span>? This action cannot be undone.
+              </p>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleCloseDeleteModal}
+                  disabled={deleting}
+                  className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmDelete}
+                  disabled={deleting}
+                  className="flex-1 px-4 py-2.5 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {deleting && (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  )}
+                  <span>{deleting ? 'Deleting...' : 'Delete Plan'}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
