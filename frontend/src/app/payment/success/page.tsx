@@ -104,20 +104,14 @@ function SuccessContent() {
 
           {/* Success Message */}
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-            {subscription?.is_trial ? 'Trial Started! 🎉' : 'Payment Successful! 🎉'}
+            Payment Successful! 🎉
           </h1>
           <p className="text-xl text-gray-300 mb-2">
             Welcome to the premium experience, {user?.first_name || 'Trader'}!
           </p>
-          {subscription?.is_trial ? (
-            <p className="text-gray-400">
-              Your {subscription.days_until_trial_end}-day free trial is now active
-            </p>
-          ) : (
-            <p className="text-gray-400">
-              Your subscription is now active and ready to use
-            </p>
-          )}
+          <p className="text-gray-400">
+            Your subscription is now active and ready to use
+          </p>
         </div>
 
         {/* Success Details Card */}
@@ -133,29 +127,6 @@ function SuccessContent() {
               </h2>
 
               <div className="space-y-4">
-                {subscription?.is_trial && (
-                  <div className="bg-[#000ABE]/20 border border-[#000ABE]/30 rounded-lg p-4 mb-6">
-                    <div className="flex items-start gap-3">
-                      <svg className="w-5 h-5 text-[#00B38F] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <div>
-                        <h4 className="text-white font-semibold text-sm mb-1">
-                          Free Trial Active - {subscription.days_until_trial_end} Days Remaining
-                        </h4>
-                        <p className="text-gray-300 text-xs leading-relaxed">
-                          Your trial ends on {new Date(subscription.trial_end_date).toLocaleDateString('en-US', { 
-                            month: 'long', 
-                            day: 'numeric', 
-                            year: 'numeric' 
-                          })}. 
-                          {' '}After that, you'll be charged {subscription.currency} {subscription.plan_base_price.toFixed(2)} automatically unless you cancel.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 <div className="flex items-start gap-3">
                   <div className="flex-shrink-0 w-8 h-8 bg-[#00B38F]/20 rounded-full flex items-center justify-center text-[#00B38F] font-bold text-sm">
                     1
@@ -163,7 +134,7 @@ function SuccessContent() {
                   <div>
                     <h3 className="text-white font-medium mb-1">Check Your Email</h3>
                     <p className="text-gray-300 text-sm">
-                      We've sent a {subscription?.is_trial ? 'trial confirmation' : 'receipt'} and welcome email to {user?.email}
+                      We've sent a receipt and welcome email to {user?.email}
                     </p>
                   </div>
                 </div>
