@@ -396,6 +396,171 @@ def add_user_to_telegram_groups(self, user_id, plan_id):
 
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
+def remove_user_from_telegram_groups(self, user_id, plan_id):
+    """
+    Remove user from Telegram groups when subscription expires or is cancelled
+    
+    Args:
+        user_id: ID of the user
+        plan_id: ID of the subscription plan
+        
+    Actions:
+        1. Get user's Telegram user ID from billing profile
+        2. Get Telegram groups associated with the plan
+        3. Remove user from each group (ban + unban pattern)
+        4. Log results
+        
+    Retries: 3 times with 60-second delay
+    """
+    try:
+        logger.info(f"Removing user {user_id} from Telegram groups for plan {plan_id}")
+        
+        # Get user and plan
+        try:
+            user = User.objects.select_related('billing_profile').get(id=user_id)
+            plan = SubscriptionPlan.objects.prefetch_related('telegram_groups').get(id=plan_id)
+        except (User.DoesNotExist, SubscriptionPlan.DoesNotExist) as e:
+            logger.error(f"User or plan not found: {str(e)}")
+            return {'success': False, 'error': str(e)}
+        
+        # Check if user has Telegram connected
+        billing_profile = user.billing_profile
+        if not billing_profile.telegram_user_id:
+            logger.info(f"User {user.email} has no Telegram user ID - nothing to remove")
+            return {'success': True, 'message': 'No Telegram account linked', 'groups_removed': 0}
+        
+        # Get Telegram configuration
+        try:
+            telegram_config = TelegramConfiguration.get_instance()
+            
+            if not telegram_config.has_valid_token():
+                logger.warning("Telegram bot token not configured or invalid")
+                return {'success': False, 'error': 'Telegram not configured'}
+            
+            bot_token = telegram_config.bot_token
+            
+        except Exception as e:
+            logger.error(f"Error getting Telegram configuration: {str(e)}")
+            return {'success': False, 'error': 'Telegram configuration error'}
+        
+        # Get Telegram groups for this plan
+        telegram_groups = plan.telegram_groups.filter(is_active=True)
+        
+        if not telegram_groups.exists():
+            logger.info(f"No Telegram groups associated with plan {plan.name}")
+            return {'success': True, 'message': 'No groups to remove from', 'groups_removed': 0}
+        
+        # Remove user from each group
+        groups_removed = []
+        groups_failed = []
+        
+        for group in telegram_groups:
+            try:
+                telegram_user_id = int(billing_profile.telegram_user_id)
+                
+                # Method 1: Try kickChatMember (works for supergroups/channels)
+                kick_url = f"https://api.telegram.org/bot{bot_token}/banChatMember"
+                kick_payload = {
+                    'chat_id': group.chat_id,
+                    'user_id': telegram_user_id
+                }
+                
+                kick_response = requests.post(kick_url, json=kick_payload, timeout=30)
+                kick_data = kick_response.json()
+                
+                if kick_data.get('ok'):
+                    # Successfully banned, now unban to just remove (not permanently block)
+                    unban_url = f"https://api.telegram.org/bot{bot_token}/unbanChatMember"
+                    unban_payload = {
+                        'chat_id': group.chat_id,
+                        'user_id': telegram_user_id,
+                        'only_if_banned': True
+                    }
+                    
+                    unban_response = requests.post(unban_url, json=unban_payload, timeout=30)
+                    unban_data = unban_response.json()
+                    
+                    if unban_data.get('ok'):
+                        groups_removed.append(group.name)
+                        logger.info(f"✅ REMOVED: User @{billing_profile.telegram_username} from {group.name}")
+                    else:
+                        # Ban worked but unban failed - user is removed but banned
+                        groups_removed.append(group.name)
+                        logger.warning(f"⚠️ User removed from {group.name} but may be banned: {unban_data.get('description')}")
+                else:
+                    error_desc = kick_data.get('description', 'Unknown error')
+                    
+                    # Handle specific errors
+                    if 'USER_NOT_PARTICIPANT' in error_desc or 'user is not a member' in error_desc.lower():
+                        groups_removed.append(group.name)
+                        logger.info(f"User not in {group.name} (already removed or never joined)")
+                    elif 'not enough rights' in error_desc.lower():
+                        groups_failed.append({
+                            'group': group.name,
+                            'error': 'Bot lacks admin rights to remove users'
+                        })
+                        logger.error(f"❌ Cannot remove from {group.name}: Bot needs admin rights")
+                    else:
+                        groups_failed.append({
+                            'group': group.name,
+                            'error': error_desc
+                        })
+                        logger.error(f"❌ Failed to remove from {group.name}: {error_desc}")
+                        
+            except Exception as group_error:
+                groups_failed.append({
+                    'group': group.name,
+                    'error': str(group_error)
+                })
+                logger.error(f"Error removing user from {group.name}: {str(group_error)}")
+        
+        # Send notification to user (optional)
+        if groups_removed:
+            try:
+                message = f"📢 *Subscription Expired*\n\n"
+                message += f"You've been removed from the following groups:\n\n"
+                for group_name in groups_removed:
+                    message += f"• {group_name}\n"
+                message += f"\n💡 Renew your subscription to regain access!"
+                
+                send_url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+                send_payload = {
+                    'chat_id': int(billing_profile.telegram_user_id),
+                    'text': message,
+                    'parse_mode': 'Markdown'
+                }
+                
+                requests.post(send_url, json=send_payload, timeout=30)
+                logger.info(f"Sent removal notification to user")
+            except Exception as msg_error:
+                logger.error(f"Failed to send removal notification: {str(msg_error)}")
+        
+        result = {
+            'success': True,
+            'groups_removed': len(groups_removed),
+            'groups_failed': len(groups_failed),
+            'removed_list': groups_removed
+        }
+        
+        if groups_failed:
+            result['failed_list'] = groups_failed
+        
+        logger.info(f"Removal complete: {len(groups_removed)} removed, {len(groups_failed)} failed")
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error in remove_user_from_telegram_groups: {str(e)}", exc_info=True)
+        
+        # Retry the task
+        try:
+            raise self.retry(exc=e)
+        except self.MaxRetriesExceededError:
+            logger.error(f"Max retries exceeded for remove_user_from_telegram_groups (user {user_id})")
+            return {'success': False, 'error': str(e)}
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60)
 def send_payment_receipt_email(self, payment_id):
     """
     Send payment receipt email to user
@@ -536,6 +701,12 @@ def check_expired_subscriptions():
     Check for expired subscriptions and deactivate them
     
     Runs: Daily at midnight (configured in celery.py)
+    
+    Actions:
+        1. Find subscriptions past their end_date
+        2. Mark as expired
+        3. Remove users from Telegram groups
+        4. Update user status
     """
     logger.info("Checking for expired subscriptions")
     
@@ -543,23 +714,30 @@ def check_expired_subscriptions():
     expired_subscriptions = Subscription.objects.filter(
         status='active',
         end_date__lt=timezone.now()
-    )
+    ).select_related('billing_profile__user', 'plan')
     
     count = 0
     for subscription in expired_subscriptions:
         subscription.status = 'expired'
-        subscription.is_active = False
         subscription.save()
         
         # Update user
-        user = subscription.user
+        user = subscription.billing_profile.user
         user.subscription_status = 'expired'
         user.save()
         
+        # Remove user from Telegram groups
+        if subscription.plan:
+            try:
+                remove_user_from_telegram_groups.delay(user.id, str(subscription.plan.id))
+                logger.info(f"Queued Telegram removal for user {user.id} from plan {subscription.plan.name}")
+            except Exception as e:
+                logger.error(f"Failed to queue Telegram removal for user {user.id}: {str(e)}")
+        
         count += 1
-        logger.info(f"Deactivated expired subscription {subscription.id} for user {user.id}")
+        logger.info(f"Expired subscription {subscription.id} for user {user.email}")
     
-    logger.info(f"Deactivated {count} expired subscriptions")
+    logger.info(f"Processed {count} expired subscriptions")
     
     return {'success': True, 'expired_count': count}
 
