@@ -639,9 +639,9 @@ class Feature(models.Model):
         help_text="Feature category for organization"
     )
     icon = models.CharField(
-        max_length=10, 
-        default='✨',
-        help_text="Emoji icon for visual representation"
+        max_length=50, 
+        default='chart-bar',
+        help_text="Icon name for visual representation (e.g., 'chart-bar', 'lightning-bolt')"
     )
     sort_order = models.IntegerField(
         default=0,
@@ -666,7 +666,7 @@ class Feature(models.Model):
         ]
     
     def __str__(self):
-        return f"{self.icon} {self.name}"
+        return self.name
     
     def clean(self):
         """Validate feature key format"""

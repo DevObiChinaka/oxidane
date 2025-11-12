@@ -189,15 +189,33 @@ export default function LessonsPage() {
   };
 
   const getVideoSourceIcon = (source: string) => {
+    const iconClasses = "w-5 h-5";
+    
     switch (source) {
       case 'youtube':
-        return '📺';
+        return (
+          <svg className={iconClasses} fill="currentColor" viewBox="0 0 24 24">
+            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+          </svg>
+        );
       case 'vimeo':
-        return '🎬';
+        return (
+          <svg className={iconClasses} fill="currentColor" viewBox="0 0 24 24">
+            <path d="M23.977 6.416c-.105 2.338-1.739 5.543-4.894 9.609-3.268 4.247-6.026 6.37-8.29 6.37-1.409 0-2.578-1.294-3.553-3.881L5.322 11.4C4.603 8.816 3.834 7.522 3.01 7.522c-.179 0-.806.378-1.881 1.132L0 7.197c1.185-1.044 2.351-2.084 3.501-3.128C5.08 2.701 6.266 1.984 7.055 1.91c1.867-.18 3.016 1.1 3.447 3.838.465 2.953.789 4.789.971 5.507.539 2.45 1.131 3.674 1.776 3.674.502 0 1.256-.796 2.265-2.385 1.004-1.589 1.54-2.797 1.612-3.628.144-1.371-.395-2.061-1.614-2.061-.574 0-1.167.121-1.777.391 1.186-3.868 3.434-5.757 6.762-5.637 2.473.06 3.628 1.664 3.493 4.797l-.013.01z"/>
+          </svg>
+        );
       case 'upload':
-        return '📁';
+        return (
+          <svg className={iconClasses} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+          </svg>
+        );
       default:
-        return '🎥';
+        return (
+          <svg className={iconClasses} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+        );
     }
   };
 
@@ -226,7 +244,11 @@ export default function LessonsPage() {
             <div className="flex flex-col sm:flex-row gap-4 flex-1">
               {/* Search */}
               <div className="relative flex-1">
-                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-900">🔍</div>
+                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
                 <input
                   type="text"
                   placeholder="Search lessons by title or description..."
@@ -328,7 +350,11 @@ export default function LessonsPage() {
           <div className="bg-white rounded-lg shadow-sm border">
             {totalLessonsCount === 0 ? (
               <div className="p-12 text-center">
-                <div className="text-4xl text-gray-900 mb-4">📚</div>
+                <div className="mb-4 flex justify-center">
+                  <svg className="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                </div>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No lessons found</h3>
                 <p className="text-gray-700 mb-4">
                   {searchTerm || selectedCourse !== 'all' 
@@ -429,7 +455,7 @@ export default function LessonsPage() {
 
                                 {/* Video Type */}
                                 <div className="col-span-1">
-                                  <span title={lesson.video_source} className="text-lg">
+                                  <span title={lesson.video_source} className="text-gray-600">
                                     {getVideoSourceIcon(lesson.video_source)}
                                   </span>
                                 </div>

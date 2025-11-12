@@ -57,6 +57,7 @@ export interface Lesson {
   description: string;
   video_source: 'upload' | 'youtube' | 'vimeo';
   video_file?: string;
+  video_file_url?: string; // Full URL to uploaded video
   video_url?: string;
   youtube_video_id?: string;
   duration: number;

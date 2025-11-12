@@ -10,6 +10,7 @@ interface Lesson {
   description: string;
   video_source: 'upload' | 'youtube' | 'vimeo';
   video_url?: string;
+  video_file_url?: string;  // For uploaded videos
   youtube_video_id?: string;
   vimeo_video_id?: string;
   duration: string;

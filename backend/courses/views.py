@@ -230,6 +230,10 @@ def course_detail(request, slug):
                     'youtube_video_id': lesson.youtube_video_id,
                 })
                 
+                # Add video_file_url for uploaded videos
+                if lesson.video_source == 'upload' and lesson.video_file:
+                    lesson_data['video_file_url'] = request.build_absolute_uri(lesson.video_file.url)
+                
                 # Add progress if user has access
                 if user and can_access:
                     try:

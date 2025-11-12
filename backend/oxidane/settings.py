@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'storages',  # AWS S3 storage backend
     'corsheaders',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',  # For token rotation/blacklisting
@@ -189,15 +190,47 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
-STATIC_URL = 'static/'
+# File upload settings (increased for video uploads)
+FILE_UPLOAD_MAX_MEMORY_SIZE = 500 * 1024 * 1024  # 500MB for videos
+DATA_UPLOAD_MAX_MEMORY_SIZE = 500 * 1024 * 1024  # 500MB for videos
 
-# Media files (uploads)
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+# AWS S3 Configuration (Production)
+USE_S3 = os.getenv('USE_S3', 'False') == 'True'
 
-# File upload settings
-FILE_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024  # 50MB
-DATA_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024  # 50MB
+if USE_S3:
+    # AWS Credentials
+    AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
+    AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME', 'us-east-1')
+    
+    # S3 Settings
+    AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
+    AWS_DEFAULT_ACL = None  # Use bucket ACL by default
+    AWS_S3_OBJECT_PARAMETERS = {
+        'CacheControl': 'max-age=86400',  # Cache for 1 day
+    }
+    AWS_S3_FILE_OVERWRITE = False
+    AWS_QUERYSTRING_AUTH = True  # Generate signed URLs for private files
+    AWS_S3_SIGNATURE_VERSION = 's3v4'
+    
+    # CloudFront CDN (optional but recommended)
+    AWS_CLOUDFRONT_DOMAIN = os.getenv('AWS_CLOUDFRONT_DOMAIN', '')
+    if AWS_CLOUDFRONT_DOMAIN:
+        AWS_S3_CUSTOM_DOMAIN = AWS_CLOUDFRONT_DOMAIN
+    
+    # Static files (CSS, JS, Admin) - Public
+    STATICFILES_STORAGE = 'oxidane.storage_backends.StaticStorage'
+    STATIC_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/static/'
+    
+    # Media files (User uploads) - Private
+    DEFAULT_FILE_STORAGE = 'oxidane.storage_backends.MediaStorage'
+    MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/media/'
+else:
+    # Local storage (Development only)
+    STATIC_URL = 'static/'
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field

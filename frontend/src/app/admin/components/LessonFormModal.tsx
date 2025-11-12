@@ -84,7 +84,7 @@ export default function LessonFormModal({ lesson, courses, onClose, onSave }: Le
       if (!Array.isArray(courses) || courses.length === 0) {
         throw new Error('No courses available. Please create a course first.');
       }
-      if (formData.video_source === 'upload' && !selectedFile) {
+      if (formData.video_source === 'upload' && !selectedFile && !lesson) {
         throw new Error('Please upload a video file');
       }
       if (formData.video_source !== 'upload' && !formData.video_url.trim()) {
@@ -107,6 +107,16 @@ export default function LessonFormModal({ lesson, courses, onClose, onSave }: Le
         uploadFormData.append('lesson_notes', formData.lesson_notes.trim());
         uploadFormData.append('video_file', selectedFile);
 
+        console.log('📤 Uploading lesson with file:', {
+          title: formData.title,
+          fileName: selectedFile.name,
+          fileSize: selectedFile.size,
+          fileType: selectedFile.type,
+          duration: formData.duration,
+          order: formData.order,
+          course: formData.course,
+        });
+
         if (lesson) {
           // Update existing lesson with file
           response = await adminAPI.updateLessonWithFile(lesson.id, uploadFormData);
@@ -114,6 +124,8 @@ export default function LessonFormModal({ lesson, courses, onClose, onSave }: Le
           // Create new lesson with file
           response = await adminAPI.createLessonWithFile(formData.course, uploadFormData);
         }
+        
+        console.log('✅ File upload successful:', response);
       } else {
         // Prepare regular lesson data (no file)
         const lessonData = {
@@ -129,14 +141,25 @@ export default function LessonFormModal({ lesson, courses, onClose, onSave }: Le
           lesson_notes: formData.lesson_notes.trim(),
         };
 
+        console.log('📤 Saving lesson without file upload:', lessonData);
+
         if (lesson) {
           // Update existing lesson
           response = await adminAPI.updateLesson(lesson.id, lessonData);
+          console.log('✅ Lesson updated:', response);
         } else {
           // Create new lesson
           response = await adminAPI.createLesson(formData.course, lessonData);
+          console.log('✅ Lesson created:', response);
         }
       }
+
+      console.log('📊 Final response data:', {
+        hasVideoFile: !!response.video_file,
+        hasVideoFileUrl: !!response.video_file_url,
+        videoSource: response.video_source,
+        video_file_url: response.video_file_url,
+      });
 
       onSave();
     } catch (err: any) {
@@ -190,13 +213,21 @@ export default function LessonFormModal({ lesson, courses, onClose, onSave }: Le
     setSelectedFile(file);
     setError(null);
 
-    // Extract duration if possible (optional enhancement)
+    // Extract duration and convert from seconds to minutes
     const video = document.createElement('video');
     video.preload = 'metadata';
     video.onloadedmetadata = () => {
+      window.URL.revokeObjectURL(video.src);
       if (video.duration && !isNaN(video.duration)) {
-        handleInputChange('duration', Math.round(video.duration));
+        // Convert seconds to minutes and round
+        const durationInMinutes = Math.round(video.duration / 60);
+        console.log(`📹 Video duration: ${Math.round(video.duration)}s = ${durationInMinutes} minutes`);
+        handleInputChange('duration', durationInMinutes);
       }
+    };
+    video.onerror = () => {
+      window.URL.revokeObjectURL(video.src);
+      console.warn('Could not extract video duration');
     };
     video.src = URL.createObjectURL(file);
   };
@@ -244,6 +275,7 @@ export default function LessonFormModal({ lesson, courses, onClose, onSave }: Le
   };
 
   const getVideoPreview = () => {
+    // Show YouTube preview
     if (formData.video_source === 'youtube' && formData.video_url) {
       const videoId = extractYouTubeId(formData.video_url);
       if (videoId) {
@@ -261,6 +293,27 @@ export default function LessonFormModal({ lesson, courses, onClose, onSave }: Le
         );
       }
     }
+    
+    // Show Vimeo preview
+    if (formData.video_source === 'vimeo' && formData.video_url) {
+      const vimeoRegex = /vimeo\.com\/(\d+)/;
+      const match = formData.video_url.match(vimeoRegex);
+      if (match && match[1]) {
+        return (
+          <div className="mt-2">
+            <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
+              <iframe
+                src={`https://player.vimeo.com/video/${match[1]}`}
+                className="w-full h-full"
+                frameBorder="0"
+                allowFullScreen
+              />
+            </div>
+          </div>
+        );
+      }
+    }
+    
     return null;
   };
 
@@ -394,9 +447,25 @@ export default function LessonFormModal({ lesson, courses, onClose, onSave }: Le
                   <input
                     type="number"
                     value={formData.order}
-                    onChange={(e) => handleInputChange('order', parseInt(e.target.value) || 1)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      // Allow empty string while typing, convert to number on blur
+                      if (val === '') {
+                        handleInputChange('order', 1);
+                      } else {
+                        const num = parseInt(val, 10);
+                        handleInputChange('order', isNaN(num) ? 1 : Math.max(1, num));
+                      }
+                    }}
+                    onBlur={(e) => {
+                      // Ensure valid number on blur
+                      if (e.target.value === '' || parseInt(e.target.value, 10) < 1) {
+                        handleInputChange('order', 1);
+                      }
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
                     min="1"
+                    placeholder="1"
                   />
                 </div>
                 <div>
@@ -406,10 +475,29 @@ export default function LessonFormModal({ lesson, courses, onClose, onSave }: Le
                   <input
                     type="number"
                     value={formData.duration}
-                    onChange={(e) => handleInputChange('duration', parseInt(e.target.value) || 0)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      // Allow empty string while typing
+                      if (val === '') {
+                        handleInputChange('duration', 0);
+                      } else {
+                        const num = parseInt(val, 10);
+                        handleInputChange('duration', isNaN(num) ? 0 : Math.max(0, num));
+                      }
+                    }}
+                    onBlur={(e) => {
+                      // Ensure valid number on blur
+                      if (e.target.value === '') {
+                        handleInputChange('duration', 0);
+                      }
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
                     min="0"
+                    placeholder="Auto-detected for uploads"
                   />
+                  <p className="mt-1 text-xs text-gray-500">
+                    {formData.video_source === 'upload' ? 'Auto-detected from video file' : 'Enter video length in minutes'}
+                  </p>
                 </div>
               </div>
 
@@ -438,9 +526,37 @@ export default function LessonFormModal({ lesson, courses, onClose, onSave }: Le
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { value: 'upload', label: '📁 Upload', desc: 'Upload video file' },
-                    { value: 'youtube', label: '📺 YouTube', desc: 'YouTube URL' },
-                    { value: 'vimeo', label: '🎬 Vimeo', desc: 'Vimeo URL' },
+                    { 
+                      value: 'upload', 
+                      label: 'Upload', 
+                      desc: 'Upload video file',
+                      icon: (
+                        <svg className="w-6 h-6 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                      )
+                    },
+                    { 
+                      value: 'youtube', 
+                      label: 'YouTube', 
+                      desc: 'YouTube URL',
+                      icon: (
+                        <svg className="w-6 h-6 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      )
+                    },
+                    { 
+                      value: 'vimeo', 
+                      label: 'Vimeo', 
+                      desc: 'Vimeo URL',
+                      icon: (
+                        <svg className="w-6 h-6 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                      )
+                    },
                   ].map(source => (
                     <label
                       key={source.value}
@@ -459,7 +575,9 @@ export default function LessonFormModal({ lesson, courses, onClose, onSave }: Le
                         className="sr-only"
                       />
                       <div className="text-center">
-                        <div className="text-lg mb-1">{source.label.split(' ')[0]}</div>
+                        <div className={formData.video_source === source.value ? 'text-blue-600' : 'text-gray-600'}>
+                          {source.icon}
+                        </div>
                         <div className="text-xs font-medium text-gray-900">{source.label.split(' ')[1]}</div>
                         <div className="text-xs text-gray-700">{source.desc}</div>
                       </div>
@@ -493,8 +611,31 @@ export default function LessonFormModal({ lesson, courses, onClose, onSave }: Le
               {formData.video_source === 'upload' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-900 mb-2">
-                    Video File {selectedFile ? '✅' : '*'}
+                    Video File {selectedFile || (lesson && (lesson as any).video_file_url) ? (
+                      <span className="text-green-600">✓</span>
+                    ) : (
+                      <span className="text-red-600">*</span>
+                    )}
                   </label>
+                  
+                  {/* Show existing video preview first if editing */}
+                  {!selectedFile && lesson && (lesson as any).video_file_url && (
+                    <div className="mb-4">
+                      <div className="aspect-video bg-gray-900 rounded-lg overflow-hidden">
+                        <video
+                          controls
+                          className="w-full h-full"
+                          src={(lesson as any).video_file_url}
+                        >
+                          Your browser does not support the video tag.
+                        </video>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2 text-center">
+                        Current video • Upload a new file to replace
+                      </p>
+                    </div>
+                  )}
+                  
                   <div 
                     className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
                       isDragOver 

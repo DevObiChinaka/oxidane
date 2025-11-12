@@ -5,17 +5,27 @@ import re
 
 class LessonSerializer(serializers.ModelSerializer):
     youtube_thumbnail = serializers.SerializerMethodField()
+    video_file_url = serializers.SerializerMethodField()
     
     class Meta:
         model = Lesson
         fields = [
             'id', 'course', 'title', 'slug', 'description', 'video_source', 
-            'video_file', 'video_url', 'youtube_video_id', 
+            'video_file', 'video_file_url', 'video_url', 'youtube_video_id', 
             'duration', 'order', 'is_preview', 'lesson_notes',
             'downloadable_resources', 'youtube_thumbnail',
             'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'youtube_video_id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'youtube_video_id', 'video_file_url', 'created_at', 'updated_at']
+    
+    def get_video_file_url(self, obj):
+        """Get the full URL for uploaded video files"""
+        if obj.video_file:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.video_file.url)
+            return obj.video_file.url
+        return None
     
     def to_internal_value(self, data):
         """Normalize incoming data to handle various formats"""

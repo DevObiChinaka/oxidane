@@ -11,6 +11,7 @@ interface Lesson {
   description: string;
   video_source: 'upload' | 'youtube' | 'vimeo';
   video_url?: string;
+  video_file_url?: string;  // For uploaded videos
   youtube_video_id?: string;
   duration: string;
   order: number;
@@ -335,6 +336,16 @@ export default function VideoPlayerPage() {
           className="w-full h-full"
           allow="autoplay; fullscreen; picture-in-picture"
           allowFullScreen
+        />
+      );
+    } else if (currentLesson.video_source === 'upload' && currentLesson.video_file_url) {
+      return (
+        <video
+          src={currentLesson.video_file_url}
+          controls
+          autoPlay
+          className="w-full h-full"
+          onEnded={handleVideoEnd}
         />
       );
     } else if (currentLesson.video_url) {

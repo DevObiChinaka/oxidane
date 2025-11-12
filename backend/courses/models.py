@@ -4,6 +4,12 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from decimal import Decimal
 import uuid
+from .validators import (
+    validate_video_file_size, 
+    validate_video_file_type,
+    validate_resource_file_size,
+    validate_resource_file_type
+)
 
 User = get_user_model()
 
@@ -247,7 +253,13 @@ class Lesson(models.Model):
     
     # Video content
     video_source = models.CharField(max_length=10, choices=VIDEO_SOURCES, default='upload')
-    video_file = models.FileField(upload_to='lesson_videos/', null=True, blank=True)
+    video_file = models.FileField(
+        upload_to='lesson_videos/', 
+        null=True, 
+        blank=True,
+        validators=[validate_video_file_size, validate_video_file_type],
+        help_text='Max 500MB. Formats: MP4, MOV, AVI, WebM. For longer videos, use YouTube or Vimeo.'
+    )
     video_url = models.URLField(blank=True, help_text="YouTube/Vimeo URL")
     youtube_video_id = models.CharField(max_length=20, blank=True)
     
@@ -258,7 +270,13 @@ class Lesson(models.Model):
     
     # Additional resources
     lesson_notes = models.TextField(blank=True, help_text="PDF notes or additional text content")
-    downloadable_resources = models.FileField(upload_to='lesson_resources/', null=True, blank=True)
+    downloadable_resources = models.FileField(
+        upload_to='lesson_resources/', 
+        null=True, 
+        blank=True,
+        validators=[validate_resource_file_size, validate_resource_file_type],
+        help_text='Max 50MB. Formats: PDF, Office docs, images, ZIP archives.'
+    )
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -209,7 +209,7 @@ def admin_course_lessons(request, course_id):
     
     if request.method == 'GET':
         lessons = course.lessons.all().order_by('order')
-        serializer = LessonSerializer(lessons, many=True)
+        serializer = LessonSerializer(lessons, many=True, context={'request': request})
         return Response({
             'course': {
                 'id': course.id,
@@ -234,13 +234,18 @@ def admin_course_lessons(request, course_id):
             print(f"📝 Video source: {data.get('video_source', 'upload')}")
             print(f"📝 Title: {data.get('title', 'No title')}")
             print(f"📝 Duration: {data.get('duration', 'No duration')} (type: {type(data.get('duration'))})")
+            print(f"📝 Video file in request.FILES: {'video_file' in request.FILES}")
+            if 'video_file' in request.FILES:
+                video_file = request.FILES['video_file']
+                print(f"📝 Video file details: {video_file.name}, {video_file.size} bytes, {video_file.content_type}")
             
-            serializer = LessonSerializer(data=data)
+            serializer = LessonSerializer(data=data, context={'request': request})
             if serializer.is_valid():
                 lesson = serializer.save()
                 print(f"✅ Lesson created successfully: {lesson.id}")
+                print(f"✅ Video file saved: {lesson.video_file.url if lesson.video_file else 'No file'}")
                 return Response(
-                    LessonSerializer(lesson).data,
+                    LessonSerializer(lesson, context={'request': request}).data,
                     status=status.HTTP_201_CREATED
                 )
             else:
@@ -252,7 +257,7 @@ def admin_course_lessons(request, course_id):
             import traceback
             traceback.print_exc()
             return Response(
-                {'error': 'Internal server error during lesson creation'},
+                {'error': f'Internal server error during lesson creation: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -264,10 +269,23 @@ def admin_lesson_detail(request, lesson_id):
     lesson = get_object_or_404(Lesson, id=lesson_id)
     
     if request.method == 'PUT':
-        serializer = LessonSerializer(lesson, data=request.data, partial=True)
+        print(f"📝 Updating lesson {lesson_id}")
+        print(f"📝 Request content type: {request.content_type}")
+        print(f"📝 Data keys: {list(request.data.keys())}")
+        print(f"📝 Video file in request.FILES: {'video_file' in request.FILES}")
+        
+        if 'video_file' in request.FILES:
+            video_file = request.FILES['video_file']
+            print(f"📝 Updating with video file: {video_file.name}, {video_file.size} bytes")
+        
+        serializer = LessonSerializer(lesson, data=request.data, partial=True, context={'request': request})
         if serializer.is_valid():
             lesson = serializer.save()
-            return Response(LessonSerializer(lesson).data)
+            print(f"✅ Lesson updated successfully")
+            print(f"✅ Video file: {lesson.video_file.url if lesson.video_file else 'No file'}")
+            return Response(LessonSerializer(lesson, context={'request': request}).data)
+        
+        print(f"❌ Update validation failed: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     elif request.method == 'DELETE':
@@ -387,7 +405,7 @@ def admin_lessons_list(request):
     paginator.page_size = 20
     paginated_lessons = paginator.paginate_queryset(lessons, request)
     
-    serializer = LessonSerializer(paginated_lessons, many=True)
+    serializer = LessonSerializer(paginated_lessons, many=True, context={'request': request})
     return paginator.get_paginated_response(serializer.data)
 
 @api_view(['GET'])
