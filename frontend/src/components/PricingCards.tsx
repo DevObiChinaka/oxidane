@@ -179,16 +179,7 @@ export default function PricingCards({
               : 'border-white/20 hover:border-[#00B38F]/30'
           } ${selectedPlanId === plan.id ? 'ring-2 ring-[#00B38F] ring-offset-2 ring-offset-transparent' : ''}`}
         >
-          {/* Trial Badge */}
-          {plan.trial_days > 0 && (
-            <div className="absolute -top-3 right-4">
-              <span className="inline-flex items-center px-3 py-1 bg-[#000ABE] text-white text-xs font-semibold rounded-full shadow-sm">
-                {plan.trial_days}-Day Trial
-              </span>
-            </div>
-          )}
-
-          <div className={`p-6 ${plan.trial_days > 0 ? 'pt-8' : ''}`}>
+          <div className="p-6">
             {/* Plan Name */}
             <h3 className="text-lg font-bold text-white mb-1">{plan.name}</h3>
             <p className="text-sm text-gray-300 mb-6 min-h-[40px]">{plan.description}</p>
@@ -205,28 +196,21 @@ export default function PricingCards({
                     </span>
                     {plan.billing_period !== 'lifetime' && (
                       <span className="text-sm text-gray-400">
-                        /{plan.billing_period.replace('ly', '')}
-                      </span>
-                    )}
-                  </div>
-                  {plan.trial_days > 0 && (
-                    <p className="text-xs text-[#00B38F] font-medium mt-1">
-                      Start free for {plan.trial_days} days
-                    </p>
+                      /{plan.billing_period.replace('ly', '')}
+                    </span>
                   )}
-                </>
-              )}
-            </div>
+                </div>
+              </>
+            )}
+          </div>
 
-            {/* CTA Button */}
-            <button
-              onClick={() => onPlanSelect?.(plan)}
-              className="w-full py-2.5 px-4 rounded-lg font-semibold text-sm transition-all duration-200 bg-gradient-to-r from-[#00B38F] to-[#00B39F] text-white hover:from-[#00A87D] hover:to-[#00A58D] shadow-sm"
-            >
-              {plan.trial_days > 0 ? 'Start Free Trial' : plan.billing_period === 'lifetime' ? 'Get Lifetime Access' : 'Get Started'}
-            </button>
-
-            {/* Features */}
+          {/* CTA Button */}
+          <button
+            onClick={() => onPlanSelect?.(plan)}
+            className="w-full py-2.5 px-4 rounded-lg font-semibold text-sm transition-all duration-200 bg-gradient-to-r from-[#00B38F] to-[#00B39F] text-white hover:from-[#00A87D] hover:to-[#00A58D] shadow-sm"
+          >
+            {plan.billing_period === 'lifetime' ? 'Get Lifetime Access' : 'Get Started'}
+          </button>            {/* Features */}
             <div className="mt-6 pt-6 border-t border-white/10">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-4">
                 What's included

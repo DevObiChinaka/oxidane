@@ -344,37 +344,12 @@ function CheckoutContent() {
                   <h2 className="text-2xl font-bold text-white mb-2">{plan.name}</h2>
                   <p className="text-gray-300 text-sm">{plan.description}</p>
                 </div>
-                {plan.trial_days > 0 && (
-                  <span className="inline-flex items-center px-3 py-1 bg-[#000ABE] text-white text-xs font-semibold rounded-full">
-                    {plan.trial_days}-Day Trial
-                  </span>
-                )}
               </div>
 
-              <div className="space-y-4 py-6 border-y border-white/10">
-                {/* Trial Information Banner */}
-                {plan.trial_days > 0 && (
-                  <div className="bg-[#000ABE]/20 border border-[#000ABE]/30 rounded-lg p-4 mb-4">
-                    <div className="flex items-start gap-3">
-                      <svg className="w-5 h-5 text-[#00B38F] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <div>
-                        <h4 className="text-white font-semibold text-sm mb-1">
-                          {plan.trial_days}-Day Free Trial
-                        </h4>
-                        <p className="text-gray-300 text-xs leading-relaxed">
-                          You won't be charged today. Your card will be authorized (not charged) to start your free trial. 
-                          After {plan.trial_days} days, you'll be automatically charged {formatCurrency(basePriceConverted)} {plan.billing_period !== 'lifetime' && `per ${plan.billing_period.replace('ly', '')}`}.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
+              <div className="space-y-4 py-6 border-white/10">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-300">
-                    {plan.trial_days > 0 ? 'Price After Trial' : 'Base Price'}
+                    Base Price
                   </span>
                   <span className="text-white font-semibold">
                     {rateLoading ? (
@@ -399,27 +374,21 @@ function CheckoutContent() {
                   </div>
                 )}
 
-                {plan.trial_days === 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-300">Processing Fee (1.5%)</span>
-                    <span className="text-white font-semibold">{formatCurrency(processingFee)}</span>
-                  </div>
-                )}
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-300">Processing Fee (1.5%)</span>
+                  <span className="text-white font-semibold">{formatCurrency(processingFee)}</span>
+                </div>
               </div>
 
               <div className="flex justify-between items-baseline mt-6">
                 <span className="text-gray-300">
-                  {plan.trial_days > 0 ? 'Due Today' : 'Total Amount'}
+                  Total Amount
                 </span>
                 <div className="text-right">
                   <div className="text-3xl font-bold text-white">
-                    {plan.trial_days > 0 ? formatCurrency(0) : formatCurrency(totalAmount)}
+                    {formatCurrency(totalAmount)}
                   </div>
-                  {plan.trial_days > 0 ? (
-                    <div className="text-sm text-[#00B38F] font-medium">Free for {plan.trial_days} days</div>
-                  ) : (
-                    <div className="text-sm text-gray-400">{plan.billing_period_display}</div>
-                  )}
+                  <div className="text-sm text-gray-400">{plan.billing_period_display}</div>
                 </div>
               </div>
             </div>

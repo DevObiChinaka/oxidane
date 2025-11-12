@@ -83,9 +83,8 @@ class SubscriptionPlanAdmin(admin.ModelAdmin):
                 'base_price',
                 'billing_period',
                 'monthly_equivalent_display',
-                'trial_days'
             ),
-            'description': 'Base price is in USD and auto-converted to other currencies'
+            'description': 'Base price is in USD and auto-converted to other currencies. Use coupon codes (WELCOME50) instead of trials for promotions.'
         }),
         ('Features & Courses', {
             'fields': (
@@ -250,15 +249,15 @@ class SubscriptionPlanAdmin(admin.ModelAdmin):
     subscriber_list_display.short_description = 'Active Subscribers'
     
     def trial_display(self, obj):
-        """Display trial period"""
+        """Display trial period (deprecated - use coupons)"""
         if obj.trial_days > 0:
             return format_html(
-                '<span style="background: #17a2b8; color: white; padding: 2px 6px; '
-                'border-radius: 3px;">{} days</span>',
+                '<span style="background: #ffc107; color: #000; padding: 2px 6px; '
+                'border-radius: 3px; font-weight: 500;">⚠️ {} days (Legacy)</span>',
                 obj.trial_days
             )
-        return format_html('<span style="color: #6c757d;">No trial</span>')
-    trial_display.short_description = 'Trial'
+        return format_html('<span style="color: #28a745; font-weight: 500;">✓ Disabled (Use Coupons)</span>')
+    trial_display.short_description = 'Trial (Deprecated)'
     
     def status_display(self, obj):
         """Display plan status"""
