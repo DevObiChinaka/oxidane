@@ -6,6 +6,7 @@ Updated: November 10, 2025
 - Now reads from PaymentConfiguration model instead of settings
 - Added create_customer() method
 - Enhanced error handling
+- Added JSON serialization helpers for Decimal types
 """
 
 import requests
@@ -13,8 +14,27 @@ import hashlib
 import hmac
 from decimal import Decimal
 import logging
+import json
 
 logger = logging.getLogger(__name__)
+
+
+def make_json_serializable(obj):
+    """
+    Convert objects to JSON-serializable format.
+    Handles Decimal, datetime, UUID, and nested structures.
+    """
+    if isinstance(obj, Decimal):
+        return float(obj)
+    elif isinstance(obj, dict):
+        return {k: make_json_serializable(v) for k, v in obj.items()}
+    elif isinstance(obj, (list, tuple)):
+        return [make_json_serializable(item) for item in obj]
+    elif hasattr(obj, 'isoformat'):  # datetime objects
+        return obj.isoformat()
+    elif hasattr(obj, '__str__'):  # UUID and other objects with string representation
+        return str(obj)
+    return obj
 
 
 class PaystackService:
@@ -33,7 +53,13 @@ class PaystackService:
         
         try:
             config = PaymentConfiguration.get_instance()
-            self.secret_key = config.paystack_secret_key
+            
+            # Decrypt secret key if it's encrypted (starts with 'gAAAAA')
+            if config.paystack_secret_key and config.paystack_secret_key.startswith('gAAAAA'):
+                self.secret_key = config.decrypt_field('paystack_secret_key')
+            else:
+                self.secret_key = config.paystack_secret_key
+                
             self.public_key = config.paystack_public_key
             self.is_enabled = config.paystack_enabled
             self.is_test_mode = config.is_test_mode
@@ -151,7 +177,7 @@ class PaystackService:
             if data.get('status'):
                 transaction = data['data']
                 
-                return {
+                result = {
                     'success': True,
                     'verified': transaction['status'] == 'success',
                     'amount': Decimal(transaction['amount']) / 100,  # Convert from kobo to naira
@@ -162,6 +188,9 @@ class PaystackService:
                     'metadata': transaction.get('metadata', {}),
                     'raw_response': transaction,
                 }
+                
+                # Convert all Decimal and non-serializable objects to JSON-safe types
+                return make_json_serializable(result)
             else:
                 return {
                     'success': False,
@@ -274,6 +303,130 @@ class PaystackService:
                 'success': False,
                 'error': 'Unable to create customer'
             }
+    
+    def charge_authorization(self, authorization_code, email, amount, currency='NGN', metadata=None):
+        """
+        Charge a previously authorized card using authorization code
+        Used for recurring payments and trial conversions
+        
+        Args:
+            authorization_code: Authorization code from previous successful transaction
+            email: Customer email address
+            amount: Amount in base currency (e.g., 30.00 for ₦30 or $30)
+            currency: Currency code (NGN, USD, etc.)
+            metadata: Additional data to attach to transaction
+            
+        Returns:
+            dict: Charge result with success status, reference, and details
+        """
+        if not self.is_enabled or not self.secret_key:
+            return {
+                'success': False,
+                'error': 'Paystack is not configured'
+            }
+        
+        url = f"{self.BASE_URL}/transaction/charge_authorization"
+        
+        headers = {
+            "Authorization": f"Bearer {self.secret_key}",
+            "Content-Type": "application/json",
+        }
+        
+        # Convert amount to kobo/cents
+        amount_in_kobo = int(Decimal(str(amount)) * 100)
+        
+        payload = {
+            "authorization_code": authorization_code,
+            "email": email,
+            "amount": amount_in_kobo,
+            "currency": currency,
+        }
+        
+        if metadata:
+            payload["metadata"] = make_json_serializable(metadata)
+        
+        try:
+            response = requests.post(url, json=payload, headers=headers, timeout=30)
+            response.raise_for_status()
+            
+            data = response.json()
+            
+            if data.get('status'):
+                transaction = data['data']
+                
+                result = {
+                    'success': transaction['status'] == 'success',
+                    'reference': transaction['reference'],
+                    'amount': Decimal(transaction['amount']) / 100,
+                    'currency': transaction['currency'],
+                    'status': transaction['status'],
+                    'paid_at': transaction.get('paid_at'),
+                    'metadata': transaction.get('metadata', {}),
+                    'message': data.get('message', 'Charge successful'),
+                    'raw_response': transaction,
+                }
+                
+                if result['success']:
+                    logger.info(f"Successfully charged authorization {authorization_code[:10]}... for {email}: {currency} {amount}")
+                else:
+                    logger.warning(f"Charge failed for {email}: {result['message']}")
+                
+                return make_json_serializable(result)
+            else:
+                logger.error(f"Paystack charge authorization failed: {data.get('message')}")
+                return {
+                    'success': False,
+                    'error': data.get('message', 'Charge failed'),
+                    'message': data.get('message', 'Charge failed')
+                }
+                
+        except requests.RequestException as e:
+            logger.error(f"Paystack charge authorization error: {str(e)}")
+            return {
+                'success': False,
+                'error': 'Unable to process charge',
+                'message': str(e)
+            }
+    
+    def extract_authorization_from_verification(self, verification_data):
+        """
+        Extract authorization details from payment verification response
+        Used to save payment method after successful transaction
+        
+        Args:
+            verification_data: Response from verify_payment()
+            
+        Returns:
+            dict: Authorization details for storing payment method or None
+        """
+        if not verification_data.get('success') or not verification_data.get('verified'):
+            return None
+        
+        raw_response = verification_data.get('raw_response', {})
+        authorization = raw_response.get('authorization')
+        
+        if not authorization:
+            logger.warning("No authorization data in verification response")
+            return None
+        
+        # Check if authorization is reusable
+        if not authorization.get('reusable'):
+            logger.info("Authorization is not reusable, skipping payment method save")
+            return None
+        
+        return {
+            'authorization_code': authorization['authorization_code'],
+            'card_type': authorization['card_type'],
+            'last4': authorization['last4'],
+            'exp_month': authorization['exp_month'],
+            'exp_year': authorization['exp_year'],
+            'bin': authorization['bin'],
+            'bank': authorization.get('bank'),
+            'brand': authorization.get('brand', authorization['card_type']),
+            'country_code': authorization.get('country_code'),
+            'signature': authorization.get('signature'),
+            'reusable': authorization['reusable'],
+        }
 
 
 class StripeService:
@@ -290,9 +443,19 @@ class StripeService:
         
         try:
             config = PaymentConfiguration.get_instance()
-            self.secret_key = config.stripe_secret_key
+            
+            # Decrypt secret keys if they're encrypted (start with 'gAAAAA')
+            if config.stripe_secret_key and config.stripe_secret_key.startswith('gAAAAA'):
+                self.secret_key = config.decrypt_field('stripe_secret_key')
+            else:
+                self.secret_key = config.stripe_secret_key
+                
+            if config.stripe_webhook_secret and config.stripe_webhook_secret.startswith('gAAAAA'):
+                self.webhook_secret = config.decrypt_field('stripe_webhook_secret')
+            else:
+                self.webhook_secret = config.stripe_webhook_secret
+                
             self.publishable_key = config.stripe_publishable_key
-            self.webhook_secret = config.stripe_webhook_secret
             self.is_enabled = config.stripe_enabled
             self.is_test_mode = config.is_test_mode
             
@@ -397,7 +560,7 @@ class StripeService:
             
             session = stripe.checkout.Session.retrieve(session_id)
             
-            return {
+            result = {
                 'success': True,
                 'verified': session.payment_status == 'paid',
                 'amount': Decimal(session.amount_total) / 100,
@@ -407,6 +570,9 @@ class StripeService:
                 'session_id': session.id,
                 'raw_response': dict(session),
             }
+            
+            # Convert all Decimal and non-serializable objects to JSON-safe types
+            return make_json_serializable(result)
             
         except Exception as e:
             logger.error(f"Stripe verification error: {str(e)}")

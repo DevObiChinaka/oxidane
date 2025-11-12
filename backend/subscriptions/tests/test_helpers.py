@@ -667,10 +667,10 @@ class TestUtilityHelpers:
     
     def test_generate_unique_code_with_prefix(self):
         """Test unique code generation with prefix"""
-        code = generate_unique_code(prefix='OXI-', length=6)
+        code = generate_unique_code(prefix='REF-', length=6)
         
-        assert code.startswith('OXI-')
-        assert len(code) == 10  # OXI- (4) + 6 random
+        assert code.startswith('REF-')
+        assert len(code) == 10  # REF- (4) + 6 random
     
     def test_generate_unique_code_uniqueness(self):
         """Test generated codes are unique"""

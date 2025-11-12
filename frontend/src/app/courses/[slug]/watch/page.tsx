@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { CheckCircleIcon, XMarkIcon, TrophyIcon } from '@heroicons/react/24/solid';
+import { apiGet, apiPost } from '@/lib/api';
 
 interface Lesson {
   id: string;  // UUID
@@ -150,25 +151,10 @@ export default function VideoPlayerPage() {
 
   const checkAuthAndFetchCourse = async () => {
     try {
-      const token = localStorage.getItem('access_token');
-      
-      if (!token) {
-        router.push('/auth');
-        return;
-      }
-
       // Verify token is valid
-      const profileResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/profile/`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const profileResponse = await apiGet('/auth/profile/');
 
       if (!profileResponse.ok) {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        router.push('/auth');
         return;
       }
 
@@ -176,9 +162,6 @@ export default function VideoPlayerPage() {
       await fetchCourseAndLessons();
     } catch (error) {
       console.error('Auth check failed:', error);
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      router.push('/auth');
     }
   };
 
@@ -187,18 +170,7 @@ export default function VideoPlayerPage() {
       setLoading(true);
       setError(null);
 
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        router.push('/auth');
-        return;
-      }
-
-      const response = await fetch(`http://localhost:8000/api/courses/${slug}/`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await apiGet(`/courses/${slug}/`);
 
       if (response.ok) {
         const data = await response.json();
@@ -223,10 +195,6 @@ export default function VideoPlayerPage() {
         };
         
         setCourse(transformedData);
-      } else if (response.status === 401 || response.status === 403) {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        router.push('/auth');
       } else if (response.status === 404) {
         setError('Course not found');
       } else {
@@ -251,18 +219,11 @@ export default function VideoPlayerPage() {
 
     try {
       setMarking(true);
-      const response = await fetch(
-        `http://localhost:8000/api/courses/lessons/${currentLesson.id}/progress/`,
+      const response = await apiPost(
+        `/courses/lessons/${currentLesson.id}/progress/`,
         {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            is_completed: true,
-            time_spent: 0, // You could track actual time spent
-          }),
+          is_completed: true,
+          time_spent: 0, // You could track actual time spent
         }
       );
 
@@ -297,11 +258,6 @@ export default function VideoPlayerPage() {
           // Course completed - show modal
           setShowCompletionModal(true);
         }
-      } else if (response.status === 401 || response.status === 403) {
-        // Unauthorized or Forbidden - redirect to login
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        router.push('/auth');
       } else {
         const errorData = await response.json().catch(() => ({}));
         console.error('Failed to mark lesson as complete:', errorData);

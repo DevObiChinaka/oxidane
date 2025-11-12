@@ -193,23 +193,24 @@ class TestCodeFormatValidators:
     
     def test_validate_verification_code_format_valid(self):
         """Test valid verification codes"""
-        validate_verification_code_format('OXI-ABCD')
-        validate_verification_code_format('OXI-1234')
-        validate_verification_code_format('OXI-A1B2')
+        validate_verification_code_format('A3F8K2')
+        validate_verification_code_format('123456')
+        validate_verification_code_format('ABCDEF')
+        validate_verification_code_format('7B9X4M')
     
     def test_validate_verification_code_format_invalid_fails(self):
         """Test invalid verification code formats fail"""
-        with pytest.raises(ValidationError, match='OXI-XXXX'):
-            validate_verification_code_format('OXI-ABC')  # Too short
+        with pytest.raises(ValidationError, match='6 alphanumeric'):
+            validate_verification_code_format('ABC12')  # Too short (5 chars)
         
         with pytest.raises(ValidationError):
-            validate_verification_code_format('OXI-ABCDE')  # Too long
+            validate_verification_code_format('ABCDEFG')  # Too long (7 chars)
         
         with pytest.raises(ValidationError):
-            validate_verification_code_format('OXIABCD')  # No dash
+            validate_verification_code_format('ABC-12')  # Contains dash
         
         with pytest.raises(ValidationError):
-            validate_verification_code_format('ABC-1234')  # Wrong prefix
+            validate_verification_code_format('ABC@12')  # Contains special char
 
 
 # ============================================================================

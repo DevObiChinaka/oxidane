@@ -3,22 +3,26 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardSidebar from '../components/DashboardSidebar';
+import { formatCurrency, formatCurrencyApprox, type Currency } from '@/lib/utils/currency';
+import { apiGet, apiPost } from '@/lib/api';
 
 interface Subscription {
   id: string;
   plan_name: string;
   plan_type: 'signal' | 'mentorship' | 'bundle';
   status: 'active' | 'expired' | 'cancelled';
-  amount: number;
-  currency: string;
+  amount_paid: number;  // What they actually paid
+  currency: string;  // Currency they paid in (NGN/USD)
+  plan_base_price: number;  // Plan's base price in USD
+  plan_currency: string;  // Always USD for plans
   billing_cycle: 'one_time' | 'weekly' | 'monthly';
   start_date: string;
-  end_date: string | null; // null for lifetime (mentorship)
+  end_date: string | null;
   auto_renew: boolean;
   features: string[];
   telegram_username?: string;
-  days_remaining?: number | null; // null for lifetime
-  is_lifetime?: boolean; // For mentorship
+  days_remaining?: number | null;
+  is_lifetime?: boolean;
 }
 
 interface SubscriptionStats {
@@ -35,10 +39,72 @@ export default function SubscriptionsPage() {
   const [stats, setStats] = useState<SubscriptionStats | null>(null);
   const [showExpired, setShowExpired] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [displayCurrency, setDisplayCurrency] = useState<Currency>('USD'); // Add currency state
+  const [conversionRate, setConversionRate] = useState<number>(1);
+  const [convertedAmounts, setConvertedAmounts] = useState<{ [key: string]: number }>({});
 
   useEffect(() => {
     checkAuthAndFetchSubscriptions();
   }, []);
+
+  // Fetch conversion rate when currency changes
+  useEffect(() => {
+    // Always fetch USD to NGN rate for showing conversions
+    fetchConversionRate();
+  }, [displayCurrency]);
+
+  // Convert amounts when subscriptions or currency changes
+  useEffect(() => {
+    convertSubscriptionAmounts();
+  }, [subscriptions, displayCurrency, conversionRate]);
+
+  const fetchConversionRate = async () => {
+    try {
+      // Always fetch USD to NGN for showing conversions in parentheses
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/v1/currency/convert/?from=USD&to=NGN&amount=1`
+      );
+      
+      console.log('Currency conversion response status:', response.status);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Currency conversion data:', data);
+        // API returns 'to_amount', not 'converted_amount'
+        const rate = data.to_amount || data.converted_amount || 1;
+        console.log('Setting conversion rate to:', rate);
+        setConversionRate(rate);
+      } else {
+        console.error('Failed to fetch conversion rate:', response.statusText);
+        // Use fallback rate if API fails
+        const fallbackRate = 1650;
+        console.log('Using fallback rate:', fallbackRate);
+        setConversionRate(fallbackRate);
+      }
+    } catch (error) {
+      console.error('Error fetching conversion rate:', error);
+      // Use fallback rate: approximate NGN/USD rate
+      const fallbackRate = displayCurrency === 'NGN' ? 1650 : 1;
+      console.log('Using fallback rate (error):', fallbackRate);
+      setConversionRate(fallbackRate);
+    }
+  };
+
+  const convertSubscriptionAmounts = () => {
+    const converted: { [key: string]: number } = {};
+    subscriptions.forEach(sub => {
+      // Always use plan_base_price (USD) as the source of truth
+      // Convert from USD to display currency
+      if (displayCurrency === 'USD') {
+        converted[sub.id] = sub.plan_base_price;  // Show plan price in USD
+      } else if (displayCurrency === 'NGN') {
+        converted[sub.id] = sub.plan_base_price * conversionRate;  // Convert USD to NGN
+      } else {
+        converted[sub.id] = sub.plan_base_price;
+      }
+    });
+    setConvertedAmounts(converted);
+  };
 
   const checkAuthAndFetchSubscriptions = async () => {
     try {
@@ -58,13 +124,7 @@ export default function SubscriptionsPage() {
 
   const fetchSubscriptions = async () => {
     try {
-      const token = localStorage.getItem('access_token');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/subscriptions/my-subscriptions/`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await apiGet('/subscriptions/my-subscriptions/');
 
       if (response.ok) {
         const data = await response.json();
@@ -85,14 +145,7 @@ export default function SubscriptionsPage() {
 
     setCancellingId(subscriptionId);
     try {
-      const token = localStorage.getItem('access_token');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/subscriptions/${subscriptionId}/cancel/`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await apiPost(`/subscriptions/${subscriptionId}/cancel/`);
 
       if (response.ok) {
         await fetchSubscriptions();
@@ -110,14 +163,8 @@ export default function SubscriptionsPage() {
 
   const toggleAutoRenewal = async (subscriptionId: string, currentValue: boolean) => {
     try {
-      const token = localStorage.getItem('access_token');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/subscriptions/${subscriptionId}/auto-renewal/`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ auto_renew: !currentValue }),
+      const response = await apiPost(`/subscriptions/${subscriptionId}/auto-renewal/`, {
+        auto_renew: !currentValue,
       });
 
       if (response.ok) {
@@ -220,9 +267,35 @@ export default function SubscriptionsPage() {
       <main className="ml-72 min-h-screen">
         {/* Header */}
         <header className="bg-white border-b border-gray-200 px-8 py-8">
-          <div>
-            <h2 className="text-3xl font-bold text-gray-900">My Subscriptions</h2>
-            <p className="text-gray-500 text-sm mt-1">Manage your active plans and billing</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-3xl font-bold text-gray-900">My Subscriptions</h2>
+              <p className="text-gray-500 text-sm mt-1">Manage your active plans and billing</p>
+            </div>
+            
+            {/* Currency Selector */}
+            <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setDisplayCurrency('USD')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                  displayCurrency === 'USD'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                🇺🇸 USD
+              </button>
+              <button
+                onClick={() => setDisplayCurrency('NGN')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                  displayCurrency === 'NGN'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                🇳🇬 NGN
+              </button>
+            </div>
           </div>
         </header>
 
@@ -250,7 +323,14 @@ export default function SubscriptionsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-500 mb-1">Total Monthly Cost</p>
-                    <p className="text-3xl font-bold text-gray-900">${stats.total_monthly_cost}</p>
+                    <p className="text-3xl font-bold text-gray-900">
+                      {formatCurrency(
+                        displayCurrency === 'NGN' 
+                          ? stats.total_monthly_cost * conversionRate 
+                          : stats.total_monthly_cost,
+                        displayCurrency
+                      )}
+                    </p>
                   </div>
                   <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                     <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -313,7 +393,7 @@ export default function SubscriptionsPage() {
                     {/* Price */}
                     <div className="mb-4">
                       <p className="text-2xl font-bold text-gray-900">
-                        ${subscription.amount}
+                        {formatCurrency(convertedAmounts[subscription.id] || subscription.plan_base_price, displayCurrency)}
                         {!subscription.is_lifetime && (
                           <span className="text-sm font-normal text-gray-500">
                             /{subscription.billing_cycle === 'weekly' ? 'week' : subscription.billing_cycle === 'monthly' ? 'month' : 'year'}
@@ -322,6 +402,13 @@ export default function SubscriptionsPage() {
                         {subscription.is_lifetime && (
                           <span className="text-sm font-normal text-gray-500"> (one-time)</span>
                         )}
+                      </p>
+                      {/* Show what they actually paid */}
+                      <p className="text-xs text-gray-500 mt-1">
+                        You paid: {displayCurrency === 'USD' 
+                          ? formatCurrency(subscription.currency === 'NGN' ? subscription.amount_paid / conversionRate : subscription.amount_paid, 'USD')
+                          : formatCurrency(subscription.currency === 'USD' ? subscription.amount_paid * conversionRate : subscription.amount_paid, 'NGN')
+                        }
                       </p>
                     </div>
 

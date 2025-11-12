@@ -714,3 +714,749 @@ def approve_telegram_join_request(self, chat_id, user_id):
         except self.MaxRetriesExceededError:
             logger.error(f"Max retries exceeded for approve_telegram_join_request")
             return {'success': False, 'error': str(e)}
+
+
+@shared_task(bind=True)
+def process_telegram_updates(self):
+    """
+    Poll Telegram for new messages and handle verification codes.
+    
+    This task should be run periodically (e.g., every 5-10 seconds) via Celery Beat.
+    It processes /start commands with verification codes and regular text messages.
+    
+    Flow:
+    1. Call getUpdates to fetch new messages
+    2. For each message, check if it's a /start command or verification code
+    3. Match code with pending verification in database
+    4. Mark user as verified and send confirmation
+    5. Update offset to acknowledge processed messages
+    
+    No webhooks needed - works behind firewalls/NAT.
+    """
+    try:
+        from django.core.cache import cache
+        
+        config = TelegramConfiguration.get_instance()
+        
+        if not config.has_valid_token():
+            logger.debug("Telegram bot not configured, skipping update processing")
+            return {'success': False, 'message': 'Bot not configured'}
+        
+        bot_token = config.decrypt_field('bot_token')
+        
+        # Get last processed update ID from cache
+        offset_key = 'telegram_bot_update_offset'
+        last_offset = cache.get(offset_key, 0)
+        
+        # Fetch updates from Telegram
+        url = f"https://api.telegram.org/bot{bot_token}/getUpdates"
+        params = {
+            'offset': last_offset + 1,  # Only get updates after last processed
+            'timeout': 5,  # Long polling timeout
+            'allowed_updates': ['message']  # Only interested in messages
+        }
+        
+        response = requests.get(url, params=params, timeout=10)
+        
+        if response.status_code != 200:
+            logger.error(f"Telegram getUpdates failed: {response.status_code}")
+            return {'success': False, 'message': 'API request failed'}
+        
+        data = response.json()
+        
+        if not data.get('ok'):
+            error = data.get('description', 'Unknown error')
+            logger.error(f"Telegram API error: {error}")
+            return {'success': False, 'message': error}
+        
+        updates = data.get('result', [])
+        
+        if not updates:
+            logger.debug("No new Telegram updates")
+            return {'success': True, 'processed': 0}
+        
+        processed_count = 0
+        new_offset = last_offset
+        
+        for update in updates:
+            update_id = update.get('update_id')
+            new_offset = max(new_offset, update_id)
+            
+            # Only process messages
+            if 'message' not in update:
+                continue
+            
+            message = update['message']
+            text = message.get('text', '').strip()
+            user = message['from']
+            user_id = str(user['id'])
+            username = user.get('username', '')
+            chat_id = message['chat']['id']
+            
+            # Handle /start command with deep link parameter
+            if text.startswith('/start'):
+                parts = text.split()
+                
+                # Check for deep link: /start VERIFY_A3F8K2
+                if len(parts) == 2 and parts[1].startswith('VERIFY_'):
+                    verification_code = parts[1].replace('VERIFY_', '').upper()
+                    username_display = f"@{username}" if username else f"user_{user_id}"
+                    logger.info(f"Deep link verification from {username_display}: {verification_code}")
+                    
+                    # Process verification
+                    result = _process_verification_code(
+                        verification_code, user_id, username, chat_id, bot_token
+                    )
+                    processed_count += 1
+                    continue
+                
+                # Regular /start command - send welcome message
+                _send_welcome_message(chat_id, username, bot_token)
+                processed_count += 1
+                continue
+            
+            # Handle direct code entry (6 alphanumeric characters)
+            if text.upper().replace(' ', '') and len(text.replace(' ', '')) == 6:
+                code = text.upper().replace(' ', '')
+                
+                # Validate code format: 6 alphanumeric
+                import re
+                if re.match(r'^[A-Z0-9]{6}$', code):
+                    username_display = f"@{username}" if username else f"user_{user_id}"
+                    logger.info(f"Direct code entry from {username_display}: {code}")
+                    
+                    result = _process_verification_code(
+                        code, user_id, username, chat_id, bot_token
+                    )
+                    processed_count += 1
+                    continue
+        
+        # Save new offset to cache
+        if new_offset > last_offset:
+            cache.set(offset_key, new_offset, timeout=None)  # Never expire
+        
+        logger.info(f"Processed {processed_count} Telegram updates")
+        return {'success': True, 'processed': processed_count}
+    
+    except requests.exceptions.Timeout:
+        logger.warning("Telegram API timeout")
+        return {'success': False, 'message': 'Timeout'}
+    
+    except Exception as e:
+        logger.error(f"Error processing Telegram updates: {str(e)}", exc_info=True)
+        return {'success': False, 'error': str(e)}
+
+
+def _process_verification_code(verification_code, telegram_user_id, telegram_username, chat_id, bot_token):
+    """
+    Helper function to process a verification code.
+    
+    Args:
+        verification_code: 6-character code (e.g., "A3F8K2")
+        telegram_user_id: Telegram user ID (str)
+        telegram_username: Telegram username (optional)
+        chat_id: Chat ID to send response to
+        bot_token: Decrypted bot token
+        
+    Returns:
+        Dict with success status and message
+    """
+    try:
+        # Find billing profile with matching code
+        from django.utils import timezone
+        
+        billing_profile = BillingProfile.objects.filter(
+            verification_code=verification_code,
+            verification_code_expires_at__gt=timezone.now(),
+            telegram_verified=False
+        ).first()
+        
+        if not billing_profile:
+            # Code not found or expired
+            _send_telegram_message(
+                chat_id,
+                "❌ Invalid or expired verification code.\n\n"
+                "Please generate a new code from the website and try again.",
+                bot_token
+            )
+            return {'success': False, 'message': 'Invalid code'}
+        
+        # Mark as verified
+        billing_profile.telegram_user_id = telegram_user_id
+        billing_profile.telegram_username = telegram_username if telegram_username else f"user_{telegram_user_id}"
+        billing_profile.telegram_verified = True
+        billing_profile.verification_code = None  # Clear code
+        billing_profile.verification_code_expires_at = None
+        billing_profile.save(update_fields=[
+            'telegram_user_id', 'telegram_username', 'telegram_verified',
+            'verification_code', 'verification_code_expires_at'
+        ])
+        
+        # Send success message
+        username_display = f"@{telegram_username}" if telegram_username else f"user_{telegram_user_id}"
+        _send_telegram_message(
+            chat_id,
+            f"✅ Verification successful!\n\n"
+            f"Your Telegram account is now linked to your subscription.\n"
+            f"User ID: {telegram_user_id}",
+            bot_token
+        )
+        
+        logger.info(f"✅ Verified: {billing_profile.user.email} → {username_display}")
+        return {'success': True, 'message': 'Verified successfully'}
+    
+    except Exception as e:
+        logger.error(f"Error in _process_verification_code: {str(e)}", exc_info=True)
+        _send_telegram_message(
+            chat_id,
+            "❌ An error occurred during verification. Please try again or contact support.",
+            bot_token
+        )
+        return {'success': False, 'error': str(e)}
+
+
+def _send_welcome_message(chat_id, username, bot_token):
+    """Send welcome message when user clicks /start."""
+    message = (
+        f"👋 Welcome to the bot{', @' + username if username else ''}!\n\n"
+        "To verify your Telegram account:\n"
+        "1. Generate a verification code on the website\n"
+        "2. Send the 6-character code here\n\n"
+        "Example: If your code is A3F8K2, just type:\n"
+        "A3F8K2"
+    )
+    _send_telegram_message(chat_id, message, bot_token)
+
+
+def _send_telegram_message(chat_id, text, bot_token):
+    """
+    Helper function to send a message via Telegram API.
+    
+    Args:
+        chat_id: Telegram chat ID
+        text: Message text
+        bot_token: Decrypted bot token
+    """
+    try:
+        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        requests.post(
+            url,
+            json={'chat_id': chat_id, 'text': text},
+            timeout=10
+        )
+    except Exception as e:
+        logger.error(f"Failed to send Telegram message: {str(e)}")
+
+
+# ============================================================================
+# TRIAL CONVERSION AND AUTO-RENEWAL TASKS
+# ============================================================================
+
+@shared_task
+def process_trial_endings():
+    """
+    Process trial subscriptions ending today and convert them to paid subscriptions.
+    
+    Runs: Daily at 3 AM (configured in celery.py)
+    
+    Flow:
+        1. Find all trial subscriptions ending today
+        2. For each subscription, trigger trial conversion task
+        3. Log results
+    
+    Returns:
+        dict: Summary of trials processed
+    """
+    try:
+        logger.info("Processing trial subscriptions ending today")
+        
+        from django.utils import timezone
+        from datetime import datetime
+        
+        # Get subscriptions ending today (trial_end_date is today)
+        today = timezone.now().date()
+        
+        ending_trials = Subscription.objects.filter(
+            is_trial=True,
+            status='active',
+            trial_end_date__date=today
+        ).select_related('billing_profile__user', 'plan', 'payment_method')
+        
+        total_count = ending_trials.count()
+        
+        if total_count == 0:
+            logger.info("No trial subscriptions ending today")
+            return {'success': True, 'trials_ending': 0}
+        
+        logger.info(f"Found {total_count} trial subscriptions ending today")
+        
+        # Trigger conversion task for each subscription
+        processed = 0
+        for subscription in ending_trials:
+            try:
+                # Queue individual conversion task (async)
+                process_trial_conversion.delay(str(subscription.id))
+                processed += 1
+                logger.info(f"Queued trial conversion for subscription {subscription.id}")
+            except Exception as e:
+                logger.error(f"Failed to queue conversion for {subscription.id}: {str(e)}")
+        
+        logger.info(f"Queued {processed}/{total_count} trial conversions")
+        
+        return {
+            'success': True,
+            'trials_ending': total_count,
+            'queued': processed
+        }
+    
+    except Exception as e:
+        logger.error(f"Error in process_trial_endings: {str(e)}", exc_info=True)
+        return {'success': False, 'error': str(e)}
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=300)
+def process_trial_conversion(self, subscription_id):
+    """
+    Convert a single trial subscription to paid by charging saved payment method.
+    
+    Args:
+        subscription_id: UUID string of subscription to convert
+        
+    Flow:
+        1. Get subscription and verify it's a trial
+        2. Check for saved payment method
+        3. Charge the payment method using authorization code
+        4. On success: Mark subscription as paid, set next billing date
+        5. On failure: Retry 3 times, then mark subscription as expired
+        
+    Retries: 3 times with 5-minute delay
+    """
+    try:
+        from django.utils import timezone
+        from datetime import timedelta
+        from subscriptions.payment_service import PaystackService
+        
+        logger.info(f"Processing trial conversion for subscription {subscription_id}")
+        
+        # Get subscription
+        try:
+            subscription = Subscription.objects.select_related(
+                'billing_profile__user',
+                'plan',
+                'payment_method'
+            ).get(id=subscription_id)
+        except Subscription.DoesNotExist:
+            logger.error(f"Subscription {subscription_id} not found")
+            return {'success': False, 'error': 'Subscription not found'}
+        
+        # Verify it's a trial subscription
+        if not subscription.is_trial:
+            logger.warning(f"Subscription {subscription_id} is not a trial")
+            return {'success': False, 'error': 'Not a trial subscription'}
+        
+        # Check trial has ended
+        if subscription.trial_end_date and subscription.trial_end_date > timezone.now():
+            logger.info(f"Trial for {subscription_id} hasn't ended yet")
+            return {'success': False, 'error': 'Trial still active'}
+        
+        # Check for payment method
+        if not subscription.payment_method or not subscription.payment_method.is_active:
+            logger.error(f"No active payment method for subscription {subscription_id}")
+            
+            # Mark subscription as expired (no payment method)
+            subscription.status = 'expired'
+            subscription.is_active = False
+            subscription.save(update_fields=['status', 'is_active'])
+            
+            # TODO: Send email notification about expired trial
+            
+            return {
+                'success': False,
+                'error': 'No active payment method',
+                'action': 'marked_expired'
+            }
+        
+        payment_method = subscription.payment_method
+        user = subscription.billing_profile.user
+        
+        # Get authorization code
+        auth_code = payment_method.gateway_authorization_code
+        
+        if not auth_code:
+            logger.error(f"Payment method {payment_method.id} has no authorization code")
+            subscription.status = 'expired'
+            subscription.is_active = False
+            subscription.save(update_fields=['status', 'is_active'])
+            return {
+                'success': False,
+                'error': 'No authorization code',
+                'action': 'marked_expired'
+            }
+        
+        # Calculate amount to charge (plan price)
+        amount = subscription.plan.base_price
+        currency = subscription.currency or 'USD'
+        
+        # Charge payment method
+        logger.info(f"Charging {currency} {amount} to payment method {payment_method.id}")
+        
+        paystack_service = PaystackService()
+        
+        charge_result = paystack_service.charge_authorization(
+            authorization_code=auth_code,
+            email=user.email,
+            amount=amount,
+            currency=currency,
+            metadata={
+                'subscription_id': str(subscription.id),
+                'plan_id': str(subscription.plan.id),
+                'trial_conversion': True,
+                'user_email': user.email
+            }
+        )
+        
+        if charge_result.get('success'):
+            # Payment successful - convert trial to paid subscription
+            logger.info(f"✅ Trial conversion successful for {subscription_id}")
+            
+            # Update subscription
+            subscription.is_trial = False
+            subscription.trial_end_date = None
+            subscription.amount_paid = amount
+            subscription.status = 'active'
+            subscription.is_active = True
+            
+            # Set next billing date based on plan period
+            if subscription.plan.billing_period == 'weekly':
+                subscription.next_billing_date = timezone.now() + timedelta(days=7)
+            elif subscription.plan.billing_period == 'monthly':
+                subscription.next_billing_date = timezone.now() + timedelta(days=30)
+            elif subscription.plan.billing_period == 'quarterly':
+                subscription.next_billing_date = timezone.now() + timedelta(days=90)
+            elif subscription.plan.billing_period == 'yearly':
+                subscription.next_billing_date = timezone.now() + timedelta(days=365)
+            elif subscription.plan.billing_period == 'lifetime':
+                subscription.next_billing_date = None  # No renewal for lifetime
+            else:
+                subscription.next_billing_date = timezone.now() + timedelta(days=30)
+            
+            subscription.save()
+            
+            # Create payment record
+            Payment.objects.create(
+                billing_profile=subscription.billing_profile,
+                subscription=subscription,
+                payment_method=payment_method,
+                amount=amount,
+                currency=currency,
+                processing_fee=Decimal('0.00'),
+                total_amount=amount,
+                status='success',
+                gateway='paystack',
+                gateway_reference=charge_result.get('reference'),
+                gateway_response=charge_result,
+                paid_at=timezone.now()
+            )
+            
+            logger.info(f"Payment record created for trial conversion {subscription_id}")
+            
+            # TODO: Send email confirming trial conversion and payment
+            
+            return {
+                'success': True,
+                'subscription_id': str(subscription.id),
+                'amount_charged': float(amount),
+                'currency': currency,
+                'reference': charge_result.get('reference'),
+                'next_billing_date': subscription.next_billing_date.isoformat() if subscription.next_billing_date else None
+            }
+        
+        else:
+            # Payment failed
+            error_message = charge_result.get('message', 'Unknown error')
+            logger.error(f"Trial conversion payment failed for {subscription_id}: {error_message}")
+            
+            # Check retry count
+            if self.request.retries < self.max_retries:
+                # Retry later
+                logger.info(f"Retrying trial conversion for {subscription_id} (attempt {self.request.retries + 1}/{self.max_retries})")
+                raise self.retry(exc=Exception(error_message))
+            else:
+                # Max retries exceeded - mark subscription as expired
+                logger.error(f"Max retries exceeded for {subscription_id}, marking as expired")
+                
+                subscription.status = 'expired'
+                subscription.is_active = False
+                subscription.save(update_fields=['status', 'is_active'])
+                
+                # TODO: Send email about failed payment and expired subscription
+                
+                return {
+                    'success': False,
+                    'error': error_message,
+                    'action': 'marked_expired',
+                    'retries_exhausted': True
+                }
+    
+    except Exception as e:
+        logger.error(f"Error in process_trial_conversion for {subscription_id}: {str(e)}", exc_info=True)
+        
+        # Retry on exception
+        try:
+            raise self.retry(exc=e)
+        except self.MaxRetriesExceededError:
+            logger.error(f"Max retries exceeded for trial conversion {subscription_id}")
+            
+            # Mark subscription as expired
+            try:
+                subscription = Subscription.objects.get(id=subscription_id)
+                subscription.status = 'expired'
+                subscription.is_active = False
+                subscription.save(update_fields=['status', 'is_active'])
+            except Exception as save_error:
+                logger.error(f"Failed to mark subscription as expired: {str(save_error)}")
+            
+            return {'success': False, 'error': str(e), 'action': 'marked_expired'}
+
+
+@shared_task
+def process_auto_renewals():
+    """
+    Process auto-renewals for subscriptions ending today.
+    
+    Runs: Daily at 2 AM (configured in celery.py)
+    
+    Flow:
+        1. Find all paid subscriptions ending today with auto_renew=True
+        2. For each subscription, charge saved payment method
+        3. On success: Extend subscription
+        4. On failure: Retry, then disable auto_renew
+    
+    Returns:
+        dict: Summary of renewals processed
+    """
+    try:
+        logger.info("Processing auto-renewals for subscriptions ending today")
+        
+        from django.utils import timezone
+        
+        # Get subscriptions ending today with auto-renewal enabled
+        today = timezone.now().date()
+        
+        renewing_subscriptions = Subscription.objects.filter(
+            status='active',
+            is_trial=False,  # Only paid subscriptions
+            auto_renew=True,
+            next_billing_date__date=today
+        ).select_related('billing_profile__user', 'plan', 'payment_method')
+        
+        total_count = renewing_subscriptions.count()
+        
+        if total_count == 0:
+            logger.info("No subscriptions to auto-renew today")
+            return {'success': True, 'renewals': 0}
+        
+        logger.info(f"Found {total_count} subscriptions to auto-renew")
+        
+        # Process each renewal
+        processed = 0
+        for subscription in renewing_subscriptions:
+            try:
+                # Queue individual renewal task (async)
+                process_single_renewal.delay(str(subscription.id))
+                processed += 1
+                logger.info(f"Queued auto-renewal for subscription {subscription.id}")
+            except Exception as e:
+                logger.error(f"Failed to queue renewal for {subscription.id}: {str(e)}")
+        
+        logger.info(f"Queued {processed}/{total_count} auto-renewals")
+        
+        return {
+            'success': True,
+            'renewals': total_count,
+            'queued': processed
+        }
+    
+    except Exception as e:
+        logger.error(f"Error in process_auto_renewals: {str(e)}", exc_info=True)
+        return {'success': False, 'error': str(e)}
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=300)
+def process_single_renewal(self, subscription_id):
+    """
+    Process a single subscription renewal by charging saved payment method.
+    
+    Args:
+        subscription_id: UUID string of subscription to renew
+        
+    Similar to trial conversion but for regular renewals.
+    
+    Retries: 3 times with 5-minute delay
+    """
+    try:
+        from django.utils import timezone
+        from datetime import timedelta
+        from subscriptions.payment_service import PaystackService
+        
+        logger.info(f"Processing auto-renewal for subscription {subscription_id}")
+        
+        # Get subscription
+        try:
+            subscription = Subscription.objects.select_related(
+                'billing_profile__user',
+                'plan',
+                'payment_method'
+            ).get(id=subscription_id)
+        except Subscription.DoesNotExist:
+            logger.error(f"Subscription {subscription_id} not found")
+            return {'success': False, 'error': 'Subscription not found'}
+        
+        # Verify auto_renew is enabled
+        if not subscription.auto_renew:
+            logger.warning(f"Auto-renew disabled for subscription {subscription_id}")
+            return {'success': False, 'error': 'Auto-renew not enabled'}
+        
+        # Check for payment method
+        if not subscription.payment_method or not subscription.payment_method.is_active:
+            logger.error(f"No active payment method for subscription {subscription_id}")
+            
+            # Disable auto-renew
+            subscription.auto_renew = False
+            subscription.save(update_fields=['auto_renew'])
+            
+            # TODO: Send email notification about disabled auto-renewal
+            
+            return {
+                'success': False,
+                'error': 'No active payment method',
+                'action': 'auto_renew_disabled'
+            }
+        
+        payment_method = subscription.payment_method
+        user = subscription.billing_profile.user
+        auth_code = payment_method.gateway_authorization_code
+        
+        if not auth_code:
+            logger.error(f"Payment method {payment_method.id} has no authorization code")
+            subscription.auto_renew = False
+            subscription.save(update_fields=['auto_renew'])
+            return {
+                'success': False,
+                'error': 'No authorization code',
+                'action': 'auto_renew_disabled'
+            }
+        
+        # Calculate amount
+        amount = subscription.plan.base_price
+        currency = subscription.currency or 'USD'
+        
+        # Charge payment method
+        logger.info(f"Charging {currency} {amount} for renewal of {subscription_id}")
+        
+        paystack_service = PaystackService()
+        
+        charge_result = paystack_service.charge_authorization(
+            authorization_code=auth_code,
+            email=user.email,
+            amount=amount,
+            currency=currency,
+            metadata={
+                'subscription_id': str(subscription.id),
+                'plan_id': str(subscription.plan.id),
+                'renewal': True,
+                'user_email': user.email
+            }
+        )
+        
+        if charge_result.get('success'):
+            # Renewal successful
+            logger.info(f"✅ Auto-renewal successful for {subscription_id}")
+            
+            # Extend subscription
+            if subscription.plan.billing_period == 'weekly':
+                subscription.next_billing_date = timezone.now() + timedelta(days=7)
+                subscription.end_date = timezone.now() + timedelta(days=7)
+            elif subscription.plan.billing_period == 'monthly':
+                subscription.next_billing_date = timezone.now() + timedelta(days=30)
+                subscription.end_date = timezone.now() + timedelta(days=30)
+            elif subscription.plan.billing_period == 'quarterly':
+                subscription.next_billing_date = timezone.now() + timedelta(days=90)
+                subscription.end_date = timezone.now() + timedelta(days=90)
+            elif subscription.plan.billing_period == 'yearly':
+                subscription.next_billing_date = timezone.now() + timedelta(days=365)
+                subscription.end_date = timezone.now() + timedelta(days=365)
+            else:
+                subscription.next_billing_date = timezone.now() + timedelta(days=30)
+                subscription.end_date = timezone.now() + timedelta(days=30)
+            
+            subscription.save()
+            
+            # Create payment record
+            Payment.objects.create(
+                billing_profile=subscription.billing_profile,
+                subscription=subscription,
+                payment_method=payment_method,
+                amount=amount,
+                currency=currency,
+                processing_fee=Decimal('0.00'),
+                total_amount=amount,
+                status='success',
+                gateway='paystack',
+                gateway_reference=charge_result.get('reference'),
+                gateway_response=charge_result,
+                paid_at=timezone.now()
+            )
+            
+            # TODO: Send renewal confirmation email
+            
+            return {
+                'success': True,
+                'subscription_id': str(subscription.id),
+                'amount_charged': float(amount),
+                'currency': currency,
+                'reference': charge_result.get('reference'),
+                'next_billing_date': subscription.next_billing_date.isoformat()
+            }
+        
+        else:
+            # Renewal payment failed
+            error_message = charge_result.get('message', 'Unknown error')
+            logger.error(f"Renewal payment failed for {subscription_id}: {error_message}")
+            
+            # Retry
+            if self.request.retries < self.max_retries:
+                logger.info(f"Retrying renewal for {subscription_id} (attempt {self.request.retries + 1}/{self.max_retries})")
+                raise self.retry(exc=Exception(error_message))
+            else:
+                # Max retries - disable auto-renewal
+                logger.error(f"Max retries exceeded for {subscription_id}, disabling auto-renew")
+                
+                subscription.auto_renew = False
+                subscription.save(update_fields=['auto_renew'])
+                
+                # TODO: Send email about failed renewal
+                
+                return {
+                    'success': False,
+                    'error': error_message,
+                    'action': 'auto_renew_disabled',
+                    'retries_exhausted': True
+                }
+    
+    except Exception as e:
+        logger.error(f"Error in process_single_renewal for {subscription_id}: {str(e)}", exc_info=True)
+        
+        try:
+            raise self.retry(exc=e)
+        except self.MaxRetriesExceededError:
+            logger.error(f"Max retries exceeded for renewal {subscription_id}")
+            
+            try:
+                subscription = Subscription.objects.get(id=subscription_id)
+                subscription.auto_renew = False
+                subscription.save(update_fields=['auto_renew'])
+            except Exception as save_error:
+                logger.error(f"Failed to disable auto_renew: {str(save_error)}")
+            
+            return {'success': False, 'error': str(e), 'action': 'auto_renew_disabled'}

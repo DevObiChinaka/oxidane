@@ -17,8 +17,10 @@ import logging
 import uuid
 import json
 from decimal import Decimal
+from datetime import timedelta
 from django.conf import settings
 from django.http import JsonResponse, HttpResponse
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.utils.decorators import method_decorator
@@ -136,34 +138,83 @@ class InitializePaymentView(APIView):
                     'error': f'Plan not available in {currency}'
                 }, status=status.HTTP_400_BAD_REQUEST)
             
-            amount = plan_price
-            discount_amount = Decimal('0.00')
+            # Check if plan has trial period
+            is_trial = plan.trial_days > 0
             
-            # Apply coupon if provided
-            if coupon_code:
-                try:
-                    coupon = Coupon.objects.get(
-                        code=coupon_code.upper(),
-                        is_active=True
-                    )
-                    
-                    # Validate coupon
-                    is_valid, error_message = coupon.validate_for_plan(plan)
-                    if not is_valid:
+            # For trial subscriptions, amount is $0 but we still need card verification
+            if is_trial:
+                amount = Decimal('0.00')  # No charge during trial
+                discount_amount = Decimal('0.00')
+                logger.info(f"Initializing trial subscription: {plan.trial_days} days for plan {plan.name}")
+            else:
+                amount = plan_price
+                discount_amount = Decimal('0.00')
+                
+                # Apply coupon if provided (only for non-trial)
+                if coupon_code:
+                    try:
+                        coupon = Coupon.objects.get(
+                            code=coupon_code.upper(),
+                            is_active=True
+                        )
+                        
+                        # Validate coupon time validity
+                        if not coupon.is_valid():
+                            from django.utils import timezone as tz
+                            now = tz.now()
+                            if coupon.valid_from and now < coupon.valid_from:
+                                return Response({
+                                    'success': False,
+                                    'error': f'Coupon is not valid until {coupon.valid_from.strftime("%Y-%m-%d")}'
+                                }, status=status.HTTP_400_BAD_REQUEST)
+                            elif coupon.valid_until and now > coupon.valid_until:
+                                return Response({
+                                    'success': False,
+                                    'error': f'Coupon expired on {coupon.valid_until.strftime("%Y-%m-%d")}'
+                                }, status=status.HTTP_400_BAD_REQUEST)
+                            else:
+                                return Response({
+                                    'success': False,
+                                    'error': 'Coupon is not currently valid'
+                                }, status=status.HTTP_400_BAD_REQUEST)
+                        
+                        # Check usage availability
+                        if not coupon.is_usage_available():
+                            return Response({
+                                'success': False,
+                                'error': 'This coupon has reached its usage limit'
+                            }, status=status.HTTP_400_BAD_REQUEST)
+                        
+                        # Check user-specific usage limit
+                        user_usage_count = Payment.objects.filter(
+                            billing_profile=billing_profile,
+                            status__in=['completed', 'success'],
+                            gateway_response__metadata__coupon_code=coupon_code.upper()
+                        ).count()
+                        
+                        if user_usage_count >= coupon.max_uses_per_user:
+                            return Response({
+                                'success': False,
+                                'error': f'You have already used this coupon {coupon.max_uses_per_user} time(s)'
+                            }, status=status.HTTP_400_BAD_REQUEST)
+                        
+                        # Check if coupon applies to this plan
+                        if not coupon.applies_to_plan(plan):
+                            return Response({
+                                'success': False,
+                                'error': 'This coupon does not apply to the selected plan'
+                            }, status=status.HTTP_400_BAD_REQUEST)
+                        
+                        # Calculate discount
+                        discount_result = coupon.calculate_discount(amount)
+                        discount_amount = discount_result['discount_amount']
+                        amount = discount_result['final_price']
+                        
+                    except Coupon.DoesNotExist:
                         return Response({
                             'success': False,
-                            'error': error_message
+                            'error': 'Invalid coupon code'
                         }, status=status.HTTP_400_BAD_REQUEST)
-                    
-                    # Calculate discount
-                    discount_amount = coupon.calculate_discount(amount)
-                    amount = amount - discount_amount
-                    
-                except Coupon.DoesNotExist:
-                    return Response({
-                        'success': False,
-                        'error': 'Invalid coupon code'
-                    }, status=status.HTTP_400_BAD_REQUEST)
             
             # Calculate processing fee
             calculation = PaymentCalculator.calculate_total_with_fees(
@@ -209,14 +260,19 @@ class InitializePaymentView(APIView):
                 gateway_response={}
             )
             
-            # Store plan_id and coupon in metadata
+            # Build metadata for payment gateway
             metadata = {
-                'plan_id': plan.id,
+                'plan_id': str(plan.id),  # Convert UUID to string
                 'plan_name': plan.name,
-                'user_id': request.user.id,
+                'user_id': str(request.user.id),  # Convert UUID to string
                 'user_email': request.user.email,
-                'payment_id': payment.id,
+                'payment_id': str(payment.id),  # Convert UUID to string
+                'is_trial': is_trial,
             }
+            
+            if is_trial:
+                metadata['trial_days'] = plan.trial_days
+                metadata['plan_price'] = str(plan_price)  # Store actual price for reference
             
             if coupon_code:
                 metadata['coupon_code'] = coupon_code
@@ -245,9 +301,9 @@ class InitializePaymentView(APIView):
                     payment.status = 'processing'
                     payment.save()
                     
-                    logger.info(f"Payment initialized: {reference} for user {request.user.id}")
+                    logger.info(f"Payment initialized: {reference} for user {request.user.id} (trial={is_trial})")
                     
-                    return Response({
+                    response_data = {
                         'success': True,
                         'payment_url': result['authorization_url'],
                         'reference': reference,
@@ -256,8 +312,16 @@ class InitializePaymentView(APIView):
                         'total_amount': float(total_amount),
                         'currency': currency,
                         'gateway': gateway,
-                        'payment_id': payment.id
-                    }, status=status.HTTP_200_OK)
+                        'payment_id': payment.id,
+                        'is_trial': is_trial,
+                        'paystack_public_key': config.paystack_public_key if gateway == 'paystack' else None,
+                    }
+                    
+                    if is_trial:
+                        response_data['trial_days'] = plan.trial_days
+                        response_data['plan_price'] = float(plan_price)
+                    
+                    return Response(response_data, status=status.HTTP_200_OK)
                 else:
                     # Payment initialization failed
                     payment.status = 'failed'
@@ -291,9 +355,9 @@ class InitializePaymentView(APIView):
                     payment.status = 'processing'
                     payment.save()
                     
-                    logger.info(f"Stripe session created: {result['session_id']} for user {request.user.id}")
+                    logger.info(f"Stripe session created: {result['session_id']} for user {request.user.id} (trial={is_trial})")
                     
-                    return Response({
+                    response_data = {
                         'success': True,
                         'payment_url': result['checkout_url'],
                         'reference': result['session_id'],
@@ -302,8 +366,15 @@ class InitializePaymentView(APIView):
                         'total_amount': float(total_amount),
                         'currency': currency,
                         'gateway': gateway,
-                        'payment_id': payment.id
-                    }, status=status.HTTP_200_OK)
+                        'payment_id': payment.id,
+                        'is_trial': is_trial,
+                    }
+                    
+                    if is_trial:
+                        response_data['trial_days'] = plan.trial_days
+                        response_data['plan_price'] = float(plan_price)
+                    
+                    return Response(response_data, status=status.HTTP_200_OK)
                 else:
                     # Payment initialization failed
                     payment.status = 'failed'
@@ -424,13 +495,92 @@ class VerifyPaymentView(APIView):
                     try:
                         plan = SubscriptionPlan.objects.get(id=plan_id)
                         
-                        # Create or update subscription
+                        # Check if plan has trial period
+                        is_trial = plan.trial_days > 0
+                        
+                        # Calculate subscription dates
+                        start_date = timezone.now()
+                        
+                        if is_trial:
+                            # Trial subscription - end date is trial period
+                            trial_end_date = start_date + timedelta(days=plan.trial_days)
+                            end_date = trial_end_date
+                            
+                            # Calculate next billing date (when trial ends)
+                            next_billing_date = trial_end_date
+                            
+                            logger.info(f"Creating trial subscription: {plan.trial_days} days trial for plan {plan.name}")
+                        else:
+                            # Regular paid subscription - calculate based on billing period
+                            trial_end_date = None
+                            
+                            if plan.billing_period == 'weekly':
+                                end_date = start_date + timedelta(days=7)
+                                next_billing_date = start_date + timedelta(days=7)
+                            elif plan.billing_period == 'monthly':
+                                end_date = start_date + timedelta(days=30)
+                                next_billing_date = start_date + timedelta(days=30)
+                            elif plan.billing_period == 'quarterly':
+                                end_date = start_date + timedelta(days=90)
+                                next_billing_date = start_date + timedelta(days=90)
+                            elif plan.billing_period == 'yearly':
+                                end_date = start_date + timedelta(days=365)
+                                next_billing_date = start_date + timedelta(days=365)
+                            elif plan.billing_period == 'lifetime':
+                                end_date = start_date + timedelta(days=36500)  # 100 years
+                                next_billing_date = None  # No renewal for lifetime
+                            else:
+                                end_date = start_date + timedelta(days=30)  # Default to monthly
+                                next_billing_date = start_date + timedelta(days=30)
+                        
+                        # Extract authorization code from payment verification for auto-renewal
+                        payment_method = None
+                        authorization_code = None
+                        
+                        if payment.payment_gateway == 'paystack':
+                            paystack_service = PaystackService()
+                            auth_data = paystack_service.extract_authorization_from_verification(result)
+                            
+                            if auth_data:
+                                # Create or update payment method
+                                payment_method, pm_created = PaymentMethod.objects.update_or_create(
+                                    billing_profile=payment.billing_profile,
+                                    gateway_authorization_code=auth_data['authorization_code'],
+                                    defaults={
+                                        'payment_type': 'card',
+                                        'card_last4': auth_data['last4'],
+                                        'card_brand': auth_data['brand'],
+                                        'card_exp_month': auth_data['exp_month'],
+                                        'card_exp_year': auth_data['exp_year'],
+                                        'is_active': True,
+                                        # Only set as default if user has no payment methods
+                                        'is_default': not PaymentMethod.objects.filter(
+                                            billing_profile=payment.billing_profile,
+                                            is_active=True
+                                        ).exists()
+                                    }
+                                )
+                                
+                                if pm_created:
+                                    logger.info(f"Payment method created from trial signup: {auth_data['last4']}")
+                                else:
+                                    logger.info(f"Payment method updated from trial signup: {auth_data['last4']}")
+                        
+                        # Create or update subscription (use billing_profile, not user)
                         subscription, created = Subscription.objects.update_or_create(
-                            user=request.user,
+                            billing_profile=payment.billing_profile,
                             defaults={
                                 'plan': plan,
                                 'status': 'active',
-                                'billing_profile': payment.billing_profile,
+                                'start_date': start_date,
+                                'end_date': end_date,
+                                'is_trial': is_trial,
+                                'trial_end_date': trial_end_date,
+                                'amount_paid': Decimal('0.00') if is_trial else payment.amount,
+                                'currency': payment.currency,
+                                'auto_renew': True,  # Enable auto-renew for both trial and paid
+                                'payment_method': payment_method,  # Link saved payment method
+                                'next_billing_date': next_billing_date,
                             }
                         )
                         
@@ -448,19 +598,31 @@ class VerifyPaymentView(APIView):
                         # Trigger Celery tasks
                         activate_subscription.delay(payment.id)
                         add_user_to_telegram_groups.delay(request.user.id, str(plan.id))
-                        send_payment_receipt_email.delay(payment.id)
+                        
+                        # Only send receipt for paid subscriptions (not trials with $0)
+                        if not is_trial:
+                            send_payment_receipt_email.delay(payment.id)
                         
                     except SubscriptionPlan.DoesNotExist:
                         logger.error(f"Plan {plan_id} not found for payment {payment.id}")
                 
-                return Response({
+                response_data = {
                     'success': True,
                     'verified': True,
                     'amount': float(payment.amount),
                     'currency': payment.currency,
                     'subscription_id': payment.subscription.id if payment.subscription else None,
                     'message': 'Payment verified successfully'
-                }, status=status.HTTP_200_OK)
+                }
+                
+                # Add trial information if subscription exists
+                if payment.subscription:
+                    response_data['is_trial'] = payment.subscription.is_trial
+                    if payment.subscription.is_trial:
+                        response_data['trial_end_date'] = payment.subscription.trial_end_date.isoformat() if payment.subscription.trial_end_date else None
+                        response_data['trial_days_remaining'] = payment.subscription.days_until_trial_end
+                
+                return Response(response_data, status=status.HTTP_200_OK)
             
             else:
                 # Payment failed

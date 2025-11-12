@@ -24,7 +24,7 @@ from decimal import Decimal, InvalidOperation
 
 User = get_user_model()
 
-from .models import Subscription, SubscriptionPlan, BillingProfile, Feature, Coupon, ReferralCode, Referral, ReferralCredit, TelegramConfiguration, TelegramGroup, PaymentConfiguration, EmailConfiguration
+from .models import Subscription, SubscriptionPlan, BillingProfile, Feature, Coupon, ReferralCode, Referral, ReferralCredit, TelegramConfiguration, TelegramGroup, PaymentConfiguration, EmailConfiguration, Payment
 from .serializers import SubscriptionSerializer, PricingPlanSerializer, FeatureSerializer, CouponSerializer, ReferralCodeSerializer, TelegramConfigurationSerializer, TelegramGroupSerializer, PaymentConfigurationSerializer, EmailConfigurationSerializer, PublicPricingPlanSerializer
 from .permissions import CanManageSubscription, IsAdmin
 
@@ -3055,21 +3055,28 @@ class ValidateCouponViewSet(viewsets.ViewSet):
         if user_id:
             try:
                 user = User.objects.get(id=user_id)
-                # Count how many times this user has used this coupon
-                user_usage_count = Subscription.objects.filter(
-                    billing_profile__user=user,
-                    metadata__coupon_code=code
-                ).count()
+                # Get billing profile for the user
+                from subscriptions.models import BillingProfile
+                billing_profile = BillingProfile.objects.filter(user=user).first()
                 
-                if user_usage_count >= coupon.max_uses_per_user:
-                    return Response({
-                        'valid': False,
-                        'code': code,
-                        'error': f'You have already used this coupon {coupon.max_uses_per_user} time(s)',
-                        'error_code': 'USER_LIMIT_REACHED',
-                        'user_usage': user_usage_count,
-                        'max_uses_per_user': coupon.max_uses_per_user
-                    }, status=status.HTTP_400_BAD_REQUEST)
+                if billing_profile:
+                    # Count how many times this user has used this coupon
+                    # Check gateway_response metadata since that's where coupon_code is stored
+                    user_usage_count = Payment.objects.filter(
+                        billing_profile=billing_profile,
+                        status__in=['completed', 'success'],
+                        gateway_response__metadata__coupon_code=code
+                    ).count()
+                    
+                    if user_usage_count >= coupon.max_uses_per_user:
+                        return Response({
+                            'valid': False,
+                            'code': code,
+                            'error': f'You have already used this coupon {coupon.max_uses_per_user} time(s)',
+                            'error_code': 'USER_LIMIT_REACHED',
+                            'user_usage': user_usage_count,
+                            'max_uses_per_user': coupon.max_uses_per_user
+                        }, status=status.HTTP_400_BAD_REQUEST)
             except User.DoesNotExist:
                 pass  # Invalid user_id, but don't fail validation
         

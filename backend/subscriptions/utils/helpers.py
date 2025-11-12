@@ -841,7 +841,7 @@ def generate_unique_code(
     Generate unique alphanumeric code.
     
     Args:
-        prefix: Prefix for code (e.g., 'OXI-')
+        prefix: Prefix for code (e.g., 'REF-' for referral codes)
         length: Length of random part (default 8)
         uppercase: Use uppercase letters (default True)
         include_numbers: Include numbers in code (default True)
@@ -850,8 +850,10 @@ def generate_unique_code(
         Generated unique code
         
     Example:
-        >>> generate_unique_code('OXI-', 6)
-        'OXI-A8F3K2'
+        >>> generate_unique_code('REF-', 6)
+        'REF-A8F3K2'
+        >>> generate_unique_code('', 6)  # No prefix
+        'A8F3K2'
     """
     chars = string.ascii_uppercase if uppercase else string.ascii_lowercase
     

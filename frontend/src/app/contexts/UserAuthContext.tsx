@@ -1,7 +1,6 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 
 // ==================== Types ====================
@@ -104,9 +103,9 @@ const removeAuthToken = (): void => {
 const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
   const token = getAuthToken();
   
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(options.headers || {}),
+    ...(options.headers as Record<string, string> || {}),
   };
   
   if (token) {
@@ -136,7 +135,6 @@ export function UserAuthProvider({ children }: UserAuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
 
   // ==================== Fetch User Profile ====================
@@ -144,67 +142,28 @@ export function UserAuthProvider({ children }: UserAuthProviderProps) {
   const fetchUserProfile = useCallback(async () => {
     const token = getAuthToken();
     
-    // If no token and no OAuth session, user is not authenticated
-    if (!token && !session) {
-      setUser(null);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      // For OAuth users, get data from session
-      if (session?.user && !token) {
-        // Map OAuth session to User type
-        const oauthUser: User = {
-          id: session.user.email || '', // Temporary ID
-          email: session.user.email || '',
-          username: session.user.email?.split('@')[0] || '',
-          first_name: session.user.name?.split(' ')[0] || '',
-          last_name: session.user.name?.split(' ').slice(1).join(' ') || '',
-          full_name: session.user.name || '',
-          avatar: session.user.image || null,
-          is_email_verified: true,
-          auth_method: 'oauth',
-          oauth_provider: (session.provider as 'google') || 'google',
-          created_at: new Date().toISOString(),
-          last_login: new Date().toISOString(),
-          subscriptions: [],
-          has_active_subscription: false,
-        };
-        
-        setUser(oauthUser);
+    if (token) {
+      try {
+        const data = await apiRequest('/auth/profile/');
+        setUser(data);
         setLoading(false);
         return;
-      }
-
-      // For traditional auth users with token
-      if (token) {
-        const data = await apiRequest('/api/user/profile/');
-        setUser(data);
-      }
-      
-      setLoading(false);
-    } catch (err) {
-      console.error('Failed to fetch user profile:', err);
-      // If token is invalid, remove it
-      if (token) {
+      } catch (err) {
+        console.error('Failed to fetch user profile:', err);
         removeAuthToken();
       }
-      setUser(null);
-      setLoading(false);
     }
-  }, [session]);
+    
+    // No token - user is not authenticated
+    setUser(null);
+    setLoading(false);
+  }, []);
 
   // ==================== Initialize Auth State ====================
 
   useEffect(() => {
-    if (sessionStatus === 'loading') {
-      setLoading(true);
-      return;
-    }
-    
     fetchUserProfile();
-  }, [sessionStatus, fetchUserProfile]);
+  }, [fetchUserProfile]);
 
   // ==================== Login with Credentials (Step 1: Check credentials, send OTP) ====================
 
@@ -332,12 +291,7 @@ export function UserAuthProvider({ children }: UserAuthProviderProps) {
     setLoading(true);
     
     try {
-      // If OAuth session, sign out from NextAuth
-      if (session) {
-        await signOut({ callbackUrl: '/', redirect: true });
-      }
-      
-      // Remove token for credential-based auth
+      // Remove token
       removeAuthToken();
       
       // Clear user state
@@ -358,7 +312,7 @@ export function UserAuthProvider({ children }: UserAuthProviderProps) {
     setError(null);
 
     try {
-      const updatedUser = await apiRequest('/api/user/profile/', {
+      const updatedUser = await apiRequest('/auth/profile/', {
         method: 'PUT',
         body: JSON.stringify(data),
       });
@@ -381,7 +335,7 @@ export function UserAuthProvider({ children }: UserAuthProviderProps) {
       formData.append('avatar', file);
 
       const token = getAuthToken();
-      const response = await fetch(`${API_URL}/api/user/profile/avatar/`, {
+      const response = await fetch(`${API_URL}/auth/profile/avatar/`, {
         method: 'POST',
         headers: token ? { 'Authorization': `Bearer ${token}` } : {},
         body: formData,

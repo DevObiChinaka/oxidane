@@ -1,23 +1,100 @@
 # 🔄 PROJECT STATUS RECONCILIATION
 
-**Date:** November 10, 2025  
+**Last Updated:** November 12, 2025  
 **Current State Analysis**
 
 ---
 
-## 📊 WHAT ACTUALLY HAPPENED
+## 📊 LATEST DEVELOPMENTS (November 2025)
+
+### ✅ Phase 0.5.11: Telegram Verification Refactor (COMPLETE)
+**Completed:** November 12, 2025
+
+#### What Changed
+Replaced the old webhook-based `/verify CODE` system with a modern **Deep Link + Username Entry** flow.
+
+#### Why the Change Was Needed
+1. **Old System Problems:**
+   - Required ngrok for development (webhook dependency)
+   - Hardcoded `@OxiWorldBot` references
+   - Needed manual BotFather command setup
+   - Didn't work with new TelegramConfiguration singleton
+   - Complex webhook debugging
+
+2. **New System Benefits:**
+   - ✅ No webhook required (works in dev without ngrok)
+   - ✅ Uses admin-configurable TelegramConfiguration
+   - ✅ No BotFather setup needed (`/start` works by default)
+   - ✅ Better UX with 3-step visual flow
+   - ✅ Direct API calls only (outbound requests)
+
+#### Implementation Details
+**Backend Changes:**
+- `billing_views.py`: 3 new endpoints
+  - `generate_telegram_verification_code()` - Returns deep link
+  - `verify_telegram_username()` - Validates username, sends 6-digit code
+  - `confirm_telegram_code()` - Verifies code, links account
+- `urls.py`: Added verification routes
+
+**Frontend Changes:**
+- `payment.ts`: New API functions with TypeScript interfaces
+- `TelegramVerification.tsx`: Complete UI overhaul
+  - Step 1: Open Bot (deep link button)
+  - Step 2: Enter Username (with "how to find" guide)
+  - Step 3: Confirm Code (6-digit input)
+- `UserAuthContext.tsx`: Fixed `/auth/profile/` endpoint
+- `userAPI.ts`: Fixed TypeScript headers type issue
+
+**User Flow:**
+```
+1. Click "Verify Telegram"
+2. Deep link opens: t.me/YourBot?start=VERIFY_OXI-A1B2
+3. User clicks START in Telegram
+4. Returns to website, enters @username
+5. Backend validates, sends 6-digit code via Telegram
+6. User enters code
+7. ✅ Account verified and linked!
+```
+
+**Testing Status:** Ready for end-to-end testing
+
+---
+
+### ✅ Phase 0.5.10: Currency & Coupon System (COMPLETE)
+**Completed:** November 11, 2025
+
+#### What Was Built
+- Live currency conversion API (1 USD = ₦1,437.08)
+- ExchangeRateService with 1-hour caching
+- React hook: `useCurrencyConverter`
+- Multi-currency pricing (USD/NGN)
+- Coupon validation with currency conversion
+- 5 test coupons created
+
+#### Files Modified
+- `backend/subscriptions/currency_service.py`
+- `frontend/src/hooks/useCurrencyConverter.ts`
+- `frontend/src/components/PricingCards.tsx`
+- `frontend/src/app/pricing/page.tsx`
+- `frontend/src/app/checkout/page.tsx`
+
+---
+
+## 📊 WHAT ACTUALLY HAPPENED (Historical Context)
 
 ### Original Plan (COMPLETE_DEVELOPMENT_ROADMAP.md)
 The roadmap outlined these phases:
 - **Phase 0:** Infrastructure Setup ✅
 - **Phase 0.5:** Dynamic Plans Foundation ✅
+  - **0.5.10:** Currency & Coupon System ✅ (Nov 11, 2025)
+  - **0.5.11:** Telegram Verification Refactor ✅ (Nov 12, 2025)
 - **Phase 1.0:** User Dashboard & Authentication (4-6 weeks) ⏸️
-- **Phase 2.0:** Payment Gateway & Subscriptions (3-4 weeks) ⏸️
-- **Phase 3.0:** Course Platform & Learning (5-6 weeks) ⏸️
+- **Phase 2.0:** Payment Gateway & Subscriptions (3-4 weeks) 🔄 In Progress (40%)
+- **Phase 3.0:** Course Platform & Learning (5-6 weeks) 🔄 Backend Complete
 - **Phase 4.0:** Platform Settings ⏸️
 - **Phase 5.0:** Enhancements ⏸️
 
-### What the Other Chat Actually Did
+### What the Other Chat Actually Did (October-November 2025)
 The other chat worked on **Backend Course-Subscription Integration**, which they called:
 - **Phase 1:** Core Models Integration (7 tasks) ✅
 - **Phase 2:** View Layer & Enrollment Logic (5 tasks) ✅

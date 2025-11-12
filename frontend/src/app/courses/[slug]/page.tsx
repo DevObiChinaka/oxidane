@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { apiGet, apiPost } from '@/lib/api';
 
 interface Lesson {
   id: string;
@@ -100,27 +101,10 @@ export default function CourseDetailPage() {
 
   const checkAuthAndFetchCourse = async () => {
     try {
-      const token = localStorage.getItem('access_token');
-      
-      if (!token) {
-        // Not authenticated, redirect to login
-        router.push('/auth');
-        return;
-      }
-
       // Verify token is valid
-      const profileResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/profile/`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const profileResponse = await apiGet('/auth/profile/');
 
       if (!profileResponse.ok) {
-        // Token invalid, clear storage and redirect
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        router.push('/auth');
         return;
       }
 
@@ -128,9 +112,6 @@ export default function CourseDetailPage() {
       await fetchCourseDetail();
     } catch (error) {
       console.error('Auth check failed:', error);
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      router.push('/auth');
     }
   };
 
@@ -139,18 +120,7 @@ export default function CourseDetailPage() {
       setLoading(true);
       setError(null);
 
-      const token = localStorage.getItem('access_token');
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
-      
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      const response = await fetch(`http://localhost:8000/api/courses/${slug}/`, {
-        headers,
-      });
+      const response = await apiGet(`/courses/${slug}/`);
 
       if (response.ok) {
         const data = await response.json();
@@ -169,11 +139,6 @@ export default function CourseDetailPage() {
         };
         
         setCourse(transformedData);
-      } else if (response.status === 401 || response.status === 403) {
-        // Token expired or forbidden, redirect to login
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        router.push('/auth');
       } else if (response.status === 404) {
         setError('Course not found');
       } else {
@@ -202,13 +167,7 @@ export default function CourseDetailPage() {
     try {
       setEnrolling(true);
       setError(null); // Clear any previous errors
-      const response = await fetch(`http://localhost:8000/api/courses/${slug}/enroll/`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await apiPost(`/courses/${slug}/enroll/`);
 
       if (response.ok) {
         const data = await response.json();
@@ -217,10 +176,6 @@ export default function CourseDetailPage() {
         setTimeout(() => setSuccessMessage(null), 1500);
         // Redirect to My Courses so user sees it added
         setTimeout(() => router.push('/my-courses'), 1600);
-      } else if (response.status === 401 || response.status === 403) {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        router.push('/auth');
       } else {
         const data = await response.json();
         console.error('Enrollment failed:', data);

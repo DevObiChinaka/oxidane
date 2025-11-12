@@ -44,6 +44,30 @@ export function formatCurrency(
 }
 
 /**
+ * Format currency with rounding for approximations
+ * NGN rounds to nearest 100, USD stays precise
+ */
+export function formatCurrencyApprox(
+  amount: number,
+  currency: Currency = 'USD'
+): string {
+  const config = CURRENCY_CONFIG[currency];
+  
+  // Round NGN to nearest 100 for cleaner approximations
+  let displayAmount = amount;
+  if (currency === 'NGN') {
+    displayAmount = Math.round(amount / 100) * 100;
+  }
+  
+  return new Intl.NumberFormat(config.locale, {
+    style: 'currency',
+    currency: config.code,
+    minimumFractionDigits: currency === 'NGN' ? 0 : 2,
+    maximumFractionDigits: currency === 'NGN' ? 0 : 2,
+  }).format(displayAmount);
+}
+
+/**
  * Get currency symbol
  */
 export function getCurrencySymbol(currency: Currency): string {

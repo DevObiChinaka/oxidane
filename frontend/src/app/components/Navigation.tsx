@@ -2,12 +2,12 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useSession } from 'next-auth/react';
+import { useUserAuth } from '../contexts/UserAuthContext';
 import Image from 'next/image';
 
 export default function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { data: session } = useSession();
+  const { user, isAuthenticated } = useUserAuth();
 
   return (
     <nav className="bg-[#000856]/90 backdrop-blur-2xl border-b border-white/15 sticky top-0 z-50 shadow-2xl">
@@ -81,7 +81,7 @@ export default function Navigation() {
 
           {/* Auth Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            {session?.user ? (
+            {isAuthenticated && user ? (
               <div className="flex items-center space-x-4">
                 <Link 
                   href="/dashboard" 
@@ -97,7 +97,7 @@ export default function Navigation() {
                 </Link>
                 <div className="w-10 h-10 rounded-full bg-gradient-to-r from-[#00A17C] to-[#00A88F] flex items-center justify-center">
                   <span className="text-white text-sm font-medium">
-                    {session.user.name?.charAt(0) || session.user.email?.charAt(0)}
+                    {user.first_name?.charAt(0) || user.email?.charAt(0) || 'U'}
                   </span>
                 </div>
               </div>
@@ -187,7 +187,7 @@ export default function Navigation() {
               
               {/* Mobile Auth */}
               <div className="pt-4 pb-3 border-t border-slate-700">
-                {session?.user ? (
+                {isAuthenticated && user ? (
                   <div className="space-y-2">
                     <Link 
                       href="/dashboard" 

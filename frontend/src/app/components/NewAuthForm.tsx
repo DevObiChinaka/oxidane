@@ -2,12 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { useSearchParams } from 'next/navigation';
 
 interface NewAuthFormProps {
   initialIsLogin?: boolean;
 }
 
 export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps) {
+  const searchParams = useSearchParams();
   const [isLogin, setIsLogin] = useState(initialIsLogin);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -266,6 +268,7 @@ export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps)
         } else if (data.token) {
           // Direct login successful - tokens returned
           localStorage.setItem('access_token', data.token);
+          localStorage.setItem('user_auth_token', data.token); // Also store for UserAuthContext
           if (data.refresh) {
             localStorage.setItem('refresh_token', data.refresh);
           }
@@ -442,13 +445,25 @@ export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps)
         // Login successful - store token and redirect
         if (data.token) {
           localStorage.setItem('access_token', data.token);
+          localStorage.setItem('user_auth_token', data.token); // Also store for UserAuthContext
           if (data.refresh) {
             localStorage.setItem('refresh_token', data.refresh);
           }
           sessionStorage.removeItem('login_session_token');
-          setSuccess('🎉 Login successful! Redirecting to dashboard...');
+          
+          // Check for redirect parameter
+          const redirectPath = searchParams.get('redirect');
+          const planId = searchParams.get('plan');
+          
+          let redirectUrl = '/dashboard'; // Default
+          if (redirectPath) {
+            // Build redirect URL with plan parameter if present
+            redirectUrl = planId ? `${redirectPath}?plan=${planId}` : redirectPath;
+          }
+          
+          setSuccess(`🎉 Login successful! Redirecting${redirectPath ? ' to checkout' : ''}...`);
           setTimeout(() => {
-            window.location.href = '/dashboard';
+            window.location.href = redirectUrl;
           }, 1500);
         }
       } else {

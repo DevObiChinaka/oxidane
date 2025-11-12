@@ -1,27 +1,71 @@
 # 🚀 Oxidane Platform - Complete Development Roadmap
-**Version:** 1.0 | **Date:** October 24, 2025 | **Status:** Strategic Plan
+**Version:** 2.0 | **Last Updated:** November 12, 2025 | **Status:** In Progress
 
 ---
 
-## 📍 CURRENT STATE ASSESSMENT
+## 📍 CURRENT STATE ASSESSMENT (November 12, 2025)
 
-### ✅ What We Have (Admin Side - 80% Complete)
-- **Admin Dashboard:** Metrics, analytics, user management
-- **Course Management:** CRUD operations, lessons, video uploads
-- **User Management:** View users, subscriptions, activity tracking
-- **Subscription Management:** Signal subscriptions, payment tracking, Telegram integration
-- **Payment Tracking:** Transaction history, payment analytics
-- **Revenue Analytics:** Live data, PDF/Excel export
-- **Email System:** 13+ automated email templates (verification, payment, expiry, etc.)
-- **Telegram Integration:** Group management, queue processing
-- **Authentication:** Admin login, OAuth (Google), email verification
+### ✅ What We Have (Completed Systems)
 
-### ⚠️ What We're Missing
-1. **User-Facing Frontend** (Student Dashboard) - 0%
-2. **Payment Gateway Integration** (Paystack/Stripe) - 0%
-3. **Course Player** (Video streaming for students) - 0%
-4. **Settings UI** (Admin platform configuration) - 0%
-5. **Mobile Responsiveness** (Full mobile optimization) - 40%
+#### **Backend Infrastructure (95% Complete)**
+- ✅ **Admin Dashboard:** Metrics, analytics, user management
+- ✅ **Course Management:** CRUD operations, lessons, video uploads
+- ✅ **User Management:** View users, subscriptions, activity tracking
+- ✅ **Subscription Management:** Dynamic plans, payment tracking, Telegram integration
+- ✅ **Payment Tracking:** Transaction history, payment analytics
+- ✅ **Revenue Analytics:** Live data, PDF/Excel export (Phase 1 complete)
+- ✅ **Email System:** 13+ automated email templates (verification, payment, expiry, etc.)
+- ✅ **Telegram Integration:** Group management, bot configuration, queue processing
+- ✅ **Authentication:** Admin login, OAuth (Google), JWT tokens, email verification
+- ✅ **Course-Subscription Integration:** Access control, enrollment logic (107 tests passing)
+- ✅ **Currency Conversion API:** Live exchange rates (USD/NGN), 1-hour caching
+- ✅ **Coupon System:** Percentage/flat discounts, validation API
+- ✅ **Telegram Verification:** Deep link + username entry (webhook-free)
+
+#### **Frontend Infrastructure (60% Complete)**
+- ✅ **Pricing Page:** Multi-currency support, coupon validation
+- ✅ **Checkout Flow:** Payment integration, Telegram verification
+- ✅ **User Authentication:** Login, registration, OAuth integration
+- ✅ **User Dashboard:** Profile management, subscription status
+- ⏳ **Course Player:** In development
+- ⏳ **Settings UI:** Partially complete
+
+### 🚧 Recent Completions (November 2025)
+
+#### **Phase 0.5.11: Telegram Verification Refactor** ✅ COMPLETE
+**Completed:** November 12, 2025
+- Replaced webhook-based `/verify CODE` system
+- Implemented Deep Link + Username Entry flow
+- No ngrok/webhook required for development
+- Works with TelegramConfiguration singleton
+- 3-step verification: Open Bot → Enter Username → Confirm Code
+- Comprehensive UI with step-by-step guidance
+- **Files Modified:**
+  - `backend/subscriptions/billing_views.py` (3 new endpoints)
+  - `backend/subscriptions/urls.py` (URL routing)
+  - `frontend/src/lib/api/payment.ts` (API functions)
+  - `frontend/src/components/TelegramVerification.tsx` (Complete UI overhaul)
+  - `frontend/src/app/contexts/UserAuthContext.tsx` (Fixed `/auth/profile/` endpoint)
+  - `frontend/src/app/utils/userAPI.ts` (Fixed TypeScript headers issue)
+- **Status:** Ready for testing
+
+#### **Phase 0.5.10: Currency & Coupon System** ✅ COMPLETE
+**Completed:** November 11, 2025
+- Live currency conversion API (open.er-api.com)
+- 1-hour smart caching via ExchangeRateService
+- React hook: `useCurrencyConverter`
+- Multi-currency support (USD/NGN)
+- Coupon validation with currency conversion
+- Test coupons created: SAVE10, SAVE20, FLAT5, WELCOME, EXPIRED
+- Fixed discount calculation in NGN
+
+### ⚠️ What We're Missing / In Progress
+
+1. **Payment Gateway Integration** (Paystack/Stripe) - 40%
+2. **Course Player** (Video streaming for students) - 30%
+3. **Settings UI** (Admin platform configuration) - 50%
+4. **Mobile Responsiveness** (Full mobile optimization) - 60%
+5. **Telegram Bot Commands** (Auto-registration via BotFather API) - 0%
 
 ---
 

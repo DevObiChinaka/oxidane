@@ -27,9 +27,9 @@ class UserAPIClient {
   private async request(endpoint: string, options: RequestInit = {}) {
     const token = getAuthToken();
 
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...(options.headers || {}),
+      ...(options.headers as Record<string, string> || {}),
     };
 
     if (token) {
@@ -143,7 +143,7 @@ class UserAPIClient {
    * Get current user profile
    */
   async getProfile() {
-    return this.request('/api/user/profile/');
+    return this.request('/auth/profile/');
   }
 
   /**
@@ -156,7 +156,7 @@ class UserAPIClient {
     bio?: string;
     location?: string;
   }) {
-    return this.request('/api/user/profile/', {
+    return this.request('/auth/profile/', {
       method: 'PUT',
       body: JSON.stringify(data),
     });
@@ -168,14 +168,14 @@ class UserAPIClient {
   async uploadAvatar(file: File) {
     const formData = new FormData();
     formData.append('avatar', file);
-    return this.uploadRequest('/api/user/profile/avatar/', formData);
+    return this.uploadRequest('/auth/profile/avatar/', formData);
   }
 
   /**
    * Delete user avatar
    */
   async deleteAvatar() {
-    return this.request('/api/user/profile/avatar/', {
+    return this.request('/auth/profile/avatar/', {
       method: 'DELETE',
     });
   }

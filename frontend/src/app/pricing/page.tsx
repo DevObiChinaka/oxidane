@@ -44,12 +44,17 @@ export default function PricingPage() {
   const handlePlanSelect = (plan: PricingPlan) => {
     setSelectedPlan(plan);
     
+    console.log('🎯 Plan selected:', plan.name);
+    console.log('🔐 Is authenticated:', isAuthenticated);
+    
     // Check if user is authenticated
     if (!isAuthenticated) {
       // Redirect to login with plan and redirect params preserved
+      console.log('➡️ Redirecting to login:', `/auth/login?redirect=/checkout&plan=${plan.id}&source=pricing`);
       router.push(`/auth/login?redirect=/checkout&plan=${plan.id}&source=pricing`);
     } else {
       // User is authenticated - go to checkout
+      console.log('➡️ Redirecting to checkout:', `/checkout?plan=${plan.id}`);
       router.push(`/checkout?plan=${plan.id}`);
     }
   };

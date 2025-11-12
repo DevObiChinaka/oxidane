@@ -37,6 +37,76 @@ def telegram_webhook(request):
         
         logger.info(f"Received Telegram webhook update: {json.dumps(data, indent=2)}")
         
+        # Handle /verify command
+        if 'message' in data and 'text' in data['message']:
+            message = data['message']
+            text = message['text'].strip()
+            
+            # Check if it's a /verify command
+            if text.startswith('/verify'):
+                user = message['from']
+                user_id = str(user['id'])
+                username = user.get('username', '')
+                
+                # Extract verification code
+                parts = text.split()
+                if len(parts) < 2:
+                    # No code provided - send help message
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'Please provide verification code: /verify YOUR-CODE'
+                    })
+                
+                verification_code = parts[1].upper().strip()
+                
+                logger.info(f"Verify command from @{username} (ID: {user_id}), code: {verification_code}")
+                
+                # Call the verification callback endpoint
+                from subscriptions.billing_views import telegram_verify_callback
+                from django.test import RequestFactory
+                
+                factory = RequestFactory()
+                verify_request = factory.post(
+                    '/api/billing/telegram/verify-callback/',
+                    data=json.dumps({
+                        'verification_code': verification_code,
+                        'telegram_user_id': user_id,
+                        'telegram_username': username
+                    }),
+                    content_type='application/json'
+                )
+                
+                # Add bot secret header
+                from django.conf import settings
+                verify_request.META['HTTP_X_BOT_SECRET'] = settings.TELEGRAM_BOT_SECRET
+                
+                # Call verification
+                response = telegram_verify_callback(verify_request)
+                response_data = json.loads(response.content)
+                
+                # Send response message to user via Telegram API
+                config = TelegramConfiguration.get_instance()
+                if config.has_valid_token():
+                    import requests as req
+                    bot_token = config.bot_token
+                    send_url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+                    
+                    if response_data.get('success'):
+                        message_text = f"✅ Verification successful! Your Telegram account is now linked."
+                    else:
+                        error_msg = response_data.get('error', 'Unknown error')
+                        message_text = f"❌ Verification failed: {error_msg}"
+                    
+                    req.post(send_url, json={
+                        'chat_id': user_id,
+                        'text': message_text
+                    })
+                
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Verification processed'
+                })
+        
         # Handle chat join request
         if 'chat_join_request' in data:
             join_request = data['chat_join_request']

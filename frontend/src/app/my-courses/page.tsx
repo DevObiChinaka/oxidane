@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import DashboardSidebar from '../components/DashboardSidebar';
+import { apiGet } from '@/lib/api';
 
 interface Course {
   id: string;
@@ -34,25 +35,10 @@ export default function MyCoursesPage() {
 
   const checkAuthAndFetchCourses = async () => {
     try {
-      const token = localStorage.getItem('access_token');
-      
-      if (!token) {
-        router.push('/auth');
-        return;
-      }
-
       // Verify token is valid
-      const profileResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/profile/`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const profileResponse = await apiGet('/auth/profile/');
 
       if (!profileResponse.ok) {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        router.push('/auth');
         return;
       }
 
@@ -60,35 +46,14 @@ export default function MyCoursesPage() {
       await fetchEnrolledCourses();
     } catch (error) {
       console.error('Auth check failed:', error);
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      router.push('/auth');
     }
   };
 
   const fetchEnrolledCourses = async () => {
     try {
-      const token = localStorage.getItem('access_token');
-      
-      if (!token) {
-        router.push('/auth');
-        return;
-      }
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/courses/enrolled/`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await apiGet('/courses/enrolled/');
 
       if (!response.ok) {
-        if (response.status === 401) {
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
-          router.push('/auth');
-          return;
-        }
         throw new Error('Failed to fetch courses');
       }
 

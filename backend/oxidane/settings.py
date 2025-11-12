@@ -387,3 +387,21 @@ LOGGING = {
 # ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY')
 # ============================================================================
 ENCRYPTION_KEY = '4ji0ZN6vG1VLvQR5cxb6hCPRzlbHwuVG-Q1NiTrq2c8='
+
+# ============================================================================
+# CELERY EAGER MODE FOR DEVELOPMENT
+# ============================================================================
+# When Celery worker is not running, make tasks execute synchronously
+# Set USE_CELERY_EAGER=True in .env for development without Celery
+# IMPORTANT: Set to False in production with proper Celery workers
+# ============================================================================
+if os.getenv('USE_CELERY_EAGER', 'False').lower() == 'true':
+    CELERY_TASK_ALWAYS_EAGER = True
+    CELERY_TASK_EAGER_PROPAGATES = True
+    print("\n" + "="*70)
+    print("⚠️  CELERY EAGER MODE ENABLED")
+    print("   Tasks will run synchronously (blocking)")
+    print("   Good for: Development, Testing")
+    print("   Bad for: Production (blocks requests)")
+    print("   To disable: Remove USE_CELERY_EAGER from .env")
+    print("="*70 + "\n")

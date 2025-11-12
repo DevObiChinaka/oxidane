@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardSidebar from '../components/DashboardSidebar';
+import { apiGet } from '@/lib/api';
 
 interface UserData {
   id: string;
@@ -35,21 +36,8 @@ export default function UserDashboard() {
 
   const checkAuth = async () => {
     try {
-      // Check if user is logged in by verifying token
-      const token = localStorage.getItem('access_token');
-      
-      if (!token) {
-        router.push('/auth');
-        return;
-      }
-
       // Fetch user profile data
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/profile/`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await apiGet('/auth/profile/');
 
       if (!response.ok) {
         throw new Error('Authentication failed');
@@ -59,28 +47,20 @@ export default function UserDashboard() {
       setUser(data);
       
       // Fetch enrolled courses count
-      await fetchEnrolledCoursesCount(token);
+      await fetchEnrolledCoursesCount();
       
       // Fetch subscription data
-      await fetchSubscriptionData(token);
+      await fetchSubscriptionData();
     } catch (error) {
       console.error('Auth check failed:', error);
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      router.push('/auth');
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchSubscriptionData = async (token: string) => {
+  const fetchSubscriptionData = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/subscriptions/my-subscriptions/`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await apiGet('/subscriptions/my-subscriptions/');
 
       if (response.ok) {
         const data = await response.json();
@@ -110,14 +90,9 @@ export default function UserDashboard() {
     }
   };
 
-  const fetchEnrolledCoursesCount = async (token: string) => {
+  const fetchEnrolledCoursesCount = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/courses/enrolled/`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await apiGet('/courses/enrolled/');
 
       if (response.ok) {
         const data = await response.json();

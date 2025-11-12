@@ -67,7 +67,7 @@ class BillingProfile(models.Model):
     
     # Verification Code (temporary, expires after use)
     verification_code = models.CharField(max_length=20, blank=True, null=True, unique=True,
-                                        help_text="OXI-XXXX format code for Telegram verification")
+                                        help_text="6-character alphanumeric code for Telegram verification")
     verification_code_created_at = models.DateTimeField(null=True, blank=True)
     verification_code_expires_at = models.DateTimeField(null=True, blank=True)
     
@@ -95,15 +95,15 @@ class BillingProfile(models.Model):
         return f"Billing Profile: {self.user.email}"
     
     def generate_verification_code(self):
-        """Generate a new verification code (OXI-XXXX format)"""
+        """Generate a new verification code (6-character alphanumeric format)"""
         import random
         import string
         
-        # Generate random 4-character alphanumeric code
-        code_suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
-        self.verification_code = f"OXI-{code_suffix}"
+        # Generate random 6-character alphanumeric code (uppercase letters + digits)
+        chars = string.ascii_uppercase + string.digits
+        self.verification_code = ''.join(random.choices(chars, k=6))
         self.verification_code_created_at = timezone.now()
-        self.verification_code_expires_at = timezone.now() + timezone.timedelta(hours=24)
+        self.verification_code_expires_at = timezone.now() + timezone.timedelta(minutes=5)
         self.save()
         return self.verification_code
     
@@ -234,6 +234,17 @@ class Subscription(models.Model):
     auto_renew = models.BooleanField(default=True)
     next_billing_date = models.DateTimeField(null=True, blank=True)
     
+    # Trial tracking
+    is_trial = models.BooleanField(
+        default=False,
+        help_text='Whether this subscription is currently in trial period'
+    )
+    trial_end_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='When trial period ends (null after trial converts to paid)'
+    )
+    
     # Cancellation
     cancelled_at = models.DateTimeField(null=True, blank=True)
     cancellation_reason = models.TextField(blank=True)
@@ -274,6 +285,14 @@ class Subscription(models.Model):
         if not self.is_active:
             return 0
         delta = self.end_date - timezone.now()
+        return max(0, delta.days)
+    
+    @property
+    def days_until_trial_end(self):
+        """Calculate days until trial ends"""
+        if not self.is_trial or not self.trial_end_date:
+            return None
+        delta = self.trial_end_date - timezone.now()
         return max(0, delta.days)
     
     def cancel(self, reason=""):

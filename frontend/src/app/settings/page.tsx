@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardSidebar from '../components/DashboardSidebar';
+import { apiGet, apiPost } from '@/lib/api';
 
 interface UserData {
   id: string;
@@ -45,19 +46,7 @@ export default function SettingsPage() {
 
   const fetchUserProfile = async () => {
     try {
-      const token = localStorage.getItem('access_token');
-      
-      if (!token) {
-        router.push('/auth');
-        return;
-      }
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/profile/`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await apiGet('/auth/profile/');
 
       if (!response.ok) {
         throw new Error('Failed to fetch profile');
@@ -67,9 +56,6 @@ export default function SettingsPage() {
       setUser(data);
     } catch (error) {
       console.error('Profile fetch failed:', error);
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      router.push('/auth');
     } finally {
       setLoading(false);
     }
@@ -77,16 +63,7 @@ export default function SettingsPage() {
 
   const fetchNotificationPreferences = async () => {
     try {
-      const token = localStorage.getItem('access_token');
-      
-      if (!token) return;
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/get-notifications/`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await apiGet('/auth/get-notifications/');
 
       if (response.ok) {
         const data = await response.json();
@@ -126,18 +103,9 @@ export default function SettingsPage() {
     setPasswordLoading(true);
 
     try {
-      const token = localStorage.getItem('access_token');
-      
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/change-password/`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          current_password: currentPassword,
-          new_password: newPassword,
-        }),
+      const response = await apiPost('/auth/change-password/', {
+        current_password: currentPassword,
+        new_password: newPassword,
       });
 
       if (!response.ok) {
@@ -163,16 +131,7 @@ export default function SettingsPage() {
     setNotificationsSuccess('');
 
     try {
-      const token = localStorage.getItem('access_token');
-      
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/update-notifications/`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(notifications),
-      });
+      const response = await apiPost('/auth/update-notifications/', notifications);
 
       if (!response.ok) {
         throw new Error('Failed to update notification preferences');

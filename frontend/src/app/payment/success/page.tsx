@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useUserAuth } from '../../contexts/UserAuthContext';
 import Navigation from '../../components/Navigation';
 import Footer from '../../components/Footer';
-import { downloadInvoiceFile } from '@/lib/api/payment';
 
 function SuccessContent() {
   const router = useRouter();
@@ -13,38 +12,59 @@ function SuccessContent() {
   const { user } = useUserAuth();
   const reference = searchParams.get('reference');
   
-  const [downloadingInvoice, setDownloadingInvoice] = useState(false);
   const [countdown, setCountdown] = useState(10);
+  const [subscription, setSubscription] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch subscription details
+  useEffect(() => {
+    const fetchSubscription = async () => {
+      try {
+        const token = localStorage.getItem('user_auth_token');
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/subscriptions/my-subscriptions/`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          // Get the most recent subscription (first in array)
+          if (data.subscriptions && data.subscriptions.length > 0) {
+            setSubscription(data.subscriptions[0]);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch subscription:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user) {
+      fetchSubscription();
+    }
+  }, [user]);
 
   // Countdown to dashboard redirect
   useEffect(() => {
     const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          router.push('/dashboard');
-          return 0;
-        }
-        return prev - 1;
-      });
+      setCountdown((prev) => prev - 1);
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [router]);
+  }, []);
 
-  const handleDownloadInvoice = async () => {
-    if (!reference) return;
-
-    try {
-      setDownloadingInvoice(true);
-      await downloadInvoiceFile(reference, `invoice-${reference}.pdf`);
-    } catch (err) {
-      console.error('Failed to download invoice:', err);
-      alert('Failed to download invoice. Please contact support.');
-    } finally {
-      setDownloadingInvoice(false);
+  // Redirect when countdown reaches 0
+  useEffect(() => {
+    if (countdown <= 0) {
+      router.push('/dashboard');
     }
-  };
+  }, [countdown, router]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#000856] via-[#002A5C] to-[#004A42]">
@@ -84,14 +104,20 @@ function SuccessContent() {
 
           {/* Success Message */}
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-            Payment Successful! 🎉
+            {subscription?.is_trial ? 'Trial Started! 🎉' : 'Payment Successful! 🎉'}
           </h1>
           <p className="text-xl text-gray-300 mb-2">
             Welcome to the premium experience, {user?.first_name || 'Trader'}!
           </p>
-          <p className="text-gray-400">
-            Your subscription is now active and ready to use
-          </p>
+          {subscription?.is_trial ? (
+            <p className="text-gray-400">
+              Your {subscription.days_until_trial_end}-day free trial is now active
+            </p>
+          ) : (
+            <p className="text-gray-400">
+              Your subscription is now active and ready to use
+            </p>
+          )}
         </div>
 
         {/* Success Details Card */}
@@ -107,6 +133,29 @@ function SuccessContent() {
               </h2>
 
               <div className="space-y-4">
+                {subscription?.is_trial && (
+                  <div className="bg-[#000ABE]/20 border border-[#000ABE]/30 rounded-lg p-4 mb-6">
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-[#00B38F] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <div>
+                        <h4 className="text-white font-semibold text-sm mb-1">
+                          Free Trial Active - {subscription.days_until_trial_end} Days Remaining
+                        </h4>
+                        <p className="text-gray-300 text-xs leading-relaxed">
+                          Your trial ends on {new Date(subscription.trial_end_date).toLocaleDateString('en-US', { 
+                            month: 'long', 
+                            day: 'numeric', 
+                            year: 'numeric' 
+                          })}. 
+                          {' '}After that, you'll be charged {subscription.currency} {subscription.plan_base_price.toFixed(2)} automatically unless you cancel.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex items-start gap-3">
                   <div className="flex-shrink-0 w-8 h-8 bg-[#00B38F]/20 rounded-full flex items-center justify-center text-[#00B38F] font-bold text-sm">
                     1
@@ -114,7 +163,7 @@ function SuccessContent() {
                   <div>
                     <h3 className="text-white font-medium mb-1">Check Your Email</h3>
                     <p className="text-gray-300 text-sm">
-                      We've sent a receipt and welcome email to {user?.email}
+                      We've sent a {subscription?.is_trial ? 'trial confirmation' : 'receipt'} and welcome email to {user?.email}
                     </p>
                   </div>
                 </div>
@@ -171,28 +220,54 @@ function SuccessContent() {
                 </div>
               </div>
 
-              <button
-                onClick={handleDownloadInvoice}
-                disabled={downloadingInvoice}
-                className="w-full mt-4 px-6 py-3 bg-white/10 border border-white/20 text-white rounded-lg hover:bg-white/20 transition-colors font-medium disabled:opacity-50"
-              >
-                {downloadingInvoice ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                    Downloading...
-                  </span>
-                ) : (
+              {/* TODO: Implement invoice download once backend PDF generation is complete */}
+              {false && (
+                <button
+                  className="w-full mt-4 px-6 py-3 bg-white/10 border border-white/20 text-white rounded-lg hover:bg-white/20 transition-colors font-medium"
+                >
                   <span className="flex items-center justify-center gap-2">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                     Download Invoice
                   </span>
-                )}
-              </button>
+                </button>
+              )}
             </div>
           </div>
         </div>
+
+        {/* Auto-redirect Countdown Banner */}
+        {countdown > 0 && (
+          <div className="bg-[#00B38F]/20 border border-[#00B38F]/30 rounded-xl p-4 mb-8 animate-pulse">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <svg className="w-8 h-8 text-[#00B38F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-[#00B38F] font-bold text-xs">{countdown}</span>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-white font-medium">
+                    Redirecting to dashboard in {countdown} second{countdown !== 1 ? 's' : ''}...
+                  </p>
+                  <p className="text-gray-300 text-sm">
+                    Or click the button below to go now
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setCountdown(0)}
+                className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                Skip
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Action Buttons */}
         <div className="grid sm:grid-cols-2 gap-4 mb-8">

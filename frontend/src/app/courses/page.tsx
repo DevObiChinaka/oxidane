@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardSidebar from '../components/DashboardSidebar';
+import { apiGet } from '@/lib/api';
 
 interface Course {
   id: string;
@@ -40,27 +41,10 @@ export default function CoursesPage() {
 
   const checkAuthAndFetchCourses = async () => {
     try {
-      const token = localStorage.getItem('access_token');
-      
-      if (!token) {
-        // Not authenticated, redirect to login
-        router.push('/auth');
-        return;
-      }
-
       // Verify token is valid by checking profile
-      const profileResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/profile/`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const profileResponse = await apiGet('/auth/profile/');
 
       if (!profileResponse.ok) {
-        // Token invalid, clear storage and redirect
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        router.push('/auth');
         return;
       }
 
@@ -68,35 +52,16 @@ export default function CoursesPage() {
       await fetchCourses();
     } catch (error) {
       console.error('Auth check failed:', error);
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      router.push('/auth');
     }
   };
 
   const fetchCourses = async () => {
     try {
-      const token = localStorage.getItem('access_token');
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
-      
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/courses/`, {
-        headers
-      });
+      const response = await apiGet('/courses/');
 
       if (response.ok) {
         const data = await response.json();
         setCourses(data.courses || []);
-      } else if (response.status === 401) {
-        // Token expired during fetch
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        router.push('/auth');
       }
     } catch (error) {
       console.error('Failed to fetch courses:', error);

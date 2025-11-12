@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardSidebar from '../components/DashboardSidebar';
+import { apiGet, apiPut } from '@/lib/api';
 
 interface UserData {
   id: string;
@@ -35,19 +36,7 @@ export default function ProfilePage() {
 
   const fetchUserProfile = async () => {
     try {
-      const token = localStorage.getItem('access_token');
-      
-      if (!token) {
-        router.push('/auth');
-        return;
-      }
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/profile/`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await apiGet('/auth/profile/');
 
       if (!response.ok) {
         throw new Error('Failed to fetch profile');
@@ -60,9 +49,6 @@ export default function ProfilePage() {
       setEmail(data.email);
     } catch (error) {
       console.error('Profile fetch failed:', error);
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      router.push('/auth');
     } finally {
       setLoading(false);
     }
@@ -75,18 +61,9 @@ export default function ProfilePage() {
     setSuccess('');
 
     try {
-      const token = localStorage.getItem('access_token');
-      
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/update-profile/`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          first_name: firstName,
-          last_name: lastName,
-        }),
+      const response = await apiPut('/auth/update-profile/', {
+        first_name: firstName,
+        last_name: lastName,
       });
 
       if (!response.ok) {

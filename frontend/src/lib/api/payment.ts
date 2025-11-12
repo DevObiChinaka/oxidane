@@ -29,6 +29,10 @@ export interface InitializePaymentResponse {
   currency: string;
   gateway: string;
   exchange_rate?: number;
+  paystack_public_key?: string;
+  is_trial?: boolean;
+  trial_days?: number;
+  plan_price?: number;
 }
 
 export interface VerifyPaymentRequest {
@@ -64,6 +68,7 @@ export interface ValidateCouponRequest {
   code: string;
   plan_id?: string;
   amount?: number;
+  user_id?: string;
 }
 
 export interface ValidateCouponResponse {
@@ -119,7 +124,21 @@ export interface PaymentHistoryResponse {
  */
 const getAuthToken = (): string | null => {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem('user_auth_token');
+  
+  // Primary: user_auth_token (set by UserAuthContext and NewAuthForm after fix)
+  // Fallback: access_token (for users who logged in before the fix)
+  const token = localStorage.getItem('user_auth_token') || localStorage.getItem('access_token');
+  
+  // If we found token in access_token but not user_auth_token, copy it over
+  if (!localStorage.getItem('user_auth_token') && localStorage.getItem('access_token')) {
+    const accessToken = localStorage.getItem('access_token');
+    if (accessToken) {
+      localStorage.setItem('user_auth_token', accessToken);
+      console.log('🔧 Auto-migrated access_token to user_auth_token');
+    }
+  }
+  
+  return token;
 };
 
 /**
@@ -225,6 +244,7 @@ export async function validateCoupon(
         code: request.code,
         plan_id: request.plan_id,
         amount: request.amount,
+        user_id: request.user_id,
       }),
     }
   );
@@ -344,12 +364,18 @@ export async function getBillingProfile(): Promise<any> {
 /**
  * Generate Telegram verification code
  * 
- * @returns Verification code and bot URL
+ * @returns Verification code and deep link, OR already verified status
  */
 export async function generateTelegramCode(): Promise<{
-  verification_code: string;
-  bot_url: string;
-  expires_at: string;
+  verification_code?: string;
+  deep_link?: string;
+  bot_username?: string;
+  expires_at?: string;
+  already_verified?: boolean;
+  telegram_verified?: boolean;
+  telegram_username?: string;
+  telegram_user_id?: string;
+  message?: string;
 }> {
   console.log('🔐 Generating Telegram code...');
   console.log('API URL:', `${API_BASE_URL}/billing/telegram/generate-code/`);
@@ -371,12 +397,91 @@ export async function generateTelegramCode(): Promise<{
   if (!response.ok) {
     const errorText = await response.text();
     console.error('Error response:', errorText);
-    await handleApiError(response);
+    
+    // Parse error and throw with proper message
+    let errorMessage = 'Failed to generate verification code';
+    try {
+      const errorData = JSON.parse(errorText);
+      errorMessage = errorData.error || errorData.detail || errorData.message || errorMessage;
+    } catch {
+      errorMessage = response.statusText || errorMessage;
+    }
+    
+    throw new Error(errorMessage);
   }
 
   const data = await response.json();
   console.log('Success data:', data);
   return data;
+}
+
+/**
+ * Verify Telegram username and send confirmation code
+ * 
+ * @param verificationCode - The verification code from generate step
+ * @param telegramUsername - User's Telegram username (with or without @)
+ * @returns Success status and message
+ */
+export async function verifyTelegramUsername(
+  verificationCode: string,
+  telegramUsername: string
+): Promise<{
+  success: boolean;
+  message: string;
+  telegram_username: string;
+}> {
+  const response = await fetch(
+    `${API_BASE_URL}/billing/telegram/verify-username/`,
+    {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        verification_code: verificationCode,
+        telegram_username: telegramUsername,
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+}
+
+/**
+ * Confirm Telegram verification with code sent via Telegram
+ * 
+ * @param verificationCode - The verification code from generate step
+ * @param confirmationCode - The 6-digit code sent to user's Telegram
+ * @returns Success status and verified username
+ */
+export async function confirmTelegramVerification(
+  verificationCode: string,
+  confirmationCode: string
+): Promise<{
+  success: boolean;
+  message: string;
+  telegram_username: string;
+  verified_at: string;
+}> {
+  const response = await fetch(
+    `${API_BASE_URL}/billing/telegram/confirm/`,
+    {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        verification_code: verificationCode,
+        confirmation_code: confirmationCode,
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
 }
 
 /**

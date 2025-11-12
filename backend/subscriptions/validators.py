@@ -269,7 +269,7 @@ def validate_referral_code_format(value):
 
 def validate_verification_code_format(value):
     """
-    Validate verification code format (OXI-XXXX pattern).
+    Validate verification code format (6 alphanumeric characters).
     
     Args:
         value: Verification code string
@@ -283,10 +283,10 @@ def validate_verification_code_format(value):
     if not value:
         return
     
-    # Must match OXI-XXXX pattern (4 alphanumeric chars after prefix)
-    if not re.match(r'^OXI-[A-Z0-9]{4}$', value.upper()):
+    # Must match 6 alphanumeric characters (uppercase letters and digits)
+    if not re.match(r'^[A-Z0-9]{6}$', value.upper()):
         raise ValidationError(
-            _('Verification code must be in format OXI-XXXX (4 alphanumeric characters).'),
+            _('Verification code must be 6 alphanumeric characters (letters and numbers).'),
             code='invalid_verification_code'
         )
 

@@ -13,6 +13,7 @@ import {
   ShieldCheckIcon,
   ClockIcon,
 } from '@heroicons/react/24/outline';
+import { apiGet, apiPost } from '@/lib/api';
 
 interface BillingProfile {
   verified: boolean;
@@ -43,24 +44,8 @@ export default function BillingPage() {
   const fetchBillingProfile = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('access_token');
       
-      if (!token) {
-        router.push('/auth/login');
-        return;
-      }
-
-      const response = await fetch('http://localhost:8000/api/billing/telegram/status/', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.status === 401) {
-        router.push('/auth/login');
-        return;
-      }
+      const response = await apiGet('/billing/telegram/status/');
 
       if (!response.ok) {
         throw new Error('Failed to fetch billing profile');
@@ -318,14 +303,7 @@ function TelegramVerificationSection({
       setLoading(true);
       setError(null);
       
-      const token = localStorage.getItem('access_token');
-      const response = await fetch('http://localhost:8000/api/billing/telegram/generate-code/', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await apiPost('/billing/telegram/generate-code/');
 
       if (!response.ok) {
         const data = await response.json();
@@ -347,13 +325,7 @@ function TelegramVerificationSection({
 
   const startPolling = () => {
     const interval = setInterval(async () => {
-      const token = localStorage.getItem('access_token');
-      const response = await fetch('http://localhost:8000/api/billing/telegram/status/', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await apiGet('/billing/telegram/status/');
       
       if (response.ok) {
         const data = await response.json();
@@ -373,14 +345,7 @@ function TelegramVerificationSection({
       setLoading(true);
       setError(null);
       
-      const token = localStorage.getItem('access_token');
-      const response = await fetch('http://localhost:8000/api/billing/telegram/unlink/', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await apiPost('/billing/telegram/unlink/');
 
       if (!response.ok) {
         const data = await response.json();

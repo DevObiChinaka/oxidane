@@ -4,6 +4,7 @@ from rest_framework.routers import DefaultRouter
 from .pricing_views import PricingPlanViewSet, CouponViewSet
 from . import billing_views
 from .user_subscription_views import UserSubscriptionViewSet
+from . import user_views  # Function-based user views
 from . import mentorship_admin_views
 from .api_views import (
     SubscriptionViewSet, SubscriptionPlanViewSet, FeatureViewSet, 
@@ -17,9 +18,14 @@ from .views import (
     InitializePaymentView, VerifyPaymentView, PaymentHistoryView,
     InvoiceDownloadView, paystack_webhook, stripe_webhook
 )  # Phase 2.1 - Payment API Endpoints
-from .views.telegram_webhook import (
-    telegram_webhook, set_telegram_webhook, get_webhook_info
-)  # Phase 2.2 - Telegram Auto-Add Webhook
+from .views.payment_method_views import (
+    save_payment_method, list_payment_methods, 
+    set_default_payment_method, delete_payment_method
+)  # Payment method tokenization for auto-renewal
+# REMOVED: Telegram webhooks - Using polling instead (no ngrok needed)
+# from .views.telegram_webhook import (
+#     telegram_webhook, set_telegram_webhook, get_webhook_info
+# )  # Phase 2.2 - Telegram Auto-Add Webhook (DEPRECATED - Using polling)
 
 app_name = 'subscriptions'
 
@@ -59,6 +65,11 @@ urlpatterns = [
     # Admin API endpoints for pricing management
     path('admin/', include(router.urls)),
     
+    # User subscription management API - Function-based view
+    # MUST be before api_router to avoid being matched as detail view with pk='my-subscriptions'
+    # Path: /api/subscriptions/my-subscriptions/
+    path('subscriptions/my-subscriptions/', user_views.my_subscriptions, name='my-subscriptions'),
+    
     # NEW: Phase 0.5 - Task 0.5.20 - Comprehensive subscription API
     # Note: Already prefixed with 'api/' in main urls.py, so this becomes /api/subscriptions/
     path('', include(api_router.urls)),
@@ -67,20 +78,22 @@ urlpatterns = [
     # Note: Already prefixed with 'api/' in main urls.py, so this becomes /api/v1/subscriptions/plans/
     path('v1/', include(v1_router.urls)),
     
-    # User subscription management API (legacy, will be deprecated)
-    # path('', include(user_router.urls)),  # Temporarily disabled to avoid conflicts
-    
     # ============================================================================
     # BILLING & TELEGRAM VERIFICATION ENDPOINTS
     # ============================================================================
     
     # Telegram Verification (User-facing)
     path('billing/telegram/generate-code/', billing_views.generate_verification_code, name='generate_verification_code'),
+    path('billing/telegram/verify-username/', billing_views.verify_telegram_username, name='verify_telegram_username'),
+    path('billing/telegram/confirm/', billing_views.confirm_telegram_verification, name='confirm_telegram_verification'),
     path('billing/telegram/status/', billing_views.telegram_verification_status, name='telegram_verification_status'),
     path('billing/telegram/unlink/', billing_views.unlink_telegram, name='unlink_telegram'),
     
-    # Telegram Verification Callback (Bot-only, uses X-Bot-Secret header)
+    # Telegram Verification Callback (Bot-only, uses X-Bot-Secret header) - DEPRECATED, kept for backward compatibility
     path('billing/telegram/verify-callback/', billing_views.telegram_verify_callback, name='telegram_verify_callback'),
+    
+    # DEV ONLY: Skip Telegram verification for local testing
+    # path('dev/skip-telegram-verification/', dev_verify_telegram.dev_skip_telegram_verification, name='dev_skip_telegram'),
     
     # ============================================================================
     # PAYMENT API ENDPOINTS - Phase 2.1 (November 10, 2025)
@@ -98,16 +111,25 @@ urlpatterns = [
     path('payments/history/', PaymentHistoryView.as_view(), name='payment_history'),
     path('payments/<int:payment_id>/invoice/', InvoiceDownloadView.as_view(), name='payment_invoice'),
     
-    # ============================================================================
-    # TELEGRAM AUTO-ADD WEBHOOKS - Phase 2.2 (November 10, 2025)
-    # ============================================================================
+    # Payment Method Management (Auto-renewal tokenization)
+    path('payment-methods/save/', save_payment_method, name='save_payment_method'),
+    path('payment-methods/', list_payment_methods, name='list_payment_methods'),
+    path('payment-methods/<uuid:payment_method_id>/set-default/', set_default_payment_method, name='set_default_payment_method'),
+    path('payment-methods/<uuid:payment_method_id>/', delete_payment_method, name='delete_payment_method'),
     
-    # Telegram Webhook (receives join request updates)
-    path('telegram/webhook/', telegram_webhook, name='telegram_webhook'),
+    # ============================================================================
+    # TELEGRAM AUTO-ADD - Phase 2.2 (November 10, 2025)
+    # ============================================================================
+    # REMOVED: Using polling instead of webhooks (no ngrok/public URL needed)
+    # See: subscriptions/tasks.py::process_telegram_updates()
+    # Celery Beat runs every 10 seconds to poll for messages
     
-    # Webhook Management (admin endpoints)
-    path('telegram/set-webhook/', set_telegram_webhook, name='set_telegram_webhook'),
-    path('telegram/webhook-info/', get_webhook_info, name='get_telegram_webhook_info'),
+    # # Telegram Webhook (receives join request updates) - DEPRECATED
+    # path('telegram/webhook/', telegram_webhook, name='telegram_webhook'),
+    # 
+    # # Webhook Management (admin endpoints) - DEPRECATED  
+    # path('telegram/set-webhook/', set_telegram_webhook, name='set_telegram_webhook'),
+    # path('telegram/webhook-info/', get_webhook_info, name='get_telegram_webhook_info'),
     
     # ============================================================================
     # ADMIN ENDPOINTS - DEPRECATED (Phase 0.4)

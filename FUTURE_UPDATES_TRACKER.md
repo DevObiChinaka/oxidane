@@ -1,12 +1,94 @@
 # 🔮 OXIDANE - FUTURE UPDATES TRACKER
 
 **Project**: OxiWorld Forex Academy Platform  
-**Last Updated**: October 5, 2025  
+**Last Updated**: November 12, 2025  
 **Status**: Active Development  
 
 ---
 
+## ✅ **RECENTLY COMPLETED UPDATES**
+
+### 🔐 **Telegram Verification System Refactor**
+- **Priority**: HIGH 🔥
+- **Status**: ✅ COMPLETE (November 12, 2025)
+- **Effort**: ~4 hours
+- **Description**: Replaced webhook-based verification with Deep Link + Username Entry
+- **Implementation**:
+  - ✅ Backend endpoints: generate, verify username, confirm code
+  - ✅ Frontend UI: 3-step flow with comprehensive guidance
+  - ✅ No webhook/ngrok dependency
+  - ✅ Works with TelegramConfiguration singleton
+  - ✅ TypeScript errors resolved
+- **Documentation**: `TELEGRAM_VERIFICATION_DEEP_LINK_IMPLEMENTATION.md`
+
+### 💱 **Currency Conversion & Coupon System**
+- **Priority**: HIGH 🔥
+- **Status**: ✅ COMPLETE (November 11, 2025)
+- **Effort**: ~6 hours
+- **Description**: Live currency conversion with coupon support
+- **Implementation**:
+  - ✅ Exchange rate API integration (open.er-api.com)
+  - ✅ 1-hour smart caching
+  - ✅ React hook for frontend
+  - ✅ Multi-currency pricing (USD/NGN)
+  - ✅ Coupon validation with currency conversion
+  - ✅ 5 test coupons created
+- **Current Rate**: 1 USD = ₦1,437.08
+
+---
+
 ## 📋 **PENDING UPDATES & ENHANCEMENTS**
+
+### 🤖 **Telegram Bot Enhancements**
+
+#### **1. Auto-Command Registration via API**
+- **Priority**: MEDIUM
+- **Status**: Concept
+- **Effort**: 3-4 hours
+- **Description**: Automatically set bot commands when admin configures bot
+- **Features**:
+  - Call Telegram `setMyCommands` API on bot configuration
+  - Support custom commands: /help, /support, /status
+  - Admin UI for managing commands
+  - Commands auto-update when bot changes
+- **Benefits**:
+  - No manual BotFather setup
+  - Professional bot interface
+  - Easy command management
+- **Dependencies**: TelegramConfiguration model (already exists)
+- **Implementation**:
+  ```python
+  POST https://api.telegram.org/bot{token}/setMyCommands
+  {
+    "commands": [
+      {"command": "help", "description": "Get help and support"},
+      {"command": "status", "description": "Check subscription status"}
+    ]
+  }
+  ```
+
+#### **2. Telegram Bot Analytics**
+- **Priority**: LOW
+- **Status**: Concept
+- **Description**: Track bot usage and verification metrics
+- **Features**:
+  - Verification success rate tracking
+  - User interaction analytics
+  - Common error logging
+  - Performance monitoring
+
+#### **3. Telegram Group Auto-Management**
+- **Priority**: HIGH
+- **Status**: Partially Complete (Auto-add works)
+- **Description**: Enhanced group management automation
+- **Features**:
+  - ✅ Auto-add on subscription activation
+  - ⏳ Auto-remove on subscription expiration
+  - ⏳ Welcome message customization
+  - ⏳ Group health checks
+  - ⏳ Member sync verification
+
+---
 
 ### 🔐 **Authentication & Security Improvements**
 

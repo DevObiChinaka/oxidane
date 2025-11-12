@@ -13,6 +13,7 @@ import {
   checkTelegramStatus,
   type InitializePaymentRequest 
 } from '@/lib/api/payment';
+import Script from 'next/script';
 
 interface PricingPlan {
   id: string;
@@ -24,6 +25,13 @@ interface PricingPlan {
   base_price: number;
   currency: string;
   trial_days: number;
+}
+
+// Declare Paystack globally
+declare global {
+  interface Window {
+    PaystackPop?: any;
+  }
 }
 
 function CheckoutContent() {
@@ -144,13 +152,16 @@ function CheckoutContent() {
 
     try {
       setCouponValidating(true);
+      setError('');
       
       // Get base price in USD for coupon validation
       const basePriceUSD = plan?.base_price || plan?.price || 0;
       
       const data = await validateCoupon({
         code: couponCode,
-        amount: basePriceUSD
+        amount: basePriceUSD,
+        plan_id: plan?.id,
+        user_id: user?.id
       });
 
       if (data.valid) {
@@ -214,9 +225,36 @@ function CheckoutContent() {
 
       const data = await initializePayment(request);
 
-      if (data.success && data.payment_url) {
-        // Redirect to payment gateway
-        window.location.href = data.payment_url;
+      if (data.success && data.reference) {
+        // Use Paystack inline popup if Paystack gateway and script is loaded
+        if (gateway === 'paystack' && window.PaystackPop && data.paystack_public_key) {
+          const handler = window.PaystackPop.setup({
+            key: data.paystack_public_key, // Use key from backend
+            email: user?.email || '',
+            amount: Math.round(data.total_amount * 100), // Convert to kobo/cents
+            currency: currency,
+            ref: data.reference,
+            metadata: {
+              plan_id: planId,
+              plan_name: plan?.name || '',
+              custom_fields: []
+            },
+            callback: function(response: any) {
+              // Payment successful - redirect to callback page
+              window.location.href = `/payment/callback?reference=${response.reference}`;
+            },
+            onClose: function() {
+              setProcessing(false);
+              setError('Payment was cancelled');
+            }
+          });
+          handler.openIframe();
+        } else if (data.payment_url) {
+          // Fallback to redirect for Stripe or if Paystack script not loaded
+          window.location.href = data.payment_url;
+        } else {
+          throw new Error('Payment initialization failed');
+        }
       } else {
         throw new Error('Failed to initialize payment');
       }
@@ -267,15 +305,22 @@ function CheckoutContent() {
   if (!plan) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#000856] via-[#002A5C] to-[#004A42]">
-      <Navigation />
+    <>
+      {/* Load Paystack Inline Script */}
+      <Script 
+        src="https://js.paystack.co/v1/inline.js" 
+        strategy="lazyOnload"
+      />
       
-      {/* Background Elements */}
-      <div className="absolute inset-0 opacity-8">
-        <div className="absolute inset-0" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-        }}></div>
-      </div>
+      <div className="min-h-screen bg-gradient-to-br from-[#000856] via-[#002A5C] to-[#004A42]">
+        <Navigation />
+        
+        {/* Background Elements */}
+        <div className="absolute inset-0 opacity-8">
+          <div className="absolute inset-0" style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+          }}></div>
+        </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="grid lg:grid-cols-2 gap-8">
@@ -307,8 +352,30 @@ function CheckoutContent() {
               </div>
 
               <div className="space-y-4 py-6 border-y border-white/10">
+                {/* Trial Information Banner */}
+                {plan.trial_days > 0 && (
+                  <div className="bg-[#000ABE]/20 border border-[#000ABE]/30 rounded-lg p-4 mb-4">
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-[#00B38F] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <div>
+                        <h4 className="text-white font-semibold text-sm mb-1">
+                          {plan.trial_days}-Day Free Trial
+                        </h4>
+                        <p className="text-gray-300 text-xs leading-relaxed">
+                          You won't be charged today. Your card will be authorized (not charged) to start your free trial. 
+                          After {plan.trial_days} days, you'll be automatically charged {formatCurrency(basePriceConverted)} {plan.billing_period !== 'lifetime' && `per ${plan.billing_period.replace('ly', '')}`}.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-300">Base Price</span>
+                  <span className="text-gray-300">
+                    {plan.trial_days > 0 ? 'Price After Trial' : 'Base Price'}
+                  </span>
                   <span className="text-white font-semibold">
                     {rateLoading ? (
                       <span className="inline-block w-20 h-4 bg-white/10 animate-pulse rounded"></span>
@@ -332,17 +399,27 @@ function CheckoutContent() {
                   </div>
                 )}
 
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-300">Processing Fee (1.5%)</span>
-                  <span className="text-white font-semibold">{formatCurrency(processingFee)}</span>
-                </div>
+                {plan.trial_days === 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-300">Processing Fee (1.5%)</span>
+                    <span className="text-white font-semibold">{formatCurrency(processingFee)}</span>
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-between items-baseline mt-6">
-                <span className="text-gray-300">Total Amount</span>
+                <span className="text-gray-300">
+                  {plan.trial_days > 0 ? 'Due Today' : 'Total Amount'}
+                </span>
                 <div className="text-right">
-                  <div className="text-3xl font-bold text-white">{formatCurrency(totalAmount)}</div>
-                  <div className="text-sm text-gray-400">{plan.billing_period_display}</div>
+                  <div className="text-3xl font-bold text-white">
+                    {plan.trial_days > 0 ? formatCurrency(0) : formatCurrency(totalAmount)}
+                  </div>
+                  {plan.trial_days > 0 ? (
+                    <div className="text-sm text-[#00B38F] font-medium">Free for {plan.trial_days} days</div>
+                  ) : (
+                    <div className="text-sm text-gray-400">{plan.billing_period_display}</div>
+                  )}
                 </div>
               </div>
             </div>
@@ -586,6 +663,7 @@ function CheckoutContent() {
 
       <Footer />
     </div>
+    </>
   );
 }
 
