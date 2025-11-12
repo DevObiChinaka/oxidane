@@ -148,6 +148,7 @@ export default function PricingPage() {
             onPlanSelect={handlePlanSelect}
             selectedPlanId={selectedPlan?.id}
             currency={currency}
+            isAuthenticated={isAuthenticated}
           />
         </div>
 

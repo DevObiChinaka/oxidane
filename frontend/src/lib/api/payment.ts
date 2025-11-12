@@ -529,3 +529,37 @@ export async function unlinkTelegram(): Promise<{ success: boolean }> {
   const data = await response.json();
   return data;
 }
+
+/**
+ * Check if purchasing a plan would conflict with existing subscriptions
+ */
+export interface CheckConflictResponse {
+  can_purchase: boolean;
+  conflict: boolean;
+  existing_subscription?: {
+    id: string;
+    plan_id: string;
+    plan_name: string;
+    billing_period: string;
+    billing_period_display: string;
+    end_date: string;
+    auto_renew: boolean;
+  };
+  message?: string;
+}
+
+export async function checkSubscriptionConflict(planId: string): Promise<CheckConflictResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/v1/payments/check-conflict/?plan_id=${planId}`,
+    {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    }
+  );
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  return response.json();
+}

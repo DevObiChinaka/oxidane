@@ -11,7 +11,9 @@ import {
   initializePayment, 
   validateCoupon, 
   checkTelegramStatus,
-  type InitializePaymentRequest 
+  checkSubscriptionConflict,
+  type InitializePaymentRequest,
+  type CheckConflictResponse
 } from '@/lib/api/payment';
 import Script from 'next/script';
 
@@ -45,6 +47,8 @@ function CheckoutContent() {
   const [showTelegramVerification, setShowTelegramVerification] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
+  const [conflict, setConflict] = useState<CheckConflictResponse | null>(null);
+  const [conflictChecking, setConflictChecking] = useState(false);
 
   // Form state
   const [currency, setCurrency] = useState<'NGN' | 'USD'>('NGN');
@@ -113,6 +117,39 @@ function CheckoutContent() {
 
     fetchPlan();
   }, [planId, router]);
+
+  // Check for subscription conflicts
+  useEffect(() => {
+    const checkConflict = async () => {
+      if (!planId || !isAuthenticated) {
+        return;
+      }
+
+      try {
+        setConflictChecking(true);
+        const conflictData = await checkSubscriptionConflict(planId);
+        
+        if (conflictData.conflict) {
+          setConflict(conflictData);
+          setError('Subscription conflict detected. Please manage your existing subscription first.');
+          
+          // Auto-redirect after 5 seconds
+          setTimeout(() => {
+            router.push('/subscriptions');
+          }, 5000);
+        } else {
+          setConflict(null);
+        }
+      } catch (err) {
+        console.error('Error checking subscription conflict:', err);
+        // Don't block checkout if conflict check fails - backend will handle it
+      } finally {
+        setConflictChecking(false);
+      }
+    };
+
+    checkConflict();
+  }, [planId, isAuthenticated, router]);
 
   // Check Telegram verification status
   useEffect(() => {
@@ -322,6 +359,46 @@ function CheckoutContent() {
         </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        {/* Conflict Warning Banner */}
+        {conflict && conflict.conflict && conflict.existing_subscription && (
+          <div className="mb-8 bg-red-50/95 backdrop-blur-sm border-2 border-red-300 rounded-2xl p-6 shadow-lg">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-red-900 mb-2">
+                  Subscription Conflict Detected
+                </h3>
+                <p className="text-sm text-red-800 mb-4 leading-relaxed">
+                  You already have an active <strong>{conflict.existing_subscription.plan_name}</strong> ({conflict.existing_subscription.billing_period_display}) 
+                  subscription ending on <strong>{new Date(conflict.existing_subscription.end_date).toLocaleDateString()}</strong>. 
+                  You can only have one recurring subscription at a time.
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <button 
+                    onClick={() => router.push('/subscriptions')}
+                    className="px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm shadow-sm"
+                  >
+                    Manage Subscriptions
+                  </button>
+                  <button 
+                    onClick={() => router.push('/pricing')}
+                    className="px-5 py-2.5 bg-white text-red-700 border border-red-300 rounded-lg hover:bg-red-50 transition-colors font-medium text-sm"
+                  >
+                    View Other Plans
+                  </button>
+                </div>
+                <p className="text-xs text-red-700 mt-4">
+                  Redirecting to subscriptions page in 5 seconds...
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+        
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Left Column - Plan Summary */}
           <div className="space-y-6">
@@ -605,7 +682,7 @@ function CheckoutContent() {
             {/* Payment Button */}
             <button
               onClick={handleProceedToPayment}
-              disabled={processing || !agreedToTerms || !telegramVerified}
+              disabled={processing || !agreedToTerms || !telegramVerified || (conflict?.conflict === true)}
               className="w-full py-4 px-6 bg-gradient-to-r from-[#00B38F] to-[#00B39F] text-white rounded-xl font-semibold text-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
             >
               {processing ? (
