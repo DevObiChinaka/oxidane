@@ -579,13 +579,6 @@ class VerifyPaymentView(APIView):
                     'message': 'Payment verified successfully'
                 }
                 
-                # Add trial information if subscription exists
-                if payment.subscription:
-                    response_data['is_trial'] = payment.subscription.is_trial
-                    if payment.subscription.is_trial:
-                        response_data['trial_end_date'] = payment.subscription.trial_end_date.isoformat() if payment.subscription.trial_end_date else None
-                        response_data['trial_days_remaining'] = payment.subscription.days_until_trial_end
-                
                 return Response(response_data, status=status.HTTP_200_OK)
             
             else:

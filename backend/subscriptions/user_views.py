@@ -123,10 +123,6 @@ def my_subscriptions(request):
             'plan_currency': 'USD',  # Plans are priced in USD by default
             'auto_renew': sub.auto_renew,
             'features': features,
-            # Trial information
-            'is_trial': sub.is_trial,
-            'trial_end_date': sub.trial_end_date.isoformat() if sub.trial_end_date else None,
-            'days_until_trial_end': sub.days_until_trial_end if sub.is_trial else None,
         }
         
         subscription_list.append(subscription_data)

@@ -249,15 +249,9 @@ class SubscriptionPlanAdmin(admin.ModelAdmin):
     subscriber_list_display.short_description = 'Active Subscribers'
     
     def trial_display(self, obj):
-        """Display trial period (deprecated - use coupons)"""
-        if obj.trial_days > 0:
-            return format_html(
-                '<span style="background: #ffc107; color: #000; padding: 2px 6px; '
-                'border-radius: 3px; font-weight: 500;">⚠️ {} days (Legacy)</span>',
-                obj.trial_days
-            )
-        return format_html('<span style="color: #28a745; font-weight: 500;">✓ Disabled (Use Coupons)</span>')
-    trial_display.short_description = 'Trial (Deprecated)'
+        """Trial status (trials disabled platform-wide)"""
+        return format_html('<span style="color: #28a745; font-weight: 500;">✓ Trials Disabled</span>')
+    trial_display.short_description = 'Trial Status'
     
     def status_display(self, obj):
         """Display plan status"""

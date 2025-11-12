@@ -443,7 +443,6 @@ class SubscriptionPlanViewSet(viewsets.ModelViewSet):
             description=f"{source_plan.description} (Cloned)",
             base_price=source_plan.base_price,
             billing_period=source_plan.billing_period,
-            trial_days=source_plan.trial_days,
             limits=source_plan.limits.copy() if source_plan.limits else {},
             paystack_plan_code='',  # Clear Paystack integration (must be set manually)
             is_active=False,  # Cloned plans start inactive

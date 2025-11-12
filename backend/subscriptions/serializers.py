@@ -163,10 +163,6 @@ class PricingPlanSerializer(serializers.ModelSerializer):
             return obj.base_price / 12
         return obj.base_price
     
-    def get_has_trial(self, obj):
-        """Check if plan has a trial period"""
-        return obj.trial_days > 0
-    
     def get_feature_count(self, obj):
         """Get count of features in this plan"""
         return obj.features.count()

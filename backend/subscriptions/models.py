@@ -234,17 +234,6 @@ class Subscription(models.Model):
     auto_renew = models.BooleanField(default=True)
     next_billing_date = models.DateTimeField(null=True, blank=True)
     
-    # Trial tracking
-    is_trial = models.BooleanField(
-        default=False,
-        help_text='Whether this subscription is currently in trial period'
-    )
-    trial_end_date = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text='When trial period ends (null after trial converts to paid)'
-    )
-    
     # Cancellation
     cancelled_at = models.DateTimeField(null=True, blank=True)
     cancellation_reason = models.TextField(blank=True)
@@ -285,14 +274,6 @@ class Subscription(models.Model):
         if not self.is_active:
             return 0
         delta = self.end_date - timezone.now()
-        return max(0, delta.days)
-    
-    @property
-    def days_until_trial_end(self):
-        """Calculate days until trial ends"""
-        if not self.is_trial or not self.trial_end_date:
-            return None
-        delta = self.trial_end_date - timezone.now()
         return max(0, delta.days)
     
     def cancel(self, reason=""):
@@ -741,12 +722,6 @@ class SubscriptionPlan(models.Model):
         default='monthly'
     )
     
-    # Trial period
-    trial_days = models.IntegerField(
-        default=0,
-        help_text='Number of days for free trial (0 = no trial)'
-    )
-    
     # Plan metadata
     is_active = models.BooleanField(
         default=True,
@@ -802,12 +777,6 @@ class SubscriptionPlan(models.Model):
                 'base_price': 'Base price must be positive.'
             })
         
-        # Ensure trial_days is non-negative
-        if self.trial_days and self.trial_days < 0:
-            raise ValidationError({
-                'trial_days': 'Trial days cannot be negative.'
-            })
-        
         # Auto-generate slug from name if not provided
         if not self.slug and self.name:
             from django.utils.text import slugify
@@ -848,10 +817,6 @@ class SubscriptionPlan(models.Model):
             # Assume 2 years for lifetime comparison
             return self.base_price / 24
         return self.base_price
-    
-    def has_trial(self):
-        """Check if plan has trial period"""
-        return self.trial_days > 0
     
     def get_feature_count(self):
         """Get count of features in this plan"""

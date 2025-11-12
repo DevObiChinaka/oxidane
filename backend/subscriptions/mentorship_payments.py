@@ -349,7 +349,6 @@ def get_mentorship_plans(request):
                 'currency': 'USD',  # Phase 0.5 uses USD with multi-currency conversion
                 'features_list': features_list,
                 'billing_period': plan.billing_period,
-                'trial_days': plan.trial_days,
                 'is_featured': plan.is_featured
             })
         
