@@ -990,7 +990,6 @@ def process_auto_renewals():
         
         renewing_subscriptions = Subscription.objects.filter(
             status='active',
-            is_trial=False,  # Only paid subscriptions
             auto_renew=True,
             next_billing_date__date=today
         ).select_related('billing_profile__user', 'plan', 'payment_method')
@@ -1174,13 +1173,18 @@ def process_single_renewal(self, subscription_id):
                 logger.info(f"Retrying renewal for {subscription_id} (attempt {self.request.retries + 1}/{self.max_retries})")
                 raise self.retry(exc=Exception(error_message))
             else:
-                # Max retries - disable auto-renewal
+                # Max retries exhausted - disable auto-renewal and let it expire naturally
                 logger.error(f"Max retries exceeded for {subscription_id}, disabling auto-renew")
                 
                 subscription.auto_renew = False
                 subscription.save(update_fields=['auto_renew'])
                 
-                # TODO: Send email about failed renewal
+                # Note: Subscription will expire at end_date (handled by check_expired_subscriptions task)
+                # This allows user to manually renew before expiration if they want
+                
+                logger.info(f"Subscription {subscription_id} will expire on {subscription.end_date}")
+                
+                # TODO: Send email about failed renewal and upcoming expiration
                 
                 return {
                     'success': False,

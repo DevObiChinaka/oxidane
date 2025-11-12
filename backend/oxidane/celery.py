@@ -31,13 +31,19 @@ app.conf.beat_schedule = {
         'schedule': 10.0,  # Every 10 seconds
     },
     
-    # Example: Check expired subscriptions every day at midnight
+    # Check expired subscriptions every day at midnight
     'check-expired-subscriptions': {
         'task': 'subscriptions.tasks.check_expired_subscriptions',
         'schedule': crontab(hour=0, minute=0),  # Daily at midnight
     },
     
-    # Example: Send subscription renewal reminders
+    # Process auto-renewals every day at 2 AM
+    'process-auto-renewals': {
+        'task': 'subscriptions.tasks.process_auto_renewals',
+        'schedule': crontab(hour=2, minute=0),  # Daily at 2 AM
+    },
+    
+    # Send subscription renewal reminders
     'send-renewal-reminders': {
         'task': 'subscriptions.tasks.send_renewal_reminders',
         'schedule': crontab(hour=9, minute=0),  # Daily at 9 AM
