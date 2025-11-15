@@ -11,6 +11,7 @@ export interface EmailTemplate {
   text_content: string;
   description: string;
   is_default: boolean;
+  is_system_email?: boolean;
   sent_count?: number;
   last_used?: string | null;
   created_at?: string;
@@ -39,6 +40,21 @@ export interface EmailAnalytics {
     sent_count: number;
     last_used: string | null;
   }>;
+}
+
+export interface EmailLog {
+  id: string;
+  template_name: string;
+  template_type: string;
+  recipient_email: string;
+  recipient_name?: string | null;
+  subject: string;
+  status: 'pending' | 'sent' | 'delivered' | 'failed' | 'bounced' | 'opened' | 'clicked';
+  error_message?: string;
+  created_at: string;
+  sent_at?: string | null;
+  delivered_at?: string | null;
+  opened_at?: string | null;
 }
 
 export interface PreviewData {

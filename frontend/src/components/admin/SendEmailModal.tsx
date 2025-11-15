@@ -12,8 +12,9 @@ interface SendEmailModalProps {
 }
 
 interface SendEmailData {
-  recipientType: 'all_users' | 'active_subscribers' | 'inactive_users' | 'specific_users';
+  recipientType: 'all_users' | 'active_subscribers' | 'inactive_users' | 'specific_users' | 'subscription_plan_only';
   specificUsers?: string[];
+  subscriptionPlans?: string[];  // New: array of billing periods
   scheduleType: 'now' | 'later';
   scheduledDate?: string;
   scheduledTime?: string;
@@ -36,6 +37,7 @@ export default function SendEmailModal({ template, isOpen, onClose, onSend }: Se
   const [activeTab, setActiveTab] = useState<'quick' | 'users' | 'schedule'>('quick');
   const [sendData, setSendData] = useState<SendEmailData>({
     recipientType: 'all_users',
+    subscriptionPlans: [],  // New: empty by default
     scheduleType: 'now'
   });
   const [users, setUsers] = useState<User[]>([]);
@@ -131,7 +133,8 @@ export default function SendEmailModal({ template, isOpen, onClose, onSend }: Se
     setLoading(true);
     onSend({
       ...sendData,
-      specificUsers: sendData.recipientType === 'specific_users' ? selectedUsers : undefined
+      specificUsers: sendData.recipientType === 'specific_users' ? selectedUsers : undefined,
+      subscriptionPlans: sendData.subscriptionPlans && sendData.subscriptionPlans.length > 0 ? sendData.subscriptionPlans : undefined
     });
   };
 
@@ -168,7 +171,7 @@ export default function SendEmailModal({ template, isOpen, onClose, onSend }: Se
               onClick={() => setActiveTab('quick')}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'quick'
-                  ? 'border-blue-500 text-blue-600'
+                  ? 'border-gray-900 text-gray-900'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
@@ -181,7 +184,7 @@ export default function SendEmailModal({ template, isOpen, onClose, onSend }: Se
               onClick={() => setActiveTab('users')}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'users'
-                  ? 'border-blue-500 text-blue-600'
+                  ? 'border-gray-900 text-gray-900'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
@@ -194,7 +197,7 @@ export default function SendEmailModal({ template, isOpen, onClose, onSend }: Se
               onClick={() => setActiveTab('schedule')}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'schedule'
-                  ? 'border-blue-500 text-blue-600'
+                  ? 'border-gray-900 text-gray-900'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
@@ -214,21 +217,21 @@ export default function SendEmailModal({ template, isOpen, onClose, onSend }: Se
               
               {/* Recipient Count Summary */}
               {users.length > 0 && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                  <h4 className="font-medium text-blue-900 mb-2">📊 Recipient Overview</h4>
+                <div className="bg-gray-100 border border-gray-300 rounded-lg p-4 mb-4">
+                  <h4 className="font-medium text-gray-900 mb-2">Recipient Overview</h4>
                   <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div className="text-blue-700">
-                      👥 Total Users: <span className="font-medium">{users.length}</span>
+                    <div className="text-gray-900">
+                      Total Users: <span className="font-medium">{users.length}</span>
                     </div>
-                    <div className="text-blue-700">
-                      ✅ Active Subscribers: <span className="font-medium">{users.filter(u => 
+                    <div className="text-gray-900">
+                      Active Subscribers: <span className="font-medium">{users.filter(u => 
                         u.subscription_status === 'active' || 
                         (u.active_signal_subscriptions_count && u.active_signal_subscriptions_count > 0) ||
                         u.is_active === true
                       ).length}</span>
                     </div>
-                    <div className="text-blue-700">
-                      😴 Inactive Users: <span className="font-medium">{users.filter(u => 
+                    <div className="text-gray-900">
+                      Inactive Users: <span className="font-medium">{users.filter(u => 
                         u.subscription_status === 'inactive' || 
                         u.is_active === false ||
                         (!u.last_login)
@@ -249,7 +252,7 @@ export default function SendEmailModal({ template, isOpen, onClose, onSend }: Se
                   { 
                     value: 'active_subscribers', 
                     label: 'Active Subscribers', 
-                    description: 'Users with active subscriptions',
+                    description: 'Users with active subscriptions (optionally filter by plan below)',
                     count: users.filter(u => 
                       u.subscription_status === 'active' || 
                       (u.active_signal_subscriptions_count && u.active_signal_subscriptions_count > 0) ||
@@ -265,6 +268,12 @@ export default function SendEmailModal({ template, isOpen, onClose, onSend }: Se
                       u.is_active === false ||
                       (!u.last_login)
                     ).length
+                  },
+                  { 
+                    value: 'subscription_plan_only', 
+                    label: 'By Subscription Plan', 
+                    description: 'Filter by specific subscription plan types (select below)',
+                    count: 0  // Dynamic based on selected plans
                   }
                 ].map((option) => (
                   <label key={option.value} className="flex items-start p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
@@ -274,20 +283,60 @@ export default function SendEmailModal({ template, isOpen, onClose, onSend }: Se
                       value={option.value}
                       checked={sendData.recipientType === option.value}
                       onChange={(e) => setSendData({ ...sendData, recipientType: e.target.value as any })}
-                      className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                      className="mt-1 h-4 w-4 text-gray-900 focus:ring-gray-500 border-gray-300"
                     />
                     <div className="ml-3 flex-grow">
                       <div className="flex items-center justify-between">
                         <div className="font-medium text-gray-900">{option.label}</div>
-                        <div className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-                          {option.count} recipients
-                        </div>
+                        {option.value !== 'subscription_plan_only' && (
+                          <div className="bg-gray-100 text-gray-900 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                            {option.count} recipients
+                          </div>
+                        )}
                       </div>
                       <div className="text-sm text-gray-500">{option.description}</div>
                     </div>
                   </label>
                 ))}
               </div>
+
+              {/* Subscription Plan Filters */}
+              {(sendData.recipientType === 'active_subscribers' || sendData.recipientType === 'subscription_plan_only') && (
+                <div className="mt-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                  <h4 className="font-medium text-gray-900 mb-3">Filter by Subscription Plan (Optional)</h4>
+                  <p className="text-sm text-gray-600 mb-3">Select specific plan types to target</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { value: 'weekly', label: 'Weekly Plans' },
+                      { value: 'monthly', label: 'Monthly Plans' },
+                      { value: 'quarterly', label: 'Quarterly Plans' },
+                      { value: 'yearly', label: 'Yearly Plans' },
+                      { value: 'lifetime', label: 'Lifetime Plans' }
+                    ].map((plan) => (
+                      <label key={plan.value} className="flex items-center p-2 border border-gray-200 rounded bg-white hover:bg-gray-50 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={sendData.subscriptionPlans?.includes(plan.value) || false}
+                          onChange={(e) => {
+                            const currentPlans = sendData.subscriptionPlans || [];
+                            const newPlans = e.target.checked
+                              ? [...currentPlans, plan.value]
+                              : currentPlans.filter(p => p !== plan.value);
+                            setSendData({ ...sendData, subscriptionPlans: newPlans });
+                          }}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <span className="ml-2 text-sm text-gray-900">{plan.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {sendData.subscriptionPlans && sendData.subscriptionPlans.length > 0 && (
+                    <div className="mt-3 text-sm text-gray-700">
+                      <strong>Selected:</strong> {sendData.subscriptionPlans.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(', ')}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -310,7 +359,7 @@ export default function SendEmailModal({ template, isOpen, onClose, onSend }: Se
                   placeholder="Search users..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-gray-500"
                 />
               </div>
 
@@ -329,7 +378,7 @@ export default function SendEmailModal({ template, isOpen, onClose, onSend }: Se
                           setSelectedUsers(selectedUsers.filter(id => id !== user.id));
                         }
                       }}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      className="h-4 w-4 text-gray-900 focus:ring-gray-500 border-gray-300 rounded"
                     />
                     <div className="ml-3 flex-1">
                       <div className="font-medium text-gray-900">{user.first_name} {user.last_name}</div>
@@ -355,7 +404,7 @@ export default function SendEmailModal({ template, isOpen, onClose, onSend }: Se
                     value="now"
                     checked={sendData.scheduleType === 'now'}
                     onChange={(e) => setSendData({ ...sendData, scheduleType: e.target.value as any })}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                    className="h-4 w-4 text-gray-900 focus:ring-gray-500 border-gray-300"
                   />
                   <span className="ml-3 font-medium text-gray-900">Send immediately</span>
                 </label>
@@ -367,7 +416,7 @@ export default function SendEmailModal({ template, isOpen, onClose, onSend }: Se
                     value="later"
                     checked={sendData.scheduleType === 'later'}
                     onChange={(e) => setSendData({ ...sendData, scheduleType: e.target.value as any })}
-                    className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                    className="mt-1 h-4 w-4 text-gray-900 focus:ring-gray-500 border-gray-300"
                   />
                   <div className="ml-3 space-y-3">
                     <span className="font-medium text-gray-900">Schedule for later</span>
@@ -377,13 +426,13 @@ export default function SendEmailModal({ template, isOpen, onClose, onSend }: Se
                           type="date"
                           value={sendData.scheduledDate || ''}
                           onChange={(e) => setSendData({ ...sendData, scheduledDate: e.target.value })}
-                          className="border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-gray-500"
                         />
                         <input
                           type="time"
                           value={sendData.scheduledTime || ''}
                           onChange={(e) => setSendData({ ...sendData, scheduledTime: e.target.value })}
-                          className="border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-gray-500"
                         />
                       </div>
                     )}

@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useUsers, useUsersAnalytics, useUserActions, useUserDetail } from '../hooks/useAdminAPI';
+import { useUsers, useUsersAnalytics, useUserActions, useUserDetail, useBulkUserActions, useDeleteUser, useUserAuditLog } from '../hooks/useAdminAPI';
 import { useAuth } from '@/contexts/AuthContext';
+import { formatCurrency } from '@/utils/currencyFormatter';
 
 // Types
 interface User {
@@ -22,32 +23,28 @@ interface User {
   created_at: string;
   updated_at: string;
   last_login: string | null;
-  signal_subscriptions_count: number;
-  active_signal_subscriptions_count: number;
-  latest_signal_subscription: {
-    plan_type: string;
-    subscription_end: string | null;
-    telegram_status: string;
+  subscriptions_count: number;
+  active_subscriptions_count: number;
+  latest_subscription: {
+    plan_name: string;
+    end_date: string | null;
+    status: string;
   } | null;
-  days_since_registration: number;
-  days_since_last_login: number | null;
 }
 
 interface UserDetail extends User {
   avatar: string | null;
-  display_name: string;
   subscription_history: Array<{
     id: string;
-    plan_type: string;
+    plan_name: string;
+    plan_base_price_usd: number;
     amount_paid: number;
     currency: string;
-    payment_status: string;
-    telegram_username: string;
-    telegram_status: string;
-    subscription_start: string | null;
-    subscription_end: string | null;
+    status: string;
+    start_date: string | null;
+    end_date: string | null;
     created_at: string;
-    paystack_reference: string;
+    auto_renew: boolean;
   }>;
   oauth_providers: Array<{
     provider: string;
@@ -55,8 +52,6 @@ interface UserDetail extends User {
     created_at: string;
   }>;
   metrics: {
-    days_since_registration: number;
-    days_since_last_login: number | null;
     total_subscriptions: number;
     active_subscriptions: number;
     total_paid: number;
@@ -98,7 +93,7 @@ interface UsersAnalytics {
     recent_logins_7d: number;
   };
   subscriptions: {
-    active_signal_subscriptions: number;
+    active_subscriptions: number;
     subscription_rate: number;
   };
 }
@@ -140,10 +135,11 @@ function formatDateShort(dateString: string | null): string {
 interface UserActionsProps {
   user: User;
   onAction: (userId: string, action: string) => void;
+  onDelete: (user: User) => void;
   isLoading: boolean;
 }
 
-function UserActions({ user, onAction, isLoading }: UserActionsProps) {
+function UserActions({ user, onAction, onDelete, isLoading }: UserActionsProps) {
   const [showDropdown, setShowDropdown] = useState(false);
 
   const actions = [
@@ -152,21 +148,45 @@ function UserActions({ user, onAction, isLoading }: UserActionsProps) {
       label: user.is_active ? 'Deactivate User' : 'Activate User',
       icon: user.is_active ? '🚫' : '✅',
       action: user.is_active ? 'deactivate' : 'activate',
-      danger: user.is_active
+      danger: user.is_active,
+      onClick: () => {
+        onAction(user.id, user.is_active ? 'deactivate' : 'activate');
+        setShowDropdown(false);
+      }
     },
     {
       id: 'verify_email',
       label: 'Verify Email',
       icon: '📧',
       action: 'verify_email',
-      disabled: user.is_email_verified
+      disabled: user.is_email_verified,
+      onClick: () => {
+        onAction(user.id, 'verify_email');
+        setShowDropdown(false);
+      }
     },
     {
       id: 'staff',
       label: user.is_staff ? 'Remove Staff' : 'Make Staff',
       icon: user.is_staff ? '👤' : '👨‍💼',
       action: user.is_staff ? 'remove_staff' : 'make_staff',
-      disabled: user.is_superuser
+      disabled: user.is_superuser,
+      onClick: () => {
+        onAction(user.id, user.is_staff ? 'remove_staff' : 'make_staff');
+        setShowDropdown(false);
+      }
+    },
+    {
+      id: 'delete',
+      label: 'Delete User',
+      icon: '🗑️',
+      action: 'delete',
+      danger: true,
+      disabled: user.is_superuser,
+      onClick: () => {
+        onDelete(user);
+        setShowDropdown(false);
+      }
     }
   ];
 
@@ -190,10 +210,7 @@ function UserActions({ user, onAction, isLoading }: UserActionsProps) {
               {actions.map((action) => (
                 <button
                   key={action.id}
-                  onClick={() => {
-                    onAction(user.id, action.action);
-                    setShowDropdown(false);
-                  }}
+                  onClick={action.onClick}
                   disabled={action.disabled || isLoading}
                   className={`w-full text-left px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                     action.danger 
@@ -282,22 +299,11 @@ function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
                 <div className="absolute top-6 right-6">
                   {user.has_oauth ? (
                     <div className="flex items-center gap-2 bg-blue-50 px-3 py-1.5 rounded-md border border-blue-200">
-                      <div className="w-5 h-5 rounded-full bg-white border border-gray-200 flex items-center justify-center shadow-sm">
-                        <svg className="w-3 h-3" viewBox="0 0 24 24">
-                          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                        </svg>
-                      </div>
-                      <span className="text-xs font-semibold text-blue-700 capitalize">{user.oauth_provider}</span>
+                      <span className="text-xs font-semibold text-blue-700 capitalize">{user.oauth_provider} Login</span>
                     </div>
                   ) : (
                     <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-md border border-gray-200">
-                      <svg className="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                      <span className="text-xs font-semibold text-gray-700">Standard</span>
+                      <span className="text-xs font-semibold text-gray-700">Standard Login</span>
                     </div>
                   )}
                 </div>
@@ -350,20 +356,20 @@ function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
               {/* Quick Stats Cards */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 text-center">
-                  <div className="text-3xl font-bold text-blue-600">{user.signal_subscriptions_count || 0}</div>
+                  <div className="text-3xl font-bold text-blue-600">{user.metrics?.total_subscriptions || 0}</div>
                   <p className="text-blue-700 font-medium mt-1">Total Subscriptions</p>
                 </div>
                 
                 <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-6 text-center">
-                  <div className="text-3xl font-bold text-emerald-600">{user.active_signal_subscriptions_count || 0}</div>
+                  <div className="text-3xl font-bold text-emerald-600">{user.metrics?.active_subscriptions || 0}</div>
                   <p className="text-emerald-700 font-medium mt-1">Active Subscriptions</p>
                 </div>
                 
                 <div className="bg-purple-50 border border-purple-200 rounded-xl p-6 text-center">
                   <div className="text-3xl font-bold text-purple-600">
-                    ${user.latest_signal_subscription?.amount_paid || '0.00'}
+                    {formatCurrency(user.metrics?.total_paid || 0, 'USD')}
                   </div>
-                  <p className="text-purple-700 font-medium mt-1">Total Paid</p>
+                  <p className="text-purple-700 font-medium mt-1">Total Paid (USD)</p>
                 </div>
                 
                 <div className="bg-teal-50 border border-teal-200 rounded-xl p-6 text-center">
@@ -409,15 +415,15 @@ function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
                   <div className="space-y-4">
                     <div className="flex justify-between items-center py-2 border-b border-gray-100">
                       <span className="text-gray-600 font-medium">Active Subscriptions</span>
-                      <span className="text-gray-800 font-semibold">{user.active_signal_subscriptions_count || 0}</span>
+                      <span className="text-gray-800 font-semibold">{user.metrics?.active_subscriptions || 0}</span>
                     </div>
                     <div className="flex justify-between items-center py-2 border-b border-gray-100">
                       <span className="text-gray-600 font-medium">Total Subscriptions</span>
-                      <span className="text-gray-800">{user.signal_subscriptions_count || 0}</span>
+                      <span className="text-gray-800">{user.metrics?.total_subscriptions || 0}</span>
                     </div>
                     <div className="flex justify-between items-center py-2">
                       <span className="text-gray-600 font-medium">Latest Plan</span>
-                      <span className="text-gray-800 capitalize">{user.latest_signal_subscription?.plan_type?.replace('_', ' ') || 'None'}</span>
+                      <span className="text-gray-800">{user.latest_subscription?.plan_name || 'None'}</span>
                     </div>
                   </div>
                 </div>
@@ -440,10 +446,11 @@ function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
                         <thead className="bg-gray-50">
                           <tr>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan Price</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount Paid</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Period</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Telegram</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Auto-Renew</th>
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
@@ -452,52 +459,38 @@ function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <div className="flex items-center gap-2">
                                   <div className="w-2 h-2 rounded-full bg-brand-teal"></div>
-                                  <span className="text-sm font-medium text-brand-teal capitalize">
-                                    {sub.plan_type.replace('_', ' ')}
+                                  <span className="text-sm font-medium text-brand-teal">
+                                    {sub.plan_name}
                                   </span>
                                 </div>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-medium">
-                                {sub.amount_paid} {sub.currency}
+                                {formatCurrency(sub.plan_base_price_usd, 'USD')}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                {formatCurrency(sub.amount_paid, sub.currency)}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                                {formatDateShort(sub.subscription_start)} - {formatDateShort(sub.subscription_end)}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                                <div>
-                                  <div className="font-medium text-gray-800">@{sub.telegram_username}</div>
-                                  <div className="flex items-center gap-1.5 mt-1">
-                                    <div className={`w-1.5 h-1.5 rounded-full ${
-                                      sub.telegram_status === 'added' ? 'bg-emerald-400' : 
-                                      sub.telegram_status === 'pending_add' ? 'bg-amber-400' : 'bg-red-400'
-                                    }`}></div>
-                                    <span className={`text-xs font-medium ${
-                                      sub.telegram_status === 'added' ? 'text-emerald-600' : 
-                                      sub.telegram_status === 'pending_add' ? 'text-amber-600' : 'text-red-600'
-                                    }`}>
-                                      {sub.telegram_status === 'added' ? 'Added to Group' :
-                                       sub.telegram_status === 'pending_add' ? 'Pending Addition' :
-                                       sub.telegram_status === 'removed' ? 'Removed' : 'Failed to Add'}
-                                    </span>
-                                  </div>
-                                </div>
+                                {formatDateShort(sub.start_date)} - {formatDateShort(sub.end_date)}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <div className="flex items-center gap-2">
                                   <div className={`w-2 h-2 rounded-full ${
-                                    sub.payment_status === 'verified' ? 'bg-emerald-400' :
-                                    sub.payment_status === 'pending' ? 'bg-amber-400' :
-                                    'bg-red-400'
+                                    sub.status === 'active' ? 'bg-emerald-400' :
+                                    sub.status === 'pending' ? 'bg-amber-400' :
+                                    'bg-gray-400'
                                   }`}></div>
-                                  <span className={`text-sm font-medium ${
-                                    sub.payment_status === 'verified' ? 'text-emerald-700' :
-                                    sub.payment_status === 'pending' ? 'text-amber-600' :
-                                    'text-red-600'
+                                  <span className={`text-sm font-medium capitalize ${
+                                    sub.status === 'active' ? 'text-emerald-700' :
+                                    sub.status === 'pending' ? 'text-amber-600' :
+                                    'text-gray-600'
                                   }`}>
-                                    {sub.payment_status === 'verified' ? 'Verified' :
-                                     sub.payment_status === 'pending' ? 'Pending' : 'Failed'}
+                                    {sub.status}
                                   </span>
                                 </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                                {sub.auto_renew ? '✓ Yes' : '✗ No'}
                               </td>
                             </tr>
                           ))}
@@ -524,18 +517,7 @@ function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
                       <div key={index} className="bg-gray-50 border border-gray-200 rounded-lg p-4 flex items-center justify-between hover:bg-gray-100 transition-colors">
                         <div className="flex items-center gap-4">
                           <div className="w-12 h-12 rounded-xl bg-white border border-gray-200 flex items-center justify-center shadow-sm">
-                            {provider.provider === 'google' ? (
-                              <svg className="w-6 h-6" viewBox="0 0 24 24">
-                                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                              </svg>
-                            ) : (
-                              <svg className="w-6 h-6 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M13.5 2L8.5 7H11V16H13V7H15.5L13.5 2Z M19 19H5V21H19V19Z"/>
-                              </svg>
-                            )}
+                            <span className="text-lg font-bold text-gray-700 capitalize">{provider.provider.charAt(0)}</span>
                           </div>
                           <div>
                             <div className="font-semibold text-gray-900 text-lg capitalize">{provider.provider}</div>
@@ -569,6 +551,91 @@ function UserDetailModal({ userId, onClose }: UserDetailModalProps) {
   );
 }
 
+// Delete Confirmation Modal
+interface DeleteConfirmModalProps {
+  user: User | null;
+  onClose: () => void;
+  onConfirm: () => void;
+  loading: boolean;
+}
+
+function DeleteConfirmModal({ user, onClose, onConfirm, loading }: DeleteConfirmModalProps) {
+  if (!user) return null;
+
+  return (
+    <div className="fixed inset-0 bg-gray-900 bg-opacity-75 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl border border-red-200 max-w-lg w-full">
+        <div className="bg-red-50 border-b-2 border-red-200 px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+              <svg className="w-6 h-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-red-900">Delete User Account</h3>
+              <p className="text-sm text-red-700">This action cannot be undone</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-4">
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <p className="text-gray-700 font-medium mb-2">You are about to delete:</p>
+            <div className="space-y-1">
+              <p className="text-gray-900 font-semibold">{user.display_name}</p>
+              <p className="text-gray-600 text-sm">{user.email}</p>
+            </div>
+          </div>
+
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-red-900 font-semibold mb-2 flex items-center gap-2">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              This will also delete:
+            </p>
+            <ul className="text-red-800 text-sm space-y-1 ml-7">
+              <li>• All subscriptions ({user.subscriptions_count})</li>
+              <li>• Billing profile and payment methods</li>
+              <li>• OAuth connections</li>
+              <li>• User preferences and settings</li>
+            </ul>
+          </div>
+
+          <p className="text-gray-600 text-sm">
+            The deletion will be logged in the audit trail. Are you absolutely sure?
+          </p>
+        </div>
+
+        <div className="bg-gray-50 px-6 py-4 flex items-center justify-end gap-3 border-t border-gray-200">
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 font-medium"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={loading}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 font-medium flex items-center gap-2"
+          >
+            {loading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                Deleting...
+              </>
+            ) : (
+              'Delete User'
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Main component
 export default function UsersPage() {
   const { isAuthenticated, loading: authLoading } = useAuth();
@@ -580,6 +647,18 @@ export default function UsersPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [subscriptionFilter, setSubscriptionFilter] = useState('');
+  
+  // Subscription plans for filtering
+  const [subscriptionPlans, setSubscriptionPlans] = useState<Array<{slug: string; name: string; billing_period: string}>>([]);
+
+  // Bulk selection state
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
+  
+  // Export state
+  const [isExporting, setIsExporting] = useState(false);
+
+  // Delete confirmation state
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
   // Build params for the API call
   const usersParams = {
@@ -593,7 +672,35 @@ export default function UsersPage() {
   // Use hooks for data fetching
   const { data: usersData, loading: usersLoading, error: usersError, refetch: refetchUsers } = useUsers(usersParams);
   const { data: analytics, loading: analyticsLoading, refetch: refetchAnalytics } = useUsersAnalytics();
+  
+  // Fetch subscription plans on mount
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const token = localStorage.getItem('access_token');
+        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+        const response = await fetch(`${API_BASE_URL}/admin/subscription-plans/`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setSubscriptionPlans(data.plans || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch subscription plans:', error);
+      }
+    };
+    
+    if (isAuthenticated) {
+      fetchPlans();
+    }
+  }, [isAuthenticated]);
   const { performAction, loading: actionLoading } = useUserActions();
+  const { performBulkAction, loading: bulkActionLoading } = useBulkUserActions();
+  const { deleteUser, loading: deleteLoading } = useDeleteUser();
 
   // Handle user actions
   const handleUserAction = async (userId: string, action: string) => {
@@ -606,6 +713,109 @@ export default function UsersPage() {
 
     } catch (error) {
       console.error('Action failed:', error);
+    }
+  };
+
+  // Handle CSV export
+  const handleExportCSV = async () => {
+    try {
+      setIsExporting(true);
+      
+      // Build query params from current filters
+      const params = new URLSearchParams();
+      if (search) params.append('search', search);
+      if (statusFilter) params.append('status', statusFilter);
+      if (subscriptionFilter) params.append('subscription', subscriptionFilter);
+      
+      const token = localStorage.getItem('access_token');
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+      const response = await fetch(`${API_BASE_URL}/admin/users/export/?${params.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Export failed');
+      }
+      
+      // Get filename from Content-Disposition header or use default
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = `users_export_${new Date().toISOString().split('T')[0]}.csv`;
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+        if (filenameMatch) filename = filenameMatch[1];
+      }
+      
+      // Download the file
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+    } catch (error) {
+      console.error('Export failed:', error);
+      alert('Failed to export users. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // Handle bulk actions
+  const handleBulkAction = async (action: string) => {
+    try {
+      await performBulkAction(Array.from(selectedUsers), action);
+      
+      // Clear selection and refresh
+      setSelectedUsers(new Set());
+      refetchUsers();
+      refetchAnalytics();
+      
+    } catch (error) {
+      console.error('Bulk action failed:', error);
+    }
+  };
+
+  // Handle delete user
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+    
+    try {
+      await deleteUser(userToDelete.id);
+      
+      // Close modal and refresh
+      setUserToDelete(null);
+      refetchUsers();
+      refetchAnalytics();
+      
+    } catch (error) {
+      console.error('Delete failed:', error);
+    }
+  };
+
+  // Toggle user selection
+  const toggleUserSelection = (userId: string) => {
+    const newSelection = new Set(selectedUsers);
+    if (newSelection.has(userId)) {
+      newSelection.delete(userId);
+    } else {
+      newSelection.add(userId);
+    }
+    setSelectedUsers(newSelection);
+  };
+
+  // Select all users on current page
+  const toggleSelectAll = () => {
+    const users = (usersData && typeof usersData === 'object' && 'users' in usersData) ? (usersData as any).users : [];
+    if (selectedUsers.size === users.length) {
+      setSelectedUsers(new Set());
+    } else {
+      setSelectedUsers(new Set(users.map((u: User) => u.id)));
     }
   };
 
@@ -658,8 +868,10 @@ export default function UsersPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
             <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <span className="text-xl">👥</span>
+              <div className="p-2">
+                <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
               </div>
               <div className="ml-4">
                 <h3 className="text-sm font-medium text-gray-500">Total Users</h3>
@@ -671,8 +883,10 @@ export default function UsersPage() {
 
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
             <div className="flex items-center">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <span className="text-xl">✅</span>
+              <div className="p-2">
+                <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
               </div>
               <div className="ml-4">
                 <h3 className="text-sm font-medium text-gray-500">Verified Users</h3>
@@ -684,12 +898,14 @@ export default function UsersPage() {
 
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
             <div className="flex items-center">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <span className="text-xl">📡</span>
+              <div className="p-2">
+                <svg className="w-6 h-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                </svg>
               </div>
               <div className="ml-4">
                 <h3 className="text-sm font-medium text-gray-500">Active Subscriptions</h3>
-                <p className="text-2xl font-semibold text-gray-900">{subscriptions.active_signal_subscriptions || 0}</p>
+                <p className="text-2xl font-semibold text-gray-900">{subscriptions.active_subscriptions || 0}</p>
                 <p className="text-sm text-gray-600">{subscriptions.subscription_rate?.toFixed(1) || '0'}% conversion</p>
               </div>
             </div>
@@ -697,8 +913,10 @@ export default function UsersPage() {
 
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
             <div className="flex items-center">
-              <div className="p-2 bg-teal-100 rounded-lg">
-                <span className="text-xl">🔄</span>
+              <div className="p-2">
+                <svg className="w-6 h-6 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
               </div>
               <div className="ml-4">
                 <h3 className="text-sm font-medium text-gray-500">Recent Activity</h3>
@@ -712,6 +930,19 @@ export default function UsersPage() {
 
       {/* Filters */}
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
+          <button
+            onClick={handleExportCSV}
+            disabled={isExporting}
+            className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-teal disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            {isExporting ? 'Exporting...' : 'Export to CSV'}
+          </button>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
@@ -755,10 +986,12 @@ export default function UsersPage() {
               }}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent text-gray-900 bg-white"
             >
-              <option value="" className="text-gray-900">All Subscriptions</option>
-              <option value="has_signals" className="text-gray-900">Has Signal Subscription</option>
-              <option value="has_courses" className="text-gray-900">Has Course Access</option>
-              <option value="none" className="text-gray-900">No Subscriptions</option>
+              <option value="" className="text-gray-900">All Users</option>
+              {subscriptionPlans.map(plan => (
+                <option key={plan.slug} value={plan.slug} className="text-gray-900">
+                  {plan.name} ({plan.billing_period})
+                </option>
+              ))}
             </select>
           </div>
 
@@ -780,6 +1013,53 @@ export default function UsersPage() {
           </div>
         </div>
       </div>
+
+      {/* Bulk Actions Bar */}
+      {selectedUsers.size > 0 && (
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-brand-teal rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">{selectedUsers.size}</span>
+                </div>
+                <span className="text-sm font-medium text-gray-700">
+                  {selectedUsers.size} {selectedUsers.size === 1 ? 'user' : 'users'} selected
+                </span>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleBulkAction('activate')}
+                  disabled={bulkActionLoading}
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-teal disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Activate
+                </button>
+                
+                <button
+                  onClick={() => handleBulkAction('deactivate')}
+                  disabled={bulkActionLoading}
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-teal disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Deactivate
+                </button>
+                
+                {bulkActionLoading && (
+                  <span className="text-sm text-gray-500">Processing...</span>
+                )}
+              </div>
+            </div>
+            
+            <button
+              onClick={() => setSelectedUsers(new Set())}
+              className="text-sm text-gray-600 hover:text-gray-900 font-medium"
+            >
+              Clear Selection
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Error State */}
       {error && (
@@ -808,6 +1088,14 @@ export default function UsersPage() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
+                    <th className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedUsers.size > 0 && selectedUsers.size === users.length}
+                        onChange={toggleSelectAll}
+                        className="w-4 h-4 text-brand-teal border-gray-300 rounded focus:ring-brand-teal cursor-pointer"
+                      />
+                    </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Auth Type</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Registration</th>
@@ -819,6 +1107,14 @@ export default function UsersPage() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {users.map((user: User) => (
                     <tr key={user.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-4">
+                        <input
+                          type="checkbox"
+                          checked={selectedUsers.has(user.id)}
+                          onChange={() => toggleUserSelection(user.id)}
+                          className="w-4 h-4 text-brand-teal border-gray-300 rounded focus:ring-brand-teal cursor-pointer"
+                        />
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
                           <div className="font-semibold text-gray-800">{user.display_name || user.full_name || user.username}</div>
@@ -844,36 +1140,13 @@ export default function UsersPage() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         {user.has_oauth ? (
                           <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 rounded-full bg-white border border-gray-200 flex items-center justify-center shadow-sm">
-                              {user.oauth_provider === 'google' ? (
-                                <svg className="w-3 h-3" viewBox="0 0 24 24">
-                                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                                </svg>
-                              ) : (
-                                <svg className="w-3 h-3 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M18 8a6 6 0 01-7.743 5.743L10 14l-.257-.257A6 6 0 0118 8z" clipRule="evenodd" />
-                                </svg>
-                              )}
-                            </div>
-                            <div>
-                              <div className="text-sm font-medium text-gray-700 capitalize">{user.oauth_provider}</div>
-                              <div className="text-xs text-gray-500">OAuth Login</div>
-                            </div>
+                            <div className="text-sm font-medium text-gray-700 capitalize">{user.oauth_provider}</div>
+                            <div className="text-xs text-gray-500">OAuth</div>
                           </div>
                         ) : (
                           <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center">
-                              <svg className="w-3 h-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                              </svg>
-                            </div>
-                            <div>
-                              <div className="text-sm font-medium text-gray-700">Standard</div>
-                              <div className="text-xs text-gray-500">Email/Password</div>
-                            </div>
+                            <div className="text-sm font-medium text-gray-700">Standard</div>
+                            <div className="text-xs text-gray-500">Email/Password</div>
                           </div>
                         )}
                       </td>
@@ -887,10 +1160,10 @@ export default function UsersPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-700">
-                          <div>Signals: <span className="font-medium">{user.active_signal_subscriptions_count}</span>/{user.signal_subscriptions_count}</div>
-                          {user.latest_signal_subscription && (
+                          <div>Active: <span className="font-medium">{user.active_subscriptions_count}</span> / {user.subscriptions_count}</div>
+                          {user.latest_subscription && (
                             <div className="text-xs text-gray-500 mt-0.5">
-                              {user.latest_signal_subscription.plan_type} - {user.latest_signal_subscription.telegram_status}
+                              {user.latest_subscription.plan_name} - {user.latest_subscription.status}
                             </div>
                           )}
                         </div>
@@ -906,6 +1179,7 @@ export default function UsersPage() {
                           <UserActions
                             user={user}
                             onAction={handleUserAction}
+                            onDelete={setUserToDelete}
                             isLoading={actionLoading}
                           />
                         </div>
@@ -1005,9 +1279,18 @@ export default function UsersPage() {
       </div>
 
       {/* User Detail Modal */}
+      {/* User Detail Modal */}
       <UserDetailModal
         userId={selectedUserId}
         onClose={() => setSelectedUserId(null)}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmModal
+        user={userToDelete}
+        onClose={() => setUserToDelete(null)}
+        onConfirm={handleDeleteUser}
+        loading={deleteLoading}
       />
     </div>
   );

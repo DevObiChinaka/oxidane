@@ -269,22 +269,37 @@ def send_welcome_email(user, test_mode=False):
 
 def send_verification_email(user, otp_code=None, test_mode=False):
     """
-    Wrapper function for sending verification emails
+    Wrapper function for sending verification emails using email_verification template
     """
-    if test_mode:
-        custom_vars = {}
-        if otp_code:
-            custom_vars['verification_code'] = otp_code
-            custom_vars['otp_code'] = otp_code  # Also add as otp_code for consistency
-        return EmailTemplateService().send_email(
-            template_type='user_login_otp',  # Use existing OTP template
-            recipient_email=user.email,
-            user=user,
-            custom_vars=custom_vars,
-            test_mode=True
-        )
-    else:
-        return automation_service.trigger_verification_email(user, otp_code)
+    from django.conf import settings
+    
+    custom_vars = {}
+    
+    # If OTP code is provided, include it
+    if otp_code:
+        custom_vars['verification_code'] = otp_code
+        custom_vars['otp_code'] = otp_code
+        custom_vars['otp'] = otp_code  # For compatibility
+    
+    # Generate verification URL if needed
+    if not test_mode and hasattr(user, 'generate_email_verification_token'):
+        token = user.generate_email_verification_token()
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+        verification_url = f"{frontend_url}/verify-email?token={token}"
+        custom_vars['verification_url'] = verification_url
+    elif not custom_vars.get('verification_url'):
+        # Provide a default verification URL for OTP-based verification
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+        custom_vars['verification_url'] = f"{frontend_url}/verify-email"
+    
+    # Use email_verification template
+    return EmailTemplateService().send_email(
+        template_type='email_verification',
+        recipient_email=user.email,
+        user=user,
+        custom_vars=custom_vars,
+        test_mode=test_mode
+    )
 
 def send_password_reset_email(user, reset_token=None, reset_otp=None, test_mode=False):
     """

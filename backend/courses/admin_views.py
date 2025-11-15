@@ -26,7 +26,13 @@ def admin_dashboard_metrics(request):
     
     # Try to get cached metrics first
     cache_key = f"admin_metrics_{timezone.now().date()}"
-    cached_metrics = cache.get(cache_key)
+    cached_metrics = None
+    
+    try:
+        cached_metrics = cache.get(cache_key)
+    except Exception as e:
+        # Log but don't crash if cache fails
+        print(f"Cache get failed: {e}")
     
     if cached_metrics:
         return Response(cached_metrics)
@@ -86,7 +92,10 @@ def admin_dashboard_metrics(request):
     }
     
     # Cache for 30 minutes
-    cache.set(cache_key, metrics, 60 * 30)
+    try:
+        cache.set(cache_key, metrics, 60 * 30)
+    except Exception as e:
+        print(f"Cache set failed: {e}")
     
     return Response(metrics)
 
@@ -415,7 +424,12 @@ def admin_course_analytics(request):
     
     # Check for cached data (30-minute cache for optimal refresh rate)
     cache_key = f"course_analytics_{timezone.now().strftime('%Y%m%d_%H%M')}"  # Cache by hour and minute
-    cached_analytics = cache.get(cache_key)
+    cached_analytics = None
+    
+    try:
+        cached_analytics = cache.get(cache_key)
+    except Exception as e:
+        print(f"Cache get failed: {e}")
     
     if cached_analytics:
         return Response(cached_analytics)
@@ -425,7 +439,10 @@ def admin_course_analytics(request):
         analytics_data = CourseAnalyticsService.get_dashboard_analytics()
         
         # Cache for 30 minutes (optimal refresh rate)
-        cache.set(cache_key, analytics_data, 60 * 30)
+        try:
+            cache.set(cache_key, analytics_data, 60 * 30)
+        except Exception as e:
+            print(f"Cache set failed: {e}")
         
         return Response(analytics_data)
         

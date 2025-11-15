@@ -20,7 +20,7 @@ class PricingPlanSerializer(serializers.ModelSerializer):
             'id', 'name', 'slug', 'description', 
             'base_price', 'billing_period', 'price_display', 'monthly_equivalent',
             'is_active', 'is_featured',
-            'sort_order', 'limits', 'stripe_price_id',
+            'sort_order', 'limits', 'paystack_plan_code',
             'feature_count', 'subscription_count', 'revenue_total', 
             'created_at', 'updated_at'
         ]

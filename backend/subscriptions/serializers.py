@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from .models import (
-    SubscriptionPlan, Subscription, Coupon, Feature, Referral, ReferralCode,
+    SubscriptionPlan, Subscription, Coupon, Feature,
     BillingProfile, PaymentMethod, Payment, TelegramGroup, TelegramConfiguration,
     PaymentConfiguration, EmailConfiguration
 )
@@ -365,25 +365,6 @@ class NestedSubscriptionPlanSerializer(serializers.ModelSerializer):
         return obj.features.count()
 
 
-class ReferralDetailsSerializer(serializers.ModelSerializer):
-    """Nested serializer for Referral details (for use in SubscriptionSerializer)"""
-    referrer_email = serializers.CharField(source='referrer.email', read_only=True)
-    referrer_name = serializers.SerializerMethodField()
-    code = serializers.CharField(source='referral_code.code', read_only=True)
-    
-    class Meta:
-        model = Referral
-        fields = ['id', 'referrer_email', 'referrer_name', 'code', 'status', 'created_at']
-        read_only_fields = ['id', 'status', 'created_at']
-    
-    def get_referrer_name(self, obj):
-        """Get referrer's full name or email"""
-        user = obj.referrer
-        if user.first_name or user.last_name:
-            return f"{user.first_name} {user.last_name}".strip()
-        return user.email
-
-
 class SubscriptionSerializer(serializers.ModelSerializer):
     """
     Comprehensive serializer for Subscription model (Phase 0.5 - Task 0.5.20)
@@ -391,7 +372,6 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     Features:
     - Full CRUD support with validation
     - Nested plan details with features
-    - Referral information if applicable
     - Computed fields (is_active, days_remaining)
     - Read-only user information
     - Support for metadata storage
@@ -407,9 +387,6 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     # Basic plan info (for list views)
     plan_name = serializers.CharField(source='plan.name', read_only=True)
     plan_slug = serializers.CharField(source='plan.slug', read_only=True)
-    
-    # Referral information (if subscription was from referral)
-    referral_details = ReferralDetailsSerializer(source='referral', read_only=True)
     
     # Computed properties
     is_active = serializers.SerializerMethodField()
@@ -431,11 +408,11 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         model = Subscription
         fields = [
             # IDs and relationships
-            'id', 'billing_profile', 'plan', 'referral',
+            'id', 'billing_profile', 'plan',
             # Read-only user info
             'user_email', 'user_name', 'telegram_username',
             # Nested details
-            'plan_details', 'plan_name', 'plan_slug', 'referral_details',
+            'plan_details', 'plan_name', 'plan_slug',
             # Subscription status
             'status', 'start_date', 'end_date',
             # Payment info
@@ -453,7 +430,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             'id', 'user_email', 'user_name', 'telegram_username',
-            'plan_details', 'plan_name', 'plan_slug', 'referral_details',
+            'plan_details', 'plan_name', 'plan_slug',
             'status', 'start_date', 'end_date', 'amount_paid', 'currency',
             'cancelled_at', 'is_active', 'days_remaining',
             'created_at', 'updated_at'
@@ -786,176 +763,6 @@ class CouponApplicationSerializer(serializers.Serializer):
     final_amount = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
     coupon_code = serializers.CharField(required=False)
     savings_percentage = serializers.DecimalField(max_digits=5, decimal_places=2, required=False)
-
-
-class ReferralCodeSerializer(serializers.ModelSerializer):
-    """
-    Comprehensive serializer for ReferralCode management (Phase 0.5 - Task 0.5.25)
-    
-    Features:
-    - Full CRUD support with validation
-    - Code normalization (uppercase, format validation)
-    - Dual discount validation (referrer + referee)
-    - Computed fields for API efficiency
-    - User ownership tracking
-    """
-    
-    # Computed fields
-    referrer_discount_display = serializers.ReadOnlyField(source='get_referrer_discount_display')
-    referee_discount_display = serializers.ReadOnlyField(source='get_referee_discount_display')
-    is_valid_now = serializers.SerializerMethodField()
-    usage_available = serializers.SerializerMethodField()
-    can_be_used_now = serializers.SerializerMethodField()
-    usage_percentage = serializers.SerializerMethodField()
-    remaining_uses = serializers.SerializerMethodField()
-    referrer_email = serializers.EmailField(source='referrer.email', read_only=True)
-    referrer_username = serializers.CharField(source='referrer.username', read_only=True)
-    
-    class Meta:
-        model = ReferralCode
-        fields = [
-            'id', 'code', 'referrer', 'referrer_email', 'referrer_username',
-            'referrer_discount_type', 'referrer_discount_value', 'referrer_discount_display',
-            'referee_discount_type', 'referee_discount_value', 'referee_discount_display',
-            'max_uses', 'current_uses', 'valid_from', 'valid_until',
-            'is_active', 'description',
-            'is_valid_now', 'usage_available', 'can_be_used_now',
-            'usage_percentage', 'remaining_uses',
-            'created_at', 'updated_at'
-        ]
-        read_only_fields = ['id', 'referrer', 'current_uses', 'created_at', 'updated_at']
-    
-    def get_is_valid_now(self, obj):
-        """Check if referral code is currently valid (time-based)"""
-        return obj.is_valid()
-    
-    def get_usage_available(self, obj):
-        """Check if usage is still available"""
-        return obj.is_usage_available()
-    
-    def get_can_be_used_now(self, obj):
-        """Check if code can be used right now (combines time + usage checks)"""
-        return obj.can_be_used()
-    
-    def get_usage_percentage(self, obj):
-        """Calculate usage percentage (0-100)"""
-        if obj.max_uses is None or obj.max_uses == 0:
-            return 0.0
-        return round((obj.current_uses / obj.max_uses) * 100, 2)
-    
-    def get_remaining_uses(self, obj):
-        """Get remaining uses (None if unlimited)"""
-        return obj.get_remaining_uses()
-    
-    def validate_code(self, value):
-        """
-        Validate and normalize referral code format.
-        - Convert to uppercase
-        - Check format (alphanumeric + underscore)
-        - Minimum 3 characters
-        - Check uniqueness on create
-        """
-        if not value:
-            raise serializers.ValidationError("Referral code is required.")
-        
-        # Normalize to uppercase
-        normalized_code = value.upper().strip()
-        
-        # Validate format (alphanumeric + underscore)
-        import re
-        if not re.match(r'^[A-Z0-9_]+$', normalized_code):
-            raise serializers.ValidationError(
-                "Referral code must contain only uppercase letters, numbers, and underscores."
-            )
-        
-        # Minimum length
-        if len(normalized_code) < 3:
-            raise serializers.ValidationError("Referral code must be at least 3 characters long.")
-        
-        # Check uniqueness on create (not on update)
-        if not self.instance:  # Creating new object
-            if ReferralCode.objects.filter(code=normalized_code).exists():
-                raise serializers.ValidationError(f"Referral code '{normalized_code}' already exists.")
-        
-        return normalized_code
-    
-    def validate_referrer_discount_value(self, value):
-        """Validate referrer discount value is non-negative"""
-        if value < 0:
-            raise serializers.ValidationError("Referrer discount value cannot be negative.")
-        return value
-    
-    def validate_referee_discount_value(self, value):
-        """Validate referee discount value is non-negative"""
-        if value < 0:
-            raise serializers.ValidationError("Referee discount value cannot be negative.")
-        return value
-    
-    def validate_max_uses(self, value):
-        """Validate max_uses is positive if specified"""
-        if value is not None and value < 0:
-            raise serializers.ValidationError("Maximum uses must be a positive number or null for unlimited.")
-        return value
-    
-    def validate(self, data):
-        """
-        Cross-field validation:
-        - Referrer discount type/value matching
-        - Referee discount type/value matching
-        - Date range validation
-        """
-        # Validate referrer discount
-        referrer_type = data.get('referrer_discount_type', getattr(self.instance, 'referrer_discount_type', None))
-        referrer_value = data.get('referrer_discount_value', getattr(self.instance, 'referrer_discount_value', None))
-        
-        if referrer_type and referrer_value is not None:
-            if referrer_type == 'percentage':
-                if referrer_value < 0 or referrer_value > 100:
-                    raise serializers.ValidationError({
-                        'referrer_discount_value': 'Percentage discount must be between 0 and 100.'
-                    })
-            elif referrer_type == 'fixed':
-                if referrer_value < 0:
-                    raise serializers.ValidationError({
-                        'referrer_discount_value': 'Fixed discount must be a positive amount.'
-                    })
-        
-        # Validate referee discount
-        referee_type = data.get('referee_discount_type', getattr(self.instance, 'referee_discount_type', None))
-        referee_value = data.get('referee_discount_value', getattr(self.instance, 'referee_discount_value', None))
-        
-        if referee_type and referee_value is not None:
-            if referee_type == 'percentage':
-                if referee_value < 0 or referee_value > 100:
-                    raise serializers.ValidationError({
-                        'referee_discount_value': 'Percentage discount must be between 0 and 100.'
-                    })
-            elif referee_type == 'fixed':
-                if referee_value < 0:
-                    raise serializers.ValidationError({
-                        'referee_discount_value': 'Fixed discount must be a positive amount.'
-                    })
-        
-        # Validate date range
-        valid_from = data.get('valid_from', getattr(self.instance, 'valid_from', None))
-        valid_until = data.get('valid_until', getattr(self.instance, 'valid_until', None))
-        
-        if valid_from and valid_until:
-            if valid_until <= valid_from:
-                raise serializers.ValidationError({
-                    'valid_until': 'Expiration date must be after start date.'
-                })
-        
-        return data
-    
-    def update(self, instance, validated_data):
-        """
-        Override update to prevent code modification after creation.
-        Referral codes should be immutable once created to maintain referral tracking integrity.
-        """
-        # Remove code from validated_data if present (code is immutable)
-        validated_data.pop('code', None)
-        return super().update(instance, validated_data)
 
 
 class EnhancedSubscriptionSerializer(serializers.ModelSerializer):

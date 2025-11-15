@@ -2,6 +2,28 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import TelegramIcon from './TelegramIcon';
+import {
+  ChatBubbleLeftRightIcon,
+  CheckCircleIcon,
+  ExclamationCircleIcon,
+  ExclamationTriangleIcon,
+  CogIcon,
+  UserGroupIcon,
+  BookOpenIcon,
+  KeyIcon,
+  BoltIcon,
+  ArrowPathIcon,
+  InformationCircleIcon,
+  XMarkIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  MagnifyingGlassIcon,
+  PlusIcon,
+  PencilIcon,
+  TrashIcon,
+  WrenchScrewdriverIcon,
+} from '@heroicons/react/24/outline';
 
 interface TelegramConfig {
   id?: number;
@@ -482,14 +504,9 @@ export default function TelegramConfigurationPage() {
         {/* Header */}
         <div>
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-              {/* Official Telegram Paper Plane Icon */}
-              <svg className="w-7 h-7 text-white" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
-              </svg>
-            </div>
+            <TelegramIcon className="w-8 h-8" color="#229ED9" />
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-3xl font-bold text-black">
                 Telegram Integration
               </h1>
               <p className="text-gray-600 mt-0.5 text-sm">Configure bot and manage group memberships</p>
@@ -503,15 +520,14 @@ export default function TelegramConfigurationPage() {
                 onClick={() => setActiveTab('bot')}
                 className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                   activeTab === 'bot'
-                    ? 'border-blue-600 text-blue-600'
+                    ? 'border-brand-teal text-brand-teal'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
                 <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
+                  <CogIcon className={`w-5 h-5 ${
+                    activeTab === 'bot' ? 'text-brand-teal' : 'text-gray-400'
+                  }`} strokeWidth={2} />
                   <span>Bot Configuration</span>
                 </div>
               </button>
@@ -519,17 +535,17 @@ export default function TelegramConfigurationPage() {
                 onClick={() => setActiveTab('groups')}
                 className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                   activeTab === 'groups'
-                    ? 'border-blue-600 text-blue-600'
+                    ? 'border-brand-teal text-brand-teal'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
                 <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
+                  <UserGroupIcon className={`w-5 h-5 ${
+                    activeTab === 'groups' ? 'text-brand-teal' : 'text-gray-400'
+                  }`} strokeWidth={2} />
                   <span>Groups Management</span>
                   {groups.length > 0 && (
-                    <span className="ml-1 bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-0.5 rounded-full">
+                    <span className="ml-1 bg-brand-teal text-white text-xs font-semibold px-1.5 py-0.5 rounded-full">
                       {groups.length}
                     </span>
                   )}
@@ -542,47 +558,26 @@ export default function TelegramConfigurationPage() {
         {/* Bot Configuration Tab */}
         {activeTab === 'bot' && (
           <>
-        {/* Connection Status Banner */}
+        {/* Minimal Connection Status */}
         {config && (
-          <div className={`rounded-xl p-6 shadow-sm border-2 ${
-            config.is_connected 
-              ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-300' 
-              : 'bg-gradient-to-r from-yellow-50 to-amber-50 border-yellow-300'
-          }`}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                  config.is_connected ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300' : 'bg-gradient-to-br from-yellow-50 to-amber-50 border-2 border-yellow-300'
-                }`}>
-                  {config.is_connected ? (
-                    <div className="w-3 h-3 bg-green-500 rounded-full shadow-lg animate-pulse"></div>
-                  ) : (
-                    <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                  )}
-                </div>
-                <div>
-                  <p className="text-lg font-bold text-gray-900">
-                    {config.is_connected ? 'Bot Connected & Active' : 'Bot Not Connected'}
-                  </p>
-                  {config.is_connected && config.bot_username && (
-                    <p className="text-sm font-medium text-gray-700 mt-0.5">@{config.bot_username}</p>
-                  )}
-                  {!config.is_connected && (
-                    <p className="text-sm text-gray-700 mt-0.5">Configure your bot token below and test the connection</p>
-                  )}
-                </div>
-              </div>
-              {config.last_health_check && (
-                <div className="text-right">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Last Checked</p>
-                  <p className="text-sm font-medium text-gray-700 mt-0.5">
-                    {new Date(config.last_health_check).toLocaleString()}
-                  </p>
-                </div>
-              )}
-            </div>
+          <div className="mb-4 flex items-center gap-2">
+            {config.is_connected ? (
+              <CheckCircleIcon className="w-5 h-5 text-brand-teal" strokeWidth={2} />
+            ) : (
+              <ExclamationTriangleIcon className="w-5 h-5 text-yellow-500" strokeWidth={2} />
+            )}
+            <span className={config.is_connected ? 'text-brand-teal font-medium' : 'text-yellow-700 font-medium'}>
+              {config.is_connected ? 'Bot Connected & Active' : 'Bot Not Connected'}
+            </span>
+            {config.is_connected && config.bot_username && (
+              <span className="text-gray-600 text-sm">@{config.bot_username}</span>
+            )}
+            {!config.is_connected && (
+              <span className="text-gray-500 text-sm">Configure your bot token below and test the connection</span>
+            )}
+            {config.last_health_check && (
+              <span className="text-xs text-gray-400 ml-2">Last Checked {new Date(config.last_health_check).toLocaleString()}</span>
+            )}
           </div>
         )}
 
@@ -636,9 +631,7 @@ export default function TelegramConfigurationPage() {
                 onClick={() => setMessage(null)}
                 className="text-gray-400 hover:text-gray-600 transition-colors"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <XMarkIcon className="w-5 h-5" strokeWidth={2} />
               </button>
             </div>
           </div>
@@ -648,16 +641,20 @@ export default function TelegramConfigurationPage() {
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <button
           onClick={() => setShowInstructions(!showInstructions)}
-          className="w-full flex items-center justify-between text-left"
+          className="w-full flex items-center justify-between text-left hover:bg-gray-50 -m-6 p-6 rounded-lg transition-colors"
         >
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">📖</span>
+          <div className="flex items-center gap-3">
+            <BookOpenIcon className="w-6 h-6 text-gray-600" strokeWidth={2} />
             <div>
               <h3 className="font-semibold text-gray-900">Setup Instructions</h3>
               <p className="text-sm text-gray-600">How to create and configure your Telegram bot</p>
             </div>
           </div>
-          <span className="text-gray-400">{showInstructions ? '▼' : '▶'}</span>
+          {showInstructions ? (
+            <ChevronDownIcon className="w-5 h-5 text-gray-400" strokeWidth={2} />
+          ) : (
+            <ChevronRightIcon className="w-5 h-5 text-gray-400" strokeWidth={2} />
+          )}
         </button>
 
         {showInstructions && (
@@ -707,8 +704,8 @@ export default function TelegramConfigurationPage() {
 
       {/* Bot Credentials */}
       <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
-        <div className="flex items-center gap-2">
-          <span className="text-2xl">🔑</span>
+        <div className="flex items-center gap-3">
+          <KeyIcon className="w-6 h-6 text-gray-600" strokeWidth={2} />
           <div>
             <h3 className="font-semibold text-gray-900">Bot Credentials</h3>
             <p className="text-sm text-gray-600">Your Telegram bot API token from @BotFather</p>
@@ -776,46 +773,34 @@ export default function TelegramConfigurationPage() {
             <button
               onClick={handleTestConnection}
               disabled={testing || !(config?.masked_token !== '(not set)' || newBotToken) || hasChanges()}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              className="px-6 py-2 bg-brand-teal text-white rounded-lg hover:bg-brand-teal/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
             >
               {testing ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <ArrowPathIcon className="w-4 h-4 animate-spin" strokeWidth={2} />
                   <span>Testing...</span>
                 </>
               ) : (
                 <>
-                  <span>🔌</span>
+                  <BoltIcon className="w-4 h-4" strokeWidth={2} />
                   <span>Test Connection</span>
                 </>
               )}
             </button>
             {hasChanges() && (
-              <p className="text-sm text-yellow-600">⚠️ Save changes first before testing</p>
+              <p className="text-sm text-yellow-600 flex items-center gap-1">
+                <ExclamationTriangleIcon className="w-4 h-4" strokeWidth={2} />
+                Save changes first before testing
+              </p>
             )}
           </div>
 
           {botInfo && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-4">
-              <p className="font-semibold text-green-900 mb-2">✅ Bot Information</p>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <span className="text-gray-600">Username:</span>
-                  <span className="ml-2 font-medium text-gray-900">@{botInfo.username}</span>
-                </div>
-                <div>
-                  <span className="text-gray-600">Name:</span>
-                  <span className="ml-2 font-medium text-gray-900">{botInfo.first_name}</span>
-                </div>
-                <div>
-                  <span className="text-gray-600">Can Join Groups:</span>
-                  <span className="ml-2 font-medium text-gray-900">{botInfo.can_join_groups ? '✅ Yes' : '❌ No'}</span>
-                </div>
-                <div>
-                  <span className="text-gray-600">Can Read Messages:</span>
-                  <span className="ml-2 font-medium text-gray-900">{botInfo.can_read_all_group_messages ? '✅ Yes' : '❌ No'}</span>
-                </div>
-              </div>
+            <div className="mt-4 flex items-center gap-2">
+              <CheckCircleIcon className="w-5 h-5 text-brand-teal" strokeWidth={2} />
+              <span className="font-semibold text-brand-teal">Bot Connected</span>
+              <span className="text-gray-600 text-sm">@{botInfo.username} ({botInfo.first_name})</span>
+              <span className="text-gray-500 text-xs ml-2">Can Join Groups: {botInfo.can_join_groups ? 'Yes' : 'No'} | Can Read Messages: {botInfo.can_read_all_group_messages ? 'Yes' : 'No'}</span>
             </div>
           )}
         </div>
@@ -823,13 +808,8 @@ export default function TelegramConfigurationPage() {
 
       {/* Automation Settings */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8 space-y-6">
-        <div className="flex items-start gap-4 pb-4 border-b border-gray-100">
-          <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
-            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-          </div>
+        <div className="flex items-start gap-3 pb-4 border-b border-gray-100">
+          <CogIcon className="w-6 h-6 text-gray-600" strokeWidth={2} />
           <div>
             <h3 className="text-xl font-bold text-gray-900">Automation Settings</h3>
             <p className="text-sm text-gray-600 mt-1">Control how your bot manages Telegram group memberships</p>
@@ -847,8 +827,8 @@ export default function TelegramConfigurationPage() {
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-gray-900 text-base">Enable Telegram Integration</span>
-                <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
-                  editedConfig.is_enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                <span className={`text-xs font-semibold ${
+                  editedConfig.is_enabled ? 'text-brand-teal' : 'text-gray-500'
                 }`}>
                   {editedConfig.is_enabled ? 'Active' : 'Inactive'}
                 </span>
@@ -869,8 +849,8 @@ export default function TelegramConfigurationPage() {
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-gray-900 text-base">Auto-Add to Groups</span>
-                <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
-                  editedConfig.auto_add_enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                <span className={`text-xs font-semibold ${
+                  editedConfig.auto_add_enabled ? 'text-brand-teal' : 'text-gray-500'
                 }`}>
                   {editedConfig.auto_add_enabled ? 'Enabled' : 'Disabled'}
                 </span>
@@ -891,8 +871,8 @@ export default function TelegramConfigurationPage() {
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-gray-900 text-base">Auto-Remove Expired Users</span>
-                <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
-                  editedConfig.auto_remove_enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                <span className={`text-xs font-semibold ${
+                  editedConfig.auto_remove_enabled ? 'text-brand-teal' : 'text-gray-500'
                 }`}>
                   {editedConfig.auto_remove_enabled ? 'Enabled' : 'Disabled'}
                 </span>
@@ -921,8 +901,8 @@ export default function TelegramConfigurationPage() {
 
       {/* Welcome & Removal Messages */}
       <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
-        <div className="flex items-center gap-2">
-          <span className="text-2xl">💬</span>
+        <div className="flex items-center gap-3">
+          <ChatBubbleLeftRightIcon className="w-6 h-6 text-gray-600" strokeWidth={2} />
           <div>
             <h3 className="font-semibold text-gray-900">Automated Messages</h3>
             <p className="text-sm text-gray-600">Messages sent to users automatically</p>
@@ -966,8 +946,8 @@ export default function TelegramConfigurationPage() {
 
       {/* Advanced Settings */}
       <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
-        <div className="flex items-center gap-2">
-          <span className="text-2xl">🛠️</span>
+        <div className="flex items-center gap-3">
+          <WrenchScrewdriverIcon className="w-6 h-6 text-gray-600" strokeWidth={2} />
           <div>
             <h3 className="font-semibold text-gray-900">Advanced Settings</h3>
             <p className="text-sm text-gray-600">Queue and rate limit configuration</p>
@@ -1035,9 +1015,7 @@ export default function TelegramConfigurationPage() {
           <div className="flex items-center gap-2">
             {hasChanges() && (
               <div className="flex items-center gap-2 text-amber-600 bg-amber-50 px-4 py-2 rounded-lg border border-amber-200">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
+                <ExclamationTriangleIcon className="w-5 h-5" strokeWidth={2} />
                 <span className="text-sm font-semibold">Unsaved Changes</span>
               </div>
             )}
@@ -1054,18 +1032,16 @@ export default function TelegramConfigurationPage() {
             <button
               onClick={handleSave}
               disabled={!hasChanges() || saving}
-              className="px-8 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-semibold text-sm shadow-lg hover:shadow-xl flex items-center gap-2"
+              className="px-8 py-2.5 bg-brand-teal text-white rounded-xl hover:bg-brand-teal/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-semibold text-sm shadow-lg hover:shadow-xl flex items-center gap-2"
             >
               {saving ? (
                 <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  <ArrowPathIcon className="w-5 h-5 animate-spin" strokeWidth={2} />
                   <span>Saving Configuration...</span>
                 </>
               ) : (
                 <>
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                  </svg>
+                  <CheckCircleIcon className="w-5 h-5" strokeWidth={2} />
                   <span>Save Configuration</span>
                 </>
               )}
@@ -1080,119 +1056,63 @@ export default function TelegramConfigurationPage() {
       {activeTab === 'groups' && (
         <>
         {/* How to Get Chat ID Guide */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <div className="flex items-start gap-4">
-            <div className="flex-shrink-0">
-              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-lg font-semibold text-gray-900">How to Get Your Telegram Group Chat ID</h3>
-                <button
-                  onClick={() => setShowGroupInstructions(!showGroupInstructions)}
-                  className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-                >
-                  {showGroupInstructions ? 'Hide' : 'Show'} Instructions
-                </button>
-              </div>
-              
-              {showGroupInstructions && (
-                <div className="space-y-4 text-sm text-gray-700">
-                  <div className="bg-green-50 border-2 border-green-500 rounded-lg p-4">
-                    <h4 className="font-semibold text-green-900 mb-2 flex items-center gap-2">
-                      <span className="text-2xl">⭐</span>
-                      Method 1: Use "Discover Available Groups" Button (Recommended)
-                    </h4>
-                    <ol className="list-decimal list-inside space-y-2 ml-2 text-green-900">
-                      <li>Add your bot to the Telegram group as an <strong>administrator</strong></li>
-                      <li>Send any test message in the group (so the bot receives an update)</li>
-                      <li>Click the <strong className="bg-white px-2 py-0.5 rounded border border-green-300">🔍 Discover Available Groups</strong> button below</li>
-                      <li>Find your group in the list of discovered groups</li>
-                      <li>Click <strong className="bg-white px-2 py-0.5 rounded border border-green-300">Copy</strong> next to the correct Chat ID</li>
-                      <li>Paste the Chat ID when creating or editing the group</li>
-                    </ol>
-                    <p className="mt-3 text-sm text-green-800 italic">
-                      💡 This method is the most reliable and doesn't require any third-party bots!
-                    </p>
-                  </div>
-                  
-                  <div>
-                    <h4 className="font-semibold text-gray-900 mb-2">Method 2: Using @userinfobot (Alternative)</h4>
-                    <ol className="list-decimal list-inside space-y-2 ml-2">
-                      <li>Add your bot to the Telegram group as an administrator</li>
-                      <li>Add <span className="font-mono bg-white px-2 py-0.5 rounded border">@userinfobot</span> to the same group</li>
-                      <li>The bot will automatically send the group's Chat ID</li>
-                      <li>The Chat ID will be a negative number (e.g., <span className="font-mono bg-white px-2 py-0.5 rounded border">-1001234567890</span>)</li>
-                      <li>Copy this ID and use it when adding the group below</li>
-                      <li>You can remove @userinfobot after getting the ID</li>
-                    </ol>
-                  </div>
-                  
-                  <div>
-                    <h4 className="font-semibold text-gray-900 mb-2">Method 3: Using Web Telegram</h4>
-                    <ol className="list-decimal list-inside space-y-2 ml-2">
-                      <li>Open <a href="https://web.telegram.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">web.telegram.org</a> in your browser</li>
-                      <li>Navigate to your group</li>
-                      <li>Check the URL in your browser's address bar</li>
-                      <li>Look for the number after <span className="font-mono bg-white px-2 py-0.5 rounded border">#-</span> (e.g., <span className="font-mono bg-white px-2 py-0.5 rounded border">#-1001234567890</span>)</li>
-                      <li>Include the minus sign: <span className="font-mono bg-white px-2 py-0.5 rounded border">-1001234567890</span></li>
-                    </ol>
-                  </div>
-
-                  <div>
-                    <h4 className="font-semibold text-gray-900 mb-2">Method 4: Using @getidsbot</h4>
-                    <ol className="list-decimal list-inside space-y-2 ml-2">
-                      <li>Add <span className="font-mono bg-white px-2 py-0.5 rounded border">@getidsbot</span> to your group</li>
-                      <li>Send the command <span className="font-mono bg-white px-2 py-0.5 rounded border">/id@getidsbot</span> in the group</li>
-                      <li>The bot will reply with the Chat ID</li>
-                      <li>Remove the bot after getting the ID</li>
-                    </ol>
-                  </div>
-
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
-                    <div className="flex items-start gap-2">
-                      <svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                      </svg>
-                      <div>
-                        <p className="font-semibold text-yellow-900 mb-1">Important Notes:</p>
-                        <ul className="list-disc list-inside space-y-1 text-yellow-800">
-                          <li>Group Chat IDs <strong>always</strong> start with a minus sign (-)</li>
-                          <li>Your bot must be added as an <strong>administrator</strong> to the group</li>
-                          <li>The bot needs "Add Users" and "Ban Users" permissions to manage memberships</li>
-                          <li>Private groups and channels work the same way</li>
-                          <li>Supergroups have Chat IDs starting with <strong>-100</strong> (e.g., -1001234567890)</li>
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
+      <div className="mb-6 bg-white rounded-lg border border-gray-200 p-6">
+        <button
+          onClick={() => setShowGroupInstructions(!showGroupInstructions)}
+          className="w-full flex items-center justify-between text-left hover:bg-gray-50 -m-6 p-6 rounded-lg transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <InformationCircleIcon className="w-6 h-6 text-gray-600" strokeWidth={2} />
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">How to Get Your Telegram Group Chat ID</h3>
+              <p className="text-sm text-gray-600">Step-by-step guide to find your group's Chat ID</p>
             </div>
           </div>
-        </div>
+          {showGroupInstructions ? (
+            <ChevronDownIcon className="w-5 h-5 text-gray-400" strokeWidth={2} />
+          ) : (
+            <ChevronRightIcon className="w-5 h-5 text-gray-400" strokeWidth={2} />
+          )}
+        </button>
+        {showGroupInstructions && (
+          <div className="mt-6 space-y-4 text-sm text-gray-700">
+            <div className="space-y-2">
+              <h4 className="font-semibold text-gray-900">Method 1: Use Discover Feature (Easiest)</h4>
+              <ol className="list-decimal list-inside space-y-1 text-gray-700 ml-2">
+                <li>Make sure your bot is added to the group as admin</li>
+                <li>Send any message in the group</li>
+                <li>Click the "Discover Chat IDs" button below</li>
+                <li>Copy the Chat ID from the results</li>
+              </ol>
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-semibold text-gray-900">Method 2: Manual Discovery</h4>
+              <ol className="list-decimal list-inside space-y-1 text-gray-700 ml-2">
+                <li>Add <code className="bg-gray-200 px-1.5 py-0.5 rounded">@userinfobot</code> to your group</li>
+                <li>The bot will automatically send the Chat ID</li>
+                <li>Copy the negative number (e.g., <code className="bg-gray-200 px-1.5 py-0.5 rounded">-1001234567890</code>)</li>
+                <li>Remove the bot from the group after getting the ID</li>
+              </ol>
+            </div>
+          </div>
+        )}
+      </div>
 
         {/* Discover Chats Button */}
         <div className="mb-6">
           <button
             onClick={handleDiscoverChats}
             disabled={discovering}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-teal text-white text-sm font-medium rounded-lg hover:bg-brand-teal/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
           >
             {discovering ? (
               <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <ArrowPathIcon className="w-4 h-4 animate-spin" strokeWidth={2} />
                 <span>Discovering...</span>
               </>
             ) : (
               <>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+                <MagnifyingGlassIcon className="w-4 h-4" strokeWidth={2} />
                 <span>Discover Chat IDs</span>
               </>
             )}
@@ -1211,31 +1131,23 @@ export default function TelegramConfigurationPage() {
           </div>
           <button
             onClick={() => handleOpenGroupModal()}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+            className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-brand-teal hover:bg-brand-teal/90 transition-colors"
           >
-            <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
+            <PlusIcon className="h-4 w-4 mr-2" strokeWidth={2} />
             Add Group
           </button>
         </div>
 
         {groups.length === 0 ? (
           <div className="text-center py-12">
-            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-            </div>
+            <UserGroupIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" strokeWidth={1.5} />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">No Groups Yet</h3>
             <p className="text-gray-600 mb-6">Add your first Telegram group to get started</p>
             <button
               onClick={() => handleOpenGroupModal()}
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-brand-teal hover:bg-brand-teal/90 transition-colors"
             >
-              <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
+              <PlusIcon className="h-4 w-4 mr-2" strokeWidth={2} />
               Add First Group
             </button>
           </div>
@@ -1247,13 +1159,13 @@ export default function TelegramConfigurationPage() {
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="text-lg font-semibold text-gray-900">{group.name}</h3>
-                      <span className={`text-xs font-semibold px-2 py-1 rounded ${
-                        group.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                      <span className={`text-xs font-semibold ${
+                        group.is_active ? 'text-green-700' : 'text-gray-500'
                       }`}>
                         {group.is_active ? 'Active' : 'Inactive'}
                       </span>
                       {group.is_private && (
-                        <span className="text-xs font-semibold px-2 py-1 rounded bg-blue-100 text-blue-700">
+                        <span className="text-xs font-semibold text-blue-700">
                           Private
                         </span>
                       )}
@@ -1282,33 +1194,33 @@ export default function TelegramConfigurationPage() {
                     <button
                       onClick={() => handleSyncMembers(group.id)}
                       disabled={syncingGroupId === group.id}
-                      className="px-3 py-1.5 text-sm text-blue-700 border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      className="px-3 py-1.5 text-sm text-brand-teal border border-brand-teal/30 rounded-lg hover:bg-brand-teal/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                       title="Sync member count from Telegram"
                     >
                       {syncingGroupId === group.id ? (
                         <>
-                          <div className="w-4 h-4 border-2 border-blue-700 border-t-transparent rounded-full animate-spin"></div>
+                          <ArrowPathIcon className="w-4 h-4 animate-spin" strokeWidth={2} />
                           <span>Syncing...</span>
                         </>
                       ) : (
                         <>
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                          </svg>
+                          <ArrowPathIcon className="w-4 h-4" strokeWidth={2} />
                           <span>Sync</span>
                         </>
                       )}
                     </button>
                     <button
                       onClick={() => handleOpenGroupModal(group)}
-                      className="px-3 py-1.5 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                      className="px-3 py-1.5 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
                     >
+                      <PencilIcon className="w-4 h-4" strokeWidth={2} />
                       Edit
                     </button>
                     <button
                       onClick={() => handleDeleteGroup(group.id)}
-                      className="px-3 py-1.5 text-sm text-red-700 border border-red-300 rounded-lg hover:bg-red-50 transition-colors"
+                      className="px-3 py-1.5 text-sm text-red-700 border border-red-300 rounded-lg hover:bg-red-50 transition-colors flex items-center gap-2"
                     >
+                      <TrashIcon className="w-4 h-4" strokeWidth={2} />
                       Delete
                     </button>
                   </div>

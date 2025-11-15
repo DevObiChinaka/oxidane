@@ -18,7 +18,8 @@ export class AdminAPIClient {
 
     // Add JWT auth token
     if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('access_token');
+      // Check for both admin_token (AdminAuthContext) and access_token (regular AuthContext)
+      const token = localStorage.getItem('admin_token') || localStorage.getItem('access_token');
       if (token) {
         defaultHeaders['Authorization'] = `Bearer ${token}`;
       }
@@ -33,9 +34,8 @@ export class AdminAPIClient {
     if (!response.ok) {
       if (response.status === 401) {
         if (typeof window !== 'undefined') {
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
-          localStorage.removeItem('user');
+          localStorage.removeItem('admin_token');
+          localStorage.removeItem('admin_user');
           window.location.href = '/admin/login';
         }
       }
@@ -110,7 +110,8 @@ export class AdminAPIClient {
 
     // Add auth token if available
     if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('access_token');
+      // Check for both admin_token (AdminAuthContext) and access_token (regular AuthContext)
+      const token = localStorage.getItem('admin_token') || localStorage.getItem('access_token');
       if (token) {
         defaultHeaders['Authorization'] = `Bearer ${token}`;
       }
@@ -131,9 +132,8 @@ export class AdminAPIClient {
         if (response.status === 401) {
           // Token expired or invalid - redirect to login
           if (typeof window !== 'undefined') {
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('refresh_token');
-            localStorage.removeItem('user');
+            localStorage.removeItem('admin_token');
+            localStorage.removeItem('admin_user');
             window.location.href = '/admin/login';
           }
         }
@@ -480,6 +480,7 @@ export class AdminAPIClient {
   }
 
   async createEmailTemplate(templateData: any) {
+    console.log('📧 Creating email template with data:', templateData);
     return this.request('/admin/email-templates/', {
       method: 'POST',
       body: JSON.stringify(templateData),
@@ -516,6 +517,7 @@ export class AdminAPIClient {
   async sendBulkEmail(templateId: string, sendData: {
     recipientType: string;
     specificUsers?: string[];
+    subscriptionPlans?: string[];
     scheduleType: string;
     scheduledDate?: string;
     scheduledTime?: string;
@@ -524,6 +526,22 @@ export class AdminAPIClient {
       method: 'POST',
       body: JSON.stringify(sendData),
     });
+  }
+
+  async getEmailLogs(params: {
+    limit?: number;
+    status?: string;
+  } = {}) {
+    const queryParams = new URLSearchParams();
+    
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) {
+        queryParams.append(key, String(value));
+      }
+    });
+
+    const endpoint = `/admin/email-logs/${queryParams.toString() ? `?${queryParams}` : ''}`;
+    return this.request(endpoint);
   }
 
   // Pricing Management Methods

@@ -238,17 +238,46 @@ class OTPManager:
                     return False, "Failed to send OTP email"
             else:
                 # For login OTP, use simple email (can create template later if needed)
-                return cls._send_simple_otp_email(email, otp, user_name, purpose)
+                return cls._send_simple_otp_email(email, otp, user_name, purpose, user)
                 
         except User.DoesNotExist:
-            return False, "User not found"
+            # If user not found, still send email without user object
+            return cls._send_simple_otp_email(email, otp, user_name, purpose, None)
         except Exception as e:
             return False, f"Failed to send OTP: {str(e)}"
     
     @classmethod
-    def _send_simple_otp_email(cls, email: str, otp: str, user_name: str, purpose: str) -> Tuple[bool, str]:
-        """Fallback method to send simple OTP email"""
+    def _send_simple_otp_email(cls, email: str, otp: str, user_name: str, purpose: str, user=None) -> Tuple[bool, str]:
+        """Send OTP email using EmailTemplateService or fallback to simple email"""
         try:
+            # Try using EmailTemplateService first
+            email_service = EmailTemplateService()
+            
+            # Prepare context
+            context = {
+                'otp': otp,
+                'otp_code': otp,
+                'expiry_minutes': cls.OTP_EXPIRY_MINUTES,
+            }
+            
+            if purpose == "password_reset":
+                # Use password_reset template
+                from django.conf import settings as django_settings
+                frontend_url = getattr(django_settings, 'FRONTEND_URL', 'http://localhost:3000')
+                reset_url = f"{frontend_url}/reset-password?email={email}"
+                context['reset_url'] = reset_url
+                
+                result = email_service.send_email(
+                    template_type='password_reset',
+                    recipient_email=email,
+                    user=user,
+                    custom_vars=context
+                )
+                
+                if result and result.get('success'):
+                    return True, "Password reset email sent successfully"
+            
+            # Fallback to simple email if template doesn't exist or fails
             if purpose == "password_reset":
                 subject = "Password Reset Code - OxiWorld Forex Academy"
                 message = f"""

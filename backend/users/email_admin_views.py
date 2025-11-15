@@ -10,7 +10,8 @@ from django.views import View
 from django.core.paginator import Paginator
 from django.utils import timezone
 from django.db.models import Q
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 import json
@@ -18,14 +19,14 @@ import logging
 
 from .models import EmailTemplate, EmailLog, User
 from .email_service import EmailTemplateService
-from .admin_auth import admin_required
+from .permissions import IsAdmin
 
 logger = logging.getLogger(__name__)
 
 
 @csrf_exempt
 @api_view(['GET', 'POST'])
-@admin_required
+@permission_classes([IsAuthenticated, IsAdmin])
 def email_templates_list(request):
     """CRUD operations for email templates"""
     
@@ -64,8 +65,13 @@ def email_templates_list(request):
                     'template_type_display': template.get_template_type_display(),
                     'status': template.status,
                     'subject_template': template.subject_template,
+                    'html_content': template.html_content,
+                    'text_content': template.text_content,
                     'description': template.description,
                     'is_default': template.is_default,
+                    'is_system_email': template.is_system_email,
+                    'from_email': template.from_email,
+                    'from_name': template.from_name,
                     'sent_count': template.sent_count,
                     'last_used': template.last_used.isoformat() if template.last_used else None,
                     'created_at': template.created_at.isoformat(),
@@ -87,7 +93,7 @@ def email_templates_list(request):
             
         except Exception as e:
             logger.error(f"Error fetching email templates: {str(e)}")
-            return Response({
+            return JsonResponse({
                 'success': False,
                 'error': 'Failed to fetch email templates'
             }, status=500)
@@ -101,7 +107,7 @@ def email_templates_list(request):
             required_fields = ['name', 'template_type', 'subject_template', 'html_content']
             for field in required_fields:
                 if not data.get(field):
-                    return Response({
+                    return JsonResponse({
                         'success': False,
                         'error': f'Field "{field}" is required'
                     }, status=400)
@@ -123,20 +129,30 @@ def email_templates_list(request):
             
             logger.info(f"Email template created: {template.name}")
             
-            return Response({
+            return JsonResponse({
                 'success': True,
                 'template': {
                     'id': str(template.id),
                     'name': template.name,
                     'template_type': template.template_type,
+                    'template_type_display': template.get_template_type_display(),
+                    'subject_template': template.subject_template,
+                    'html_content': template.html_content,
+                    'text_content': template.text_content,
+                    'description': template.description,
                     'status': template.status,
+                    'is_default': template.is_default,
+                    'is_system_email': template.is_system_email,
+                    'from_email': template.from_email,
+                    'from_name': template.from_name,
                     'created_at': template.created_at.isoformat(),
+                    'updated_at': template.updated_at.isoformat(),
                 }
             })
             
         except Exception as e:
             logger.error(f"Error creating email template: {str(e)}")
-            return Response({
+            return JsonResponse({
                 'success': False,
                 'error': 'Failed to create email template'
             }, status=500)
@@ -144,7 +160,7 @@ def email_templates_list(request):
 
 @csrf_exempt
 @api_view(['GET', 'PUT', 'DELETE'])
-@admin_required
+@permission_classes([IsAuthenticated, IsAdmin])
 def email_template_detail(request, template_id):
     """Individual email template operations"""
     
@@ -166,6 +182,7 @@ def email_template_detail(request, template_id):
                     'description': template.description,
                     'status': template.status,
                     'is_default': template.is_default,
+                    'is_system_email': template.is_system_email,
                     'from_email': template.from_email,
                     'from_name': template.from_name,
                     'available_variables': template.available_variables,
@@ -188,6 +205,13 @@ def email_template_detail(request, template_id):
         try:
             template = get_object_or_404(EmailTemplate, id=template_id)
             data = json.loads(request.body)
+            
+            # Prevent deactivating system emails
+            if template.is_system_email and data.get('status') == 'inactive':
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Cannot deactivate system-critical email templates. These emails are required for platform functionality.'
+                }, status=403)
             
             # Update fields
             updatable_fields = [
@@ -228,6 +252,14 @@ def email_template_detail(request, template_id):
         """Delete email template"""
         try:
             template = get_object_or_404(EmailTemplate, id=template_id)
+            
+            # Prevent deletion of system emails
+            if template.is_system_email:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Cannot delete system-critical email templates. These emails are required for platform functionality.'
+                }, status=403)
+            
             template_name = template.name
             template.delete()
             
@@ -248,7 +280,7 @@ def email_template_detail(request, template_id):
 
 @csrf_exempt
 @api_view(['POST'])
-@admin_required
+@permission_classes([IsAuthenticated, IsAdmin])
 def preview_email_template(request, template_id):
     """Preview email template with sample data"""
     if request.method != 'POST':
@@ -277,7 +309,7 @@ def preview_email_template(request, template_id):
 
 @csrf_exempt
 @api_view(['POST'])
-@admin_required
+@permission_classes([IsAuthenticated, IsAdmin])
 def send_test_email(request, template_id):
     """Send test email using template"""
     if request.method != 'POST':
@@ -335,7 +367,11 @@ def send_test_email(request, template_id):
         
         logger.info(f"Test email sent for template {template.name} to {recipient_email}")
         
-        return JsonResponse(result)
+        # Ensure result is a dict before returning
+        if not isinstance(result, dict):
+            result = {'success': True, 'message': 'Test email sent successfully'}
+        
+        return JsonResponse(result, safe=False)
         
     except json.JSONDecodeError:
         return JsonResponse({
@@ -351,7 +387,8 @@ def send_test_email(request, template_id):
 
 
 @csrf_exempt
-@admin_required
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdmin])
 def send_bulk_email(request, template_id):
     """Send bulk email to selected recipients"""
     if request.method != 'POST':
@@ -361,6 +398,7 @@ def send_bulk_email(request, template_id):
         data = json.loads(request.body)
         recipient_type = data.get('recipientType', 'all_users')
         specific_users = data.get('specificUsers', [])
+        subscription_plans = data.get('subscriptionPlans', [])  # New: filter by billing period
         schedule_type = data.get('scheduleType', 'now')
         
         # Get template
@@ -368,16 +406,29 @@ def send_bulk_email(request, template_id):
         
         # Get users based on recipient type
         from django.contrib.auth import get_user_model
+        from subscriptions.models import Subscription
         User = get_user_model()
         
         if recipient_type == 'all_users':
             recipients = User.objects.filter(is_active=True, email__isnull=False).exclude(email='')
         elif recipient_type == 'active_subscribers':
-            recipients = User.objects.filter(
+            # Get users with active subscriptions
+            recipients_query = User.objects.filter(
                 is_active=True, 
                 email__isnull=False,
-                signal_subscriptions__payment_status='verified'
-            ).exclude(email='').distinct()
+            ).exclude(email='')
+            
+            # Further filter by subscription plan billing period if specified
+            if subscription_plans:
+                recipients = recipients_query.filter(
+                    subscription__status='active',
+                    subscription__plan__billing_period__in=subscription_plans
+                ).distinct()
+            else:
+                # All active subscribers (any plan)
+                recipients = recipients_query.filter(
+                    subscription__status='active'
+                ).distinct()
         elif recipient_type == 'trial_users':
             # Users who are active but don't have verified subscriptions
             recipients = User.objects.filter(
@@ -392,6 +443,20 @@ def send_bulk_email(request, template_id):
                 Q(is_active=False) | Q(last_login__isnull=True),
                 email__isnull=False
             ).exclude(email='')
+        elif recipient_type == 'subscription_plan_only':
+            # New recipient type: filter by subscription plan billing period only
+            if not subscription_plans:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Subscription plans must be specified'
+                }, status=400)
+            
+            recipients = User.objects.filter(
+                is_active=True,
+                email__isnull=False,
+                subscription__status='active',
+                subscription__plan__billing_period__in=subscription_plans
+            ).exclude(email='').distinct()
         elif recipient_type == 'specific_users':
             recipients = User.objects.filter(
                 id__in=specific_users,
@@ -450,7 +515,7 @@ def send_bulk_email(request, template_id):
 
 
 @api_view(['GET'])
-@admin_required
+@permission_classes([IsAuthenticated, IsAdmin])
 def email_template_types(request):
     """Get available email template types"""
     return JsonResponse({
@@ -467,7 +532,7 @@ def email_template_types(request):
 
 
 @api_view(['GET'])
-@admin_required
+@permission_classes([IsAuthenticated, IsAdmin])
 def email_analytics(request):
     """Get email analytics and statistics"""
     try:
@@ -534,3 +599,53 @@ def get_template_type_description(template_type):
         'custom': 'Custom template for specific use cases'
     }
     return descriptions.get(template_type, 'Custom email template')
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def email_logs(request):
+    """Get recent email logs for activity tracking"""
+    try:
+        # Get query parameters
+        limit = min(int(request.GET.get('limit', 50)), 100)  # Max 100
+        status_filter = request.GET.get('status')
+        
+        # Build queryset
+        logs = EmailLog.objects.select_related('template', 'recipient_user')
+        
+        if status_filter:
+            logs = logs.filter(status=status_filter)
+        
+        # Get limited results
+        logs = logs[:limit]
+        
+        # Serialize data
+        logs_data = []
+        for log in logs:
+            logs_data.append({
+                'id': str(log.id),
+                'template_name': log.template.name if log.template else 'Deleted Template',
+                'template_type': log.template.get_template_type_display() if log.template else 'N/A',
+                'recipient_email': log.recipient_email,
+                'recipient_name': f"{log.recipient_user.first_name} {log.recipient_user.last_name}" if log.recipient_user else None,
+                'subject': log.subject,
+                'status': log.status,
+                'error_message': log.error_message,
+                'created_at': log.created_at.isoformat(),
+                'sent_at': log.sent_at.isoformat() if log.sent_at else None,
+                'delivered_at': log.delivered_at.isoformat() if log.delivered_at else None,
+                'opened_at': log.opened_at.isoformat() if log.opened_at else None,
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'logs': logs_data,
+            'total': EmailLog.objects.count()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching email logs: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': 'Failed to fetch email logs'
+        }, status=500)

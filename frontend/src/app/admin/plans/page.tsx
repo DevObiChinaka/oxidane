@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import * as HeroIcons from '@heroicons/react/24/outline';
 
 interface Feature {
   id: string;
@@ -57,6 +58,37 @@ interface PlanFormData {
 }
 
 const CURRENCIES = ['USD', 'NGN'];
+
+// Icon rendering utility
+const renderIcon = (iconName: string, className: string = 'w-5 h-5') => {
+  if (!iconName) return null;
+  
+  // Map common icon names to their Heroicons equivalents
+  const iconMap: Record<string, string> = {
+    'chat': 'chat-bubble-left-right',
+    'message': 'chat-bubble-left',
+    'signal': 'signal',
+    'signals': 'chart-bar',
+  };
+  
+  // Use mapped name if available
+  const mappedName = iconMap[iconName.toLowerCase()] || iconName;
+  
+  // Convert icon name to PascalCase for Heroicons (e.g., 'chart-bar' -> 'ChartBarIcon')
+  const iconKey = mappedName
+    .split('-')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join('') + 'Icon';
+  
+  const IconComponent = (HeroIcons as any)[iconKey];
+  
+  if (!IconComponent) {
+    // Fallback to a generic icon
+    return <HeroIcons.Square3Stack3DIcon className={className} />;
+  }
+  
+  return <IconComponent className={className} />;
+};
 
 export default function PlansPage() {
   const router = useRouter();
@@ -471,7 +503,7 @@ export default function PlansPage() {
       )}
 
       {/* Plans Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {plans.map(plan => (
           <div
             key={plan.id}
@@ -482,87 +514,88 @@ export default function PlansPage() {
             }`}
           >
             {/* Plan Header */}
-            <div className="p-4 border-b border-gray-100">
-              <div className="flex items-start justify-between mb-2">
-                <h3 className="text-lg font-semibold text-gray-900">{plan.name}</h3>
+            <div className="p-3 border-b border-gray-100">
+              <div className="flex items-start justify-between mb-1">
+                <h3 className="text-base font-semibold text-gray-900">{plan.name}</h3>
                 {plan.is_featured && (
-                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
-                    ⭐ Featured
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                    ⭐
                   </span>
                 )}
               </div>
-              <p className="text-sm text-gray-700 line-clamp-2">{plan.description || 'No description'}</p>
+              <p className="text-xs text-gray-600 line-clamp-2">{plan.description || 'No description'}</p>
             </div>
 
             {/* Pricing */}
-            <div className="px-4 py-4 bg-gray-50">
+            <div className="px-3 py-3 bg-gray-50">
               <div className="text-center">
-                <div className="text-3xl font-bold text-gray-900">
+                <div className="text-2xl font-bold text-gray-900">
                   {formatCurrency(convertPrice(plan.base_price, selectedCurrency), selectedCurrency)}
                 </div>
-                <div className="text-sm text-gray-600 mt-1">
+                <div className="text-xs text-gray-600 mt-0.5">
                   per {getBillingPeriodLabel(plan.billing_period).toLowerCase()}
                 </div>
                 {plan.trial_days > 0 && (
-                  <div className="mt-2 inline-block bg-green-100 text-green-700 text-xs font-medium px-2 py-1 rounded">
-                    {plan.trial_days} days free trial
+                  <div className="mt-1.5 inline-block bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5 rounded">
+                    {plan.trial_days} days trial
                   </div>
                 )}
               </div>
             </div>
 
             {/* Features */}
-            <div className="px-4 py-3">
-              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+            <div className="px-3 py-2">
+              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
                 Features ({plan.features?.length || 0})
               </div>
-              <div className="space-y-1 max-h-32 overflow-y-auto">
+              <div className="space-y-1 max-h-24 overflow-y-auto">
                 {plan.features && plan.features.length > 0 ? (
                   <>
-                    {plan.features.slice(0, 4).map(feature => (
-                      <div key={feature.id} className="flex items-center text-sm text-gray-700">
-                        <svg className="w-4 h-4 text-green-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
+                    {plan.features.slice(0, 3).map(feature => (
+                      <div key={feature.id} className="flex items-center text-xs text-gray-700 gap-1.5">
+                        <span className="text-green-600 flex-shrink-0">
+                          {renderIcon(feature.icon, 'w-3.5 h-3.5')}
+                        </span>
                         <span className="truncate">{feature.name}</span>
                       </div>
                     ))}
-                    {plan.features.length > 4 && (
-                      <div className="text-xs text-gray-500 pl-6">
-                        +{plan.features.length - 4} more
+                    {plan.features.length > 3 && (
+                      <div className="text-xs text-gray-500 pl-5">
+                        +{plan.features.length - 3} more
                       </div>
                     )}
                   </>
                 ) : (
-                  <div className="text-xs text-gray-500">No features assigned</div>
+                  <div className="text-xs text-gray-500">No features</div>
                 )}
               </div>
             </div>
 
             {/* Telegram Groups */}
-            <div className="px-4 py-3 border-t border-gray-200">
-              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                Telegram Groups ({plan.telegram_groups?.length || 0})
+            <div className="px-3 py-2 border-t border-gray-200">
+              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                Groups ({plan.telegram_groups?.length || 0})
               </div>
               <div className="space-y-1">
                 {plan.telegram_groups && plan.telegram_groups.length > 0 ? (
                   <div className="flex flex-wrap gap-1">
                     {plan.telegram_groups.map(group => (
-                      <span key={group.id} className="inline-flex items-center bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded">
-                        💬 {group.name}
+                      <span key={group.id} className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 text-xs px-1.5 py-0.5 rounded">
+                        {renderIcon('chat-bubble-left-right', 'w-3 h-3')}
+                        <span className="truncate max-w-[100px]">{group.name}</span>
                       </span>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-xs text-gray-500">No groups assigned</div>
+                  <div className="text-xs text-gray-500">No groups</div>
                 )}
               </div>
             </div>
 
             {/* Status & Actions */}
-            <div className="px-4 py-3 bg-gray-50 border-t border-gray-100">
-              <div className="flex items-center justify-between mb-3">
-                <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+            <div className="px-3 py-2 bg-gray-50 border-t border-gray-100">
+              <div className="flex items-center justify-between mb-2">
+                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
                   plan.is_active 
                     ? 'bg-green-100 text-green-700' 
                     : 'bg-gray-100 text-gray-600'
@@ -570,20 +603,20 @@ export default function PlansPage() {
                   {plan.is_active ? '● Active' : '○ Inactive'}
                 </span>
                 <span className="text-xs text-gray-500">
-                  Order: {plan.sort_order}
+                  #{plan.sort_order}
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-1.5">
                 <button
                   onClick={() => handleOpenModal(plan)}
-                  className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors"
+                  className="px-2 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors"
                 >
                   Edit
                 </button>
                 <button
                   onClick={() => handleToggleActive(plan)}
-                  className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                  className={`px-2 py-1.5 text-xs font-medium rounded transition-colors ${
                     plan.is_active
                       ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                       : 'bg-green-600 text-white hover:bg-green-700'
@@ -593,7 +626,7 @@ export default function PlansPage() {
                 </button>
                 <button
                   onClick={() => handleClone(plan)}
-                  className="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 text-xs font-medium rounded hover:bg-gray-50 transition-colors"
+                  className="px-2 py-1.5 bg-white border border-gray-300 text-gray-700 text-xs font-medium rounded hover:bg-gray-50 transition-colors"
                 >
                   Clone
                 </button>
@@ -794,9 +827,12 @@ export default function PlansPage() {
                         }}
                         className="w-5 h-5 mt-0.5 text-[#00B38F] border-2 border-gray-400 rounded focus:ring-[#00B38F] cursor-pointer"
                       />
-                      <div className="ml-3">
+                      <div className="ml-3 flex items-center gap-2">
+                        <span className="text-blue-600">
+                          {renderIcon(feature.icon, 'w-5 h-5')}
+                        </span>
                         <span className="text-sm font-medium text-gray-900">
-                          {feature.icon} {feature.name}
+                          {feature.name}
                         </span>
                         <p className="text-xs text-gray-500">{feature.description}</p>
                       </div>

@@ -348,7 +348,7 @@ CELERY_BEAT_SCHEDULE = {}
 # ========================================
 # CACHE CONFIGURATION
 # ========================================
-# Use Redis for caching
+# Use Redis for caching with fallback to dummy cache
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
@@ -359,7 +359,8 @@ CACHES = {
             'SOCKET_TIMEOUT': 5,
             'RETRY_ON_TIMEOUT': True,
             'MAX_CONNECTIONS': 50,
-            'CONNECTION_POOL_KWARGS': {'max_connections': 50}
+            'CONNECTION_POOL_KWARGS': {'max_connections': 50},
+            'IGNORE_EXCEPTIONS': True,  # Don't crash if Redis is down
         },
         'KEY_PREFIX': 'oxidane',
         'TIMEOUT': 300,  # 5 minutes default

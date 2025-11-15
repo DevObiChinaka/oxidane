@@ -57,8 +57,13 @@ urlpatterns = [
     
     # Admin user management
     path('admin/users/', admin_views.user_list, name='admin_user_list'),
+    path('admin/users/export/', admin_views.export_users_csv, name='admin_export_users_csv'),
+    path('admin/subscription-plans/', admin_views.subscription_plans_list, name='admin_subscription_plans'),
     path('admin/users/<uuid:user_id>/', admin_views.user_detail, name='admin_user_detail'),
     path('admin/users/<uuid:user_id>/action/', admin_views.user_action, name='admin_user_action'),
+    path('admin/users/<uuid:user_id>/audit-log/', admin_views.user_audit_log, name='admin_user_audit_log'),
+    path('admin/users/<uuid:user_id>/delete/', admin_views.delete_user, name='admin_delete_user'),
+    path('admin/users/bulk-action/', admin_views.bulk_user_action, name='admin_bulk_user_action'),
     path('admin/users-analytics/', admin_views.users_analytics, name='admin_users_analytics'),
     
     # Email template management
@@ -69,4 +74,5 @@ urlpatterns = [
     path('admin/email-templates/<uuid:template_id>/send/', email_admin_views.send_bulk_email, name='admin_send_bulk_email'),
     path('admin/email-template-types/', email_admin_views.email_template_types, name='admin_email_template_types'),
     path('admin/email-analytics/', email_admin_views.email_analytics, name='admin_email_analytics'),
+    path('admin/email-logs/', email_admin_views.email_logs, name='admin_email_logs'),
 ]

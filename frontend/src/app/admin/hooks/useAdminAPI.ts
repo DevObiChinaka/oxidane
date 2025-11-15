@@ -332,7 +332,7 @@ export function useUserActions() {
     try {
       setLoading(true);
       setError(null);
-      const result = await apiClient.post(`/admin/users/${userId}/${action}/`, {});
+      const result = await apiClient.post(`/admin/users/${userId}/action/`, { action });
       return result;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Action failed';
@@ -344,6 +344,57 @@ export function useUserActions() {
   }, []);
 
   return { performAction, loading, error };
+}
+
+export function useBulkUserActions() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const performBulkAction = useCallback(async (userIds: string[], action: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await apiClient.post('/admin/users/bulk-action/', { user_ids: userIds, action });
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Bulk action failed';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { performBulkAction, loading, error };
+}
+
+export function useDeleteUser() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const deleteUser = useCallback(async (userId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await apiClient.delete(`/admin/users/${userId}/delete/`);
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Delete failed';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { deleteUser, loading, error };
+}
+
+export function useUserAuditLog(userId: string | null) {
+  return useAPI(
+    () => userId ? apiClient.get(`/admin/users/${userId}/audit-log/`) : Promise.resolve(null),
+    [userId]
+  );
 }
 
 // Pricing Management Hooks

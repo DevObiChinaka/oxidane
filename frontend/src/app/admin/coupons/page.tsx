@@ -429,62 +429,56 @@ export default function CouponsPage() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {coupons.map(coupon => {
             const expiryStatus = getExpiryStatus(coupon);
             const usagePercent = getUsagePercentage(coupon);
 
             return (
-              <div key={coupon.id} className="bg-white rounded-lg border-2 border-gray-200 overflow-hidden hover:shadow-lg transition-shadow">
-                <div className="p-6">
+              <div key={coupon.id} className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+                <div className="p-3">
                   {/* Header with checkbox and code */}
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-start gap-3 flex-1">
-                      <input
-                        type="checkbox"
-                        checked={selectedCoupons.includes(coupon.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedCoupons([...selectedCoupons, coupon.id]);
-                          } else {
-                            setSelectedCoupons(selectedCoupons.filter(id => id !== coupon.id));
-                          }
-                        }}
-                        className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="text-2xl font-bold font-mono text-gray-900">{coupon.code}</h3>
-                          <span className={`text-xs font-semibold px-2 py-1 rounded ${
-                            coupon.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-                          }`}>
-                            {coupon.is_active ? 'Active' : 'Inactive'}
-                          </span>
-                          <span className={`text-xs font-semibold px-2 py-1 rounded ${expiryStatus.color}`}>
-                            {expiryStatus.label}
-                          </span>
-                        </div>
-                        <p className="text-lg font-semibold text-blue-600">{getDiscountDisplay(coupon)}</p>
-                        {coupon.description && (
-                          <p className="text-sm text-gray-600 mt-2">{coupon.description}</p>
-                        )}
+                  <div className="flex items-start gap-2 mb-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedCoupons.includes(coupon.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedCoupons([...selectedCoupons, coupon.id]);
+                        } else {
+                          setSelectedCoupons(selectedCoupons.filter(id => id !== coupon.id));
+                        }
+                      }}
+                      className="mt-1 w-3.5 h-3.5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 flex-shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1 mb-1 flex-wrap">
+                        <h3 className="text-base font-bold font-mono text-gray-900 truncate">{coupon.code}</h3>
+                        <span className={`text-xs font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${
+                          coupon.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                        }`}>
+                          {coupon.is_active ? '●' : '○'}
+                        </span>
                       </div>
+                      <p className="text-sm font-semibold text-blue-600 mb-1">{getDiscountDisplay(coupon)}</p>
+                      {coupon.description && (
+                        <p className="text-xs text-gray-600 line-clamp-2">{coupon.description}</p>
+                      )}
                     </div>
                   </div>
 
                   {/* Usage Stats */}
-                  <div className="mb-4 bg-gray-50 rounded-lg p-3">
-                    <div className="flex items-center justify-between text-sm mb-2">
+                  <div className="mb-2 bg-gray-50 rounded p-2">
+                    <div className="flex items-center justify-between text-xs mb-1">
                       <span className="text-gray-600">Usage</span>
                       <span className="font-semibold text-gray-900">
-                        {coupon.current_uses} {coupon.max_uses ? `/ ${coupon.max_uses}` : ''}
-                        {!coupon.max_uses && <span className="text-gray-500 ml-1">(unlimited)</span>}
+                        {coupon.current_uses}{coupon.max_uses ? `/${coupon.max_uses}` : ''}
                       </span>
                     </div>
                     {coupon.max_uses && (
-                      <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="w-full bg-gray-200 rounded-full h-1.5">
                         <div 
-                          className={`h-2 rounded-full transition-all ${
+                          className={`h-1.5 rounded-full transition-all ${
                             usagePercent >= 90 ? 'bg-red-500' :
                             usagePercent >= 70 ? 'bg-amber-500' :
                             'bg-green-500'
@@ -496,54 +490,49 @@ export default function CouponsPage() {
                   </div>
 
                   {/* Validity Period */}
-                  <div className="mb-4 text-sm">
-                    <div className="flex items-center text-gray-600 mb-1">
-                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="mb-2 text-xs space-y-0.5">
+                    <div className="flex items-center text-gray-600 truncate">
+                      <svg className="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
-                      <span className="font-medium">Valid from:</span>
-                      <span className="ml-2">{formatDate(coupon.valid_from)}</span>
+                      <span className="truncate">{new Date(coupon.valid_from).toLocaleDateString()}</span>
                     </div>
                     {coupon.valid_until && (
-                      <div className="flex items-center text-gray-600">
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="flex items-center text-gray-600 truncate">
+                        <svg className="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        <span className="font-medium">Expires:</span>
-                        <span className="ml-2">{formatDate(coupon.valid_until)}</span>
+                        <span className="truncate">{new Date(coupon.valid_until).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                    {coupon.plans.length > 0 && (
+                      <div className="text-gray-600">
+                        {coupon.plans.length} plan{coupon.plans.length !== 1 ? 's' : ''}
                       </div>
                     )}
                   </div>
 
-                  {/* Plans */}
-                  {coupon.plans.length > 0 && (
-                    <div className="mb-4 text-sm">
-                      <span className="text-gray-600 font-medium">Applies to:</span>
-                      <span className="ml-2 text-gray-900">{coupon.plans.length} plan(s)</span>
-                    </div>
-                  )}
-
                   {/* Actions */}
-                  <div className="grid grid-cols-2 gap-2 pt-4 border-t border-gray-200">
+                  <div className="grid grid-cols-2 gap-1.5 pt-2 border-t border-gray-200">
                     <button
                       onClick={() => handleOpenModal(coupon)}
-                      className="px-3 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                      className="px-2 py-1.5 text-xs text-gray-700 border border-gray-300 rounded hover:bg-gray-50 transition-colors"
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => handleToggleActive(coupon)}
-                      className={`px-3 py-2 text-sm rounded-lg transition-colors ${
+                      className={`px-2 py-1.5 text-xs rounded transition-colors ${
                         coupon.is_active
                           ? 'text-gray-700 border border-gray-300 hover:bg-gray-50'
                           : 'text-white bg-green-600 hover:bg-green-700'
                       }`}
                     >
-                      {coupon.is_active ? 'Deactivate' : 'Activate'}
+                      {coupon.is_active ? 'Off' : 'On'}
                     </button>
                     <button
                       onClick={() => handleDelete(coupon.id)}
-                      className="col-span-2 px-3 py-2 text-sm text-red-700 border border-red-300 rounded-lg hover:bg-red-50 transition-colors"
+                      className="col-span-2 px-2 py-1.5 text-xs text-red-700 border border-red-300 rounded hover:bg-red-50 transition-colors"
                     >
                       Delete
                     </button>

@@ -2,6 +2,18 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import {
+  CheckCircleIcon,
+  ExclamationCircleIcon,
+  ArrowPathIcon,
+  BoltIcon,
+  CreditCardIcon,
+  EnvelopeIcon,
+  CircleStackIcon,
+  ExclamationTriangleIcon,
+  ChatBubbleLeftRightIcon,
+} from '@heroicons/react/24/outline';
+import TelegramIcon from '../telegram/TelegramIcon';
 
 interface HealthMetrics {
   status: 'ok' | 'error';
@@ -133,7 +145,7 @@ export default function SystemHealthPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">System Health & Monitoring</h1>
+          <h1 className="text-2xl font-bold text-black">System Health & Monitoring</h1>
           <p className="text-gray-600">Real-time platform status and configuration overview</p>
         </div>
         <div className="flex items-center space-x-3">
@@ -143,18 +155,16 @@ export default function SystemHealthPage() {
           <button
             onClick={handleManualRefresh}
             disabled={refreshing}
-            className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center space-x-2"
+            className="px-4 py-2 text-sm font-medium text-white bg-brand-teal rounded-lg hover:bg-brand-teal/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center space-x-2"
           >
             {refreshing ? (
               <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <ArrowPathIcon className="h-4 w-4 animate-spin" strokeWidth={2} />
                 <span>Refreshing...</span>
               </>
             ) : (
               <>
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
+                <ArrowPathIcon className="h-4 w-4" strokeWidth={2} />
                 <span>Refresh</span>
               </>
             )}
@@ -163,40 +173,20 @@ export default function SystemHealthPage() {
       </div>
 
       {/* Overall System Status */}
-      <div className={`rounded-lg border-2 p-6 transition-all ${ 
-        isHealthy 
-          ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-300' 
-          : 'bg-gradient-to-br from-red-50 to-orange-50 border-red-300'
-      }`}>
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <div className="flex items-center mb-2">
-              {isHealthy ? (
-                <>
-                  <div className="w-4 h-4 bg-green-500 rounded-full mr-3 animate-pulse"></div>
-                  <h2 className="text-2xl font-bold text-green-700">System Operational</h2>
-                </>
-              ) : (
-                <>
-                  <div className="w-4 h-4 bg-red-500 rounded-full mr-3 animate-pulse"></div>
-                  <h2 className="text-2xl font-bold text-red-700">System Error</h2>
-                </>
-              )}
-            </div>
-            <p className={`text-sm ${isHealthy ? 'text-green-600' : 'text-red-600'}`}>
-              {healthStatus?.message || 'Status unknown'}
-            </p>
-          </div>
-          <div className={`p-4 rounded-lg ${isHealthy ? 'bg-green-100' : 'bg-red-100'}`}>
-            <svg className={`h-10 w-10 ${isHealthy ? 'text-green-600' : 'text-red-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              {isHealthy ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              )}
-            </svg>
-          </div>
-        </div>
+      <div className="flex items-center gap-2 mb-4">
+        {isHealthy ? (
+          <CheckCircleIcon className="w-5 h-5 text-brand-teal" strokeWidth={2} />
+        ) : (
+          <ExclamationCircleIcon className="w-5 h-5 text-red-600" strokeWidth={2} />
+        )}
+        <span className={`font-medium ${
+          isHealthy ? 'text-brand-teal' : 'text-red-600'
+        }`}>
+          {isHealthy ? 'System Operational' : 'System Error'}
+        </span>
+        <span className="text-sm text-gray-500">
+          · {healthStatus?.message || 'Status unknown'}
+        </span>
       </div>
 
       {/* Platform Setup Progress */}
@@ -232,10 +222,8 @@ export default function SystemHealthPage() {
         </div>
 
         {setupComplete && (
-          <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-3 flex items-center">
-            <svg className="h-5 w-5 text-green-600 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+          <div className="mt-4 p-3 flex items-center">
+            <CheckCircleIcon className="h-5 w-5 text-green-600 mr-2" strokeWidth={2} />
             <span className="text-sm font-medium text-green-800">
               Platform setup is complete! All components are configured.
             </span>
@@ -252,15 +240,7 @@ export default function SystemHealthPage() {
             : 'bg-gray-50 border-gray-300 hover:border-gray-400'
         }`}>
           <div className="flex items-start justify-between mb-3">
-            <div className={`p-2 rounded-lg ${
-              setupStatus?.components.telegram.configured ? 'bg-blue-100' : 'bg-gray-200'
-            }`}>
-              <svg className={`h-6 w-6 ${
-                setupStatus?.components.telegram.configured ? 'text-blue-600' : 'text-gray-500'
-              }`} fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295-.002 0-.003 0-.005 0l.213-3.054 5.56-5.022c.24-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.64-.203-.658-.64.135-.954l11.566-4.458c.538-.196 1.006.128.832.941z"/>
-              </svg>
-            </div>
+            <TelegramIcon className="h-8 w-8" color={setupStatus?.components.telegram.configured ? '#229ED9' : '#9CA3AF'} />
             <div className={`w-2 h-2 rounded-full ${
               setupStatus?.components.telegram.connection_status === 'connected' ? 'bg-green-500' :
               setupStatus?.components.telegram.connection_status === 'error' ? 'bg-red-500' :
@@ -294,22 +274,16 @@ export default function SystemHealthPage() {
             : 'bg-gray-50 border-gray-300 hover:border-gray-400'
         }`}>
           <div className="flex items-start justify-between mb-3">
-            <div className={`p-2 rounded-lg ${
-              setupStatus?.components.payment.configured ? 'bg-green-100' : 'bg-gray-200'
-            }`}>
-              <svg className={`h-6 w-6 ${
-                setupStatus?.components.payment.configured ? 'text-green-600' : 'text-gray-500'
-              }`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-              </svg>
-            </div>
-            <div className={`px-2 py-1 rounded text-xs font-medium ${
+            <CreditCardIcon className={`h-8 w-8 ${
+              setupStatus?.components.payment.configured ? 'text-green-600' : 'text-gray-400'
+            }`} strokeWidth={1.5} />
+            <span className={`text-xs font-medium ${
               setupStatus?.components.payment.test_mode 
-                ? 'bg-orange-100 text-orange-700' 
-                : 'bg-green-100 text-green-700'
+                ? 'text-orange-600' 
+                : 'text-green-600'
             }`}>
               {setupStatus?.components.payment.test_mode ? 'Test' : 'Live'}
-            </div>
+            </span>
           </div>
           
           <h4 className="font-semibold text-gray-900 mb-1">Payment Gateways</h4>
@@ -336,15 +310,9 @@ export default function SystemHealthPage() {
             : 'bg-gray-50 border-gray-300 hover:border-gray-400'
         }`}>
           <div className="flex items-start justify-between mb-3">
-            <div className={`p-2 rounded-lg ${
-              setupStatus?.components.email.configured ? 'bg-purple-100' : 'bg-gray-200'
-            }`}>
-              <svg className={`h-6 w-6 ${
-                setupStatus?.components.email.configured ? 'text-purple-600' : 'text-gray-500'
-              }`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
-            </div>
+            <EnvelopeIcon className={`h-8 w-8 ${
+              setupStatus?.components.email.configured ? 'text-purple-600' : 'text-gray-400'
+            }`} strokeWidth={1.5} />
             <div className={`w-2 h-2 rounded-full ${
               setupStatus?.components.email.connection_status === 'connected' ? 'bg-green-500' :
               'bg-gray-400'
@@ -372,11 +340,7 @@ export default function SystemHealthPage() {
         {/* Database Status */}
         <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-lg border-2 border-indigo-300 hover:border-indigo-400 p-5 transition-all">
           <div className="flex items-start justify-between mb-3">
-            <div className="p-2 bg-indigo-100 rounded-lg">
-              <svg className="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
-              </svg>
-            </div>
+            <CircleStackIcon className="h-8 w-8 text-indigo-600" strokeWidth={1.5} />
             <div className="w-2 h-2 rounded-full bg-green-500"></div>
           </div>
           
@@ -402,9 +366,7 @@ export default function SystemHealthPage() {
       {setupStatus && setupStatus.recommendations.length > 0 && (
         <div className="bg-orange-50 border-2 border-orange-200 rounded-lg p-6">
           <div className="flex items-start mb-4">
-            <svg className="h-6 w-6 text-orange-600 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
+            <ExclamationTriangleIcon className="h-6 w-6 text-orange-600 mr-3 flex-shrink-0" strokeWidth={2} />
             <div className="flex-1">
               <h3 className="text-lg font-semibold text-orange-900 mb-2">Setup Recommendations</h3>
               <ul className="space-y-3">
@@ -432,9 +394,7 @@ export default function SystemHealthPage() {
       {/* Quick Actions */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <svg className="h-5 w-5 mr-2 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
+          <BoltIcon className="h-5 w-5 mr-2 text-brand-teal" strokeWidth={2} />
           Quick Actions
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -442,11 +402,7 @@ export default function SystemHealthPage() {
             onClick={() => router.push('/admin/settings/telegram')}
             className="flex items-center p-4 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors text-left"
           >
-            <div className="p-2 bg-blue-100 rounded-lg mr-3">
-              <svg className="h-5 w-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295-.002 0-.003 0-.005 0l.213-3.054 5.56-5.022c.24-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.64-.203-.658-.64.135-.954l11.566-4.458c.538-.196 1.006.128.832.941z"/>
-              </svg>
-            </div>
+            <TelegramIcon className="h-6 w-6 mr-3" color="#229ED9" />
             <div>
               <div className="font-medium text-gray-900">Configure Telegram</div>
               <div className="text-xs text-gray-600">Setup bot token and connection</div>
@@ -457,11 +413,7 @@ export default function SystemHealthPage() {
             onClick={() => router.push('/admin/settings/payment')}
             className="flex items-center p-4 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg transition-colors text-left"
           >
-            <div className="p-2 bg-green-100 rounded-lg mr-3">
-              <svg className="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-              </svg>
-            </div>
+            <CreditCardIcon className="h-6 w-6 text-green-600 mr-3" strokeWidth={2} />
             <div>
               <div className="font-medium text-gray-900">Configure Payment</div>
               <div className="text-xs text-gray-600">Setup Paystack and Stripe</div>
@@ -472,11 +424,7 @@ export default function SystemHealthPage() {
             onClick={() => router.push('/admin/settings/email')}
             className="flex items-center p-4 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg transition-colors text-left"
           >
-            <div className="p-2 bg-purple-100 rounded-lg mr-3">
-              <svg className="h-5 w-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
-            </div>
+            <EnvelopeIcon className="h-6 w-6 text-purple-600 mr-3" strokeWidth={2} />
             <div>
               <div className="font-medium text-gray-900">Configure Email</div>
               <div className="text-xs text-gray-600">Setup SMTP server</div>

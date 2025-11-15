@@ -89,9 +89,53 @@ def send_user_login_otp_email(user, otp, ip_address='Unknown'):
         print(f"Error sending login OTP email: {str(e)}")
         return False
 
-def send_signin_notification_email(user, signin_details=None):
-    """Send sign-in notification email to users using template system"""
+def send_signin_notification_email(user, signin_details=None, request=None):
+    """Send sign-in notification email to users using EmailTemplateService"""
     try:
+        # Try using EmailTemplateService first
+        from .email_service import EmailTemplateService
+        email_service = EmailTemplateService()
+        
+        current_time = timezone.now().strftime('%B %d, %Y at %I:%M %p')
+        signin_method = signin_details.get('method', 'Email & Password') if signin_details else 'Email & Password'
+        
+        # Extract device and location info if request is available
+        device = 'Unknown Device'
+        location = 'Unknown Location'
+        
+        if request:
+            user_agent = request.META.get('HTTP_USER_AGENT', '')
+            # Simple device detection
+            if 'Mobile' in user_agent:
+                device = 'Mobile Device'
+            elif 'Tablet' in user_agent:
+                device = 'Tablet'
+            else:
+                device = 'Desktop/Laptop'
+                
+            # Get IP for location (basic)
+            ip_address = request.META.get('REMOTE_ADDR', 'Unknown')
+            location = f"IP: {ip_address}"
+        
+        # Use signin_notification template
+        context = {
+            'signin_datetime': current_time,
+            'signin_method': signin_method,
+            'device': device,
+            'location': location,
+        }
+        
+        result = email_service.send_email(
+            template_type='signin_notification',
+            recipient_email=user.email,
+            user=user,
+            custom_vars=context
+        )
+        
+        if result and result.get('success'):
+            return True
+        
+        # Fallback to hardcoded if template fails
         current_time = timezone.now().strftime('%B %d, %Y at %I:%M %p UTC')
         signin_method = signin_details.get('method', 'Email & Password') if signin_details else 'Email & Password'
         
@@ -1031,6 +1075,27 @@ def resend_verification(request):
             token = user.generate_email_verification_token()
             verification_url = f"{settings.FRONTEND_URL}/verify-email?token={token}"
             
+            # Try using EmailTemplateService
+            try:
+                from .email_service import EmailTemplateService
+                email_service = EmailTemplateService()
+                
+                result = email_service.send_email(
+                    template_type='email_verification',
+                    recipient_email=email,
+                    user=user,
+                    custom_vars={'verification_url': verification_url}
+                )
+                
+                if result and result.get('success'):
+                    return JsonResponse({
+                        'message': 'Verification email sent successfully',
+                        'email': email
+                    })
+            except Exception as template_error:
+                logger.warning(f"EmailTemplateService failed, using fallback: {template_error}")
+            
+            # Fallback to hardcoded email
             send_mail(
                 subject='Verify your OxiWorld account',
                 message=f'''

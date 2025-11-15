@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.html import format_html
 from django.utils import timezone
-from .models import User, OAuthProvider, EmailTemplate, UserPreferences
+from .models import User, OAuthProvider, EmailTemplate, UserPreferences, AdminAction
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
@@ -186,3 +186,44 @@ class UserPreferencesAdmin(admin.ModelAdmin):
     )
     
     list_editable = ('email_login', 'course_updates', 'subscription_renewal', 'signal_alerts', 'promotional_emails')
+
+
+@admin.register(AdminAction)
+class AdminActionAdmin(admin.ModelAdmin):
+    """Admin interface for viewing audit logs"""
+    list_display = (
+        'created_at',
+        'admin_email',
+        'action',
+        'target_email',
+        'ip_address'
+    )
+    list_filter = ('action', 'created_at')
+    search_fields = ('admin_email', 'target_email', 'action_display')
+    readonly_fields = (
+        'id',
+        'admin_user',
+        'admin_email',
+        'action',
+        'action_display',
+        'target_user',
+        'target_email',
+        'details',
+        'ip_address',
+        'user_agent',
+        'created_at'
+    )
+    ordering = ('-created_at',)
+    
+    def has_add_permission(self, request):
+        """Prevent manual creation of audit logs"""
+        return False
+    
+    def has_change_permission(self, request, obj=None):
+        """Prevent editing audit logs"""
+        return False
+    
+    def has_delete_permission(self, request, obj=None):
+        """Only superusers can delete audit logs"""
+        return request.user.is_superuser
+

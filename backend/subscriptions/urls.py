@@ -1,6 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-# from . import admin_views  # DEPRECATED: Phase 0.4 admin views - will be rewritten for Phase 0.6
+from . import admin_views  # Phase 0.5 unified subscriptions management
+from . import payment_admin_views  # Payment transactions management
 from .pricing_views import PricingPlanViewSet, CouponViewSet
 from . import billing_views
 from .user_subscription_views import UserSubscriptionViewSet
@@ -8,10 +9,10 @@ from . import user_views  # Function-based user views
 from . import mentorship_admin_views
 from .api_views import (
     SubscriptionViewSet, SubscriptionPlanViewSet, FeatureViewSet, 
-    CouponViewSet as APICouponViewSet, ReferralCodeViewSet, ReferralStatsViewSet,
+    CouponViewSet as APICouponViewSet,
     TelegramConfigurationViewSet, TelegramGroupViewSet, PaymentConfigurationViewSet,
     EmailConfigurationViewSet, SetupStatusViewSet, PublicPricingViewSet, ValidateCouponViewSet,
-    ValidateReferralViewSet, SubscriptionUpgradeViewSet, SubscriptionDowngradeViewSet,
+        SubscriptionUpgradeViewSet, SubscriptionDowngradeViewSet,
     CurrencyConversionViewSet
 )  # Phase 0.5 - Tasks 0.5.20-0.5.36
 from .views import (
@@ -39,14 +40,12 @@ router.register(r'pricing/coupons', CouponViewSet, basename='coupon-codes')
 user_router = DefaultRouter()
 user_router.register(r'subscriptions', UserSubscriptionViewSet, basename='user-subscriptions')
 
-# NEW: Phase 0.5 - Tasks 0.5.20-0.5.30 - Subscription, Plan, Feature, Coupon, Referral, Telegram, Payment, Email Config API endpoints
+# NEW: Phase 0.5 - Tasks 0.5.20-0.5.30 - Subscription, Plan, Feature, Coupon, Telegram, Payment, Email Config API endpoints
 api_router = DefaultRouter()
 api_router.register(r'subscriptions', SubscriptionViewSet, basename='subscription')
 api_router.register(r'admin/plans', SubscriptionPlanViewSet, basename='plan')
 api_router.register(r'admin/features', FeatureViewSet, basename='feature')
 api_router.register(r'admin/coupons', APICouponViewSet, basename='coupon')
-api_router.register(r'admin/referrals/codes', ReferralCodeViewSet, basename='referral-code')
-api_router.register(r'admin/referrals/stats', ReferralStatsViewSet, basename='referral-stats')
 api_router.register(r'admin/telegram/config', TelegramConfigurationViewSet, basename='telegram-config')
 api_router.register(r'admin/telegram/groups', TelegramGroupViewSet, basename='telegram-group')
 api_router.register(r'admin/payment/config', PaymentConfigurationViewSet, basename='payment-config')
@@ -57,7 +56,6 @@ api_router.register(r'admin/setup/status', SetupStatusViewSet, basename='setup-s
 v1_router = DefaultRouter()
 v1_router.register(r'subscriptions/plans', PublicPricingViewSet, basename='v1-plans')
 v1_router.register(r'subscriptions/validate-coupon', ValidateCouponViewSet, basename='v1-validate-coupon')
-v1_router.register(r'subscriptions/validate-referral', ValidateReferralViewSet, basename='v1-validate-referral')
 v1_router.register(r'subscriptions', SubscriptionUpgradeViewSet, basename='v1-subscription-upgrade')
 v1_router.register(r'subscriptions', SubscriptionDowngradeViewSet, basename='v1-subscription-downgrade')
 v1_router.register(r'currency', CurrencyConversionViewSet, basename='v1-currency')  # Live currency conversion
@@ -181,4 +179,16 @@ urlpatterns = [
     
     # Mentorship Analytics
     path('admin/mentorship/analytics/', mentorship_admin_views.mentorship_analytics, name='mentorship_analytics'),
+    
+    # ============================================================================
+    # PHASE 0.5: Unified Subscriptions Management
+    # ============================================================================
+    path('admin/subscriptions-management/', admin_views.subscription_management_list, name='subscription_management_list'),
+    path('admin/subscriptions-management/<uuid:subscription_id>/update/', admin_views.update_subscription_action, name='update_subscription_action'),
+    path('admin/subscriptions-management/plans/', admin_views.subscription_plans_filter, name='subscription_plans_filter'),
+    
+    # ============================================================================
+    # PAYMENT TRANSACTIONS MANAGEMENT
+    # ============================================================================
+    path('admin/payments/transactions/', payment_admin_views.payment_transactions_list, name='payment_transactions_list'),
 ]

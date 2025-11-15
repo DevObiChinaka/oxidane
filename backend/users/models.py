@@ -457,6 +457,7 @@ class EmailTemplate(models.Model):
     # Template settings
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
     is_default = models.BooleanField(default=False, help_text="Default template for this type")
+    is_system_email = models.BooleanField(default=False, help_text="System-critical email that cannot be deleted or deactivated")
     
     # Email settings
     from_email = models.EmailField(blank=True, help_text="Override default from email")
@@ -609,3 +610,123 @@ class UserPreferences(models.Model):
     
     def __str__(self):
         return f"Preferences for {self.user.email}"
+
+
+class AdminAction(models.Model):
+    """
+    Audit log for admin actions on user accounts.
+    Tracks who did what to whom and when for compliance and security.
+    """
+    ACTION_CHOICES = [
+        ('activate', 'Activated User'),
+        ('deactivate', 'Deactivated User'),
+        ('verify_email', 'Verified Email'),
+        ('make_staff', 'Granted Staff Privileges'),
+        ('remove_staff', 'Removed Staff Privileges'),
+        ('delete', 'Deleted User'),
+        ('bulk_activate', 'Bulk Activated Users'),
+        ('bulk_deactivate', 'Bulk Deactivated Users'),
+        ('bulk_verify', 'Bulk Verified Emails'),
+        ('impersonate', 'Impersonated User'),
+        ('send_email', 'Sent Email to User'),
+        ('update_subscription', 'Updated Subscription'),
+        ('export_users', 'Exported Users to CSV'),
+        ('other', 'Other Action'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    
+    # Who performed the action
+    admin_user = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True,
+        related_name='admin_actions_performed',
+        help_text='Admin who performed the action'
+    )
+    admin_email = models.EmailField(help_text='Email of admin (preserved even if admin deleted)')
+    
+    # What action was performed
+    action = models.CharField(max_length=30, choices=ACTION_CHOICES)
+    action_display = models.CharField(max_length=200, help_text='Human-readable action description')
+    
+    # Who was affected
+    target_user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='admin_actions_received',
+        help_text='User who was affected by the action'
+    )
+    target_email = models.EmailField(
+        blank=True,
+        help_text='Email of affected user (preserved even if user deleted)'
+    )
+    
+    # Additional context
+    details = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='Additional details about the action (e.g., reason, previous values, affected count)'
+    )
+    
+    # IP and metadata
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True)
+    
+    # Timestamp
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['admin_user', '-created_at']),
+            models.Index(fields=['target_user', '-created_at']),
+            models.Index(fields=['action', '-created_at']),
+        ]
+        verbose_name = 'Admin Action'
+        verbose_name_plural = 'Admin Actions'
+    
+    def __str__(self):
+        return f"{self.admin_email} - {self.action_display} - {self.created_at.strftime('%Y-%m-%d %H:%M')}"
+    
+    @classmethod
+    def log_action(cls, admin_user, action, target_user=None, details=None, request=None):
+        """
+        Convenience method to log an admin action.
+        
+        Usage:
+            AdminAction.log_action(
+                admin_user=request.user,
+                action='activate',
+                target_user=user,
+                details={'reason': 'Account verification complete'},
+                request=request
+            )
+        """
+        action_display = dict(cls.ACTION_CHOICES).get(action, action)
+        
+        # Get IP and user agent from request if provided
+        ip_address = None
+        user_agent = ''
+        if request:
+            x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+            if x_forwarded_for:
+                ip_address = x_forwarded_for.split(',')[0]
+            else:
+                ip_address = request.META.get('REMOTE_ADDR')
+            user_agent = request.META.get('HTTP_USER_AGENT', '')
+        
+        return cls.objects.create(
+            admin_user=admin_user,
+            admin_email=admin_user.email,
+            action=action,
+            action_display=action_display,
+            target_user=target_user,
+            target_email=target_user.email if target_user else '',
+            details=details or {},
+            ip_address=ip_address,
+            user_agent=user_agent
+        )
+

@@ -32,7 +32,6 @@ const Icon: React.FC<{ name: string; className?: string }> = ({ name, className 
     'plans': 'M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z',
     'features': 'M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z',
     'coupons': 'M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z',
-    'referrals': 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1',
     'payments': 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z',
     'revenue': 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
     
@@ -114,9 +113,7 @@ export default function AdminSidebar() {
       requiresSetup: false, // TEMP: Disabled for development
       items: [
         { name: 'Users', href: '/admin/users', icon: 'users' },
-        { name: 'Signal Subscriptions', href: '/admin/subscriptions', icon: 'subscriptions' },
-        { name: 'Mentorship Program', href: '/admin/mentorship', icon: 'mentorship' },
-        { name: 'Telegram Queue', href: '/admin/telegram', icon: 'telegram' },
+        { name: 'Subscriptions', href: '/admin/subscriptions-management', icon: 'subscriptions' },
       ]
     },
     {
@@ -126,9 +123,7 @@ export default function AdminSidebar() {
         { name: 'Subscription Plans', href: '/admin/plans', icon: 'plans' },
         { name: 'Features', href: '/admin/features', icon: 'features' },
         { name: 'Coupons', href: '/admin/coupons', icon: 'coupons' },
-        { name: 'Referral Codes', href: '/admin/referrals', icon: 'referrals' },
         { name: 'Payments', href: '/admin/payments', icon: 'payments' },
-        { name: 'Revenue Reports', href: '/admin/revenue', icon: 'revenue' },
       ]
     },
     {
