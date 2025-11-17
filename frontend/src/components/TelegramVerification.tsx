@@ -13,6 +13,7 @@ interface TelegramVerificationProps {
   onError?: (error: string) => void;
   showInline?: boolean;
   autoStart?: boolean;
+  theme?: 'light' | 'dark';
 }
 
 type VerificationStep = 'initial' | 'bot' | 'username' | 'confirm';
@@ -21,7 +22,8 @@ export default function TelegramVerification({
   onVerified,
   onError,
   showInline = false,
-  autoStart = true
+  autoStart = true,
+  theme = 'light'
 }: TelegramVerificationProps) {
   const [verificationCode, setVerificationCode] = useState<string>('');
   const [botUrl, setBotUrl] = useState<string>('');
@@ -210,6 +212,14 @@ export default function TelegramVerification({
       setChecking(true);
       const data = await checkTelegramStatus();
       
+      // Check for verification errors first
+      if (data.verification_error) {
+        setError(data.verification_error);
+        onError?.(data.verification_error);
+        setChecking(false);
+        return;
+      }
+      
       if (data.telegram_verified) {
         setIsVerified(true);
         onVerified?.();
@@ -219,7 +229,7 @@ export default function TelegramVerification({
     } finally {
       setChecking(false);
     }
-  }, [onVerified]);
+  }, [onVerified, onError]);
 
   // Auto-generate code on mount with delay to ensure auth is ready
   useEffect(() => {
@@ -229,6 +239,14 @@ export default function TelegramVerification({
         // First check if already verified
         try {
           const status = await checkTelegramStatus();
+          
+          // Check for verification errors
+          if (status.verification_error) {
+            setError(status.verification_error);
+            onError?.(status.verification_error);
+            return;
+          }
+          
           if (status.telegram_verified) {
             setIsVerified(true);
             onVerified?.();
@@ -297,29 +315,18 @@ export default function TelegramVerification({
 
   if (isVerified) {
     return (
-      <div className="text-center py-6">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-green-50 dark:bg-green-900/20 rounded-full mb-4">
-          <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="text-center py-8">
+        <div className="inline-flex items-center justify-center w-14 h-14 bg-green-50 rounded-full mb-4">
+          <svg className="w-7 h-7 text-[#00B38F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-          🎉 Telegram Verified!
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          Telegram Verified
         </h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          Your Telegram account is now connected and ready
+        <p className="text-sm text-gray-600 mb-4">
+          Your account is connected and ready
         </p>
-        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 max-w-md mx-auto">
-          <p className="text-xs text-green-800 dark:text-green-200 mb-2 font-medium">
-            ✅ What happens next?
-          </p>
-          <ul className="text-xs text-green-700 dark:text-green-300 space-y-1 text-left">
-            <li>• You'll be automatically added to exclusive Telegram groups</li>
-            <li>• Access to course materials and community discussions</li>
-            <li>• Real-time updates and notifications</li>
-            <li>• Direct support from mentors and instructors</li>
-          </ul>
-        </div>
       </div>
     );
   }
@@ -327,12 +334,9 @@ export default function TelegramVerification({
   if (loading && !verificationCode) {
     return (
       <div className="text-center py-8">
-        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#00B38F] mb-4"></div>
-        <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          Preparing verification...
-        </p>
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          Setting up your secure verification code
+        <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-[#00B38F] mb-4"></div>
+        <p className="text-sm text-gray-600">
+          Generating verification link...
         </p>
       </div>
     );
@@ -341,18 +345,12 @@ export default function TelegramVerification({
   if (error) {
     return (
       <div className="text-center py-6">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-red-50 rounded-full mb-4">
-          <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
+        <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-sm text-red-600">{error}</p>
         </div>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-          Verification Failed
-        </h3>
-        <p className="text-sm text-red-600 mb-4">{error}</p>
         <button
           onClick={generateCode}
-          className="px-6 py-2.5 bg-[#00B38F] text-white rounded-lg hover:bg-[#00A87D] transition-colors text-sm font-medium"
+          className="px-5 py-2 bg-[#000856] text-white rounded-lg hover:bg-[#000856]/90 transition-colors text-sm font-medium"
         >
           Try Again
         </button>
@@ -366,36 +364,22 @@ export default function TelegramVerification({
 
   return (
     <div className={containerClass}>
-      {/* Header */}
-      <div className="text-center mb-6">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded-full mb-4">
-          <svg className="w-8 h-8 text-[#0088cc]" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295-.002 0-.003 0-.005 0l.213-3.054 5.56-5.022c.24-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.64-.203-.658-.64.135-.954l11.566-4.458c.538-.196 1.006.128.832.941z"/>
-          </svg>
-        </div>
-        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-          Connect Your Telegram Account
-        </h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-          Quick and easy - just 2 simple steps!
-        </p>
-        <p className="text-xs text-gray-500 dark:text-gray-500">
-          Get instant access to exclusive course groups and community
-        </p>
-      </div>
 
-      {/* Progress Indicator - Simplified for Option C */}
+
+      {/* Waiting indicator */}
       {currentStep === 'bot' && verificationCode && (
         <div className="flex items-center justify-center mb-6">
-          <div className="inline-flex items-center gap-3 px-6 py-3 bg-blue-50 dark:bg-blue-900/20 rounded-full border border-blue-200 dark:border-blue-700">
-            <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
-              <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-bold animate-pulse">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
-              </div>
-              <span className="text-sm font-semibold">Waiting for verification in Telegram...</span>
-            </div>
+          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border ${
+            theme === 'dark' 
+              ? 'bg-blue-500/10 border-blue-500/30' 
+              : 'bg-blue-50 border-blue-200'
+          }`}>
+            <div className={`animate-spin rounded-full h-4 w-4 border-b-2 ${
+              theme === 'dark' ? 'border-blue-400' : 'border-blue-600'
+            }`}></div>
+            <span className={`text-sm ${theme === 'dark' ? 'text-blue-100' : 'text-gray-700'}`}>
+              Waiting for verification...
+            </span>
           </div>
         </div>
       )}
@@ -407,123 +391,114 @@ export default function TelegramVerification({
         </div>
       )}
 
-      {/* Step 1: Open Bot */}
+      {/* Verification Steps */}
       {currentStep === 'bot' && (
         <div className="space-y-4">
-          {/* Show Verification Code Prominently */}
-          <div className="bg-gradient-to-r from-emerald-50 to-blue-50 dark:from-emerald-900/20 dark:to-blue-900/20 border-2 border-emerald-200 dark:border-emerald-800 rounded-lg p-6 text-center">
-            <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-              Your Verification Code
-            </p>
-            <div className="bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 rounded-lg p-4 mb-3 relative group">
-              <p className="text-3xl font-bold font-mono tracking-widest text-emerald-600 dark:text-emerald-400 select-all">
-                {verificationCode}
-              </p>
-              <button
-                onClick={copyToClipboard}
-                className={`absolute top-2 right-2 p-2 rounded-lg transition-all ${
-                  copied 
-                    ? 'bg-emerald-100 dark:bg-emerald-900 opacity-100' 
-                    : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 opacity-0 group-hover:opacity-100'
-                }`}
-                title={copied ? "Copied!" : "Copy code"}
-              >
-                {copied ? (
-                  <svg className="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          {/* Step 1: Open Bot */}
+          <div className={`border rounded-lg p-5 ${
+            theme === 'dark'
+              ? 'border-white/20 bg-white/5'
+              : 'border-gray-200 bg-white'
+          }`}>
+            <div className="flex items-start gap-3 mb-3">
+              <div className="flex-shrink-0 w-6 h-6 bg-[#00B38F] text-white rounded-full flex items-center justify-center text-xs font-bold">
+                1
+              </div>
+              <div className="flex-1">
+                <h4 className={`font-medium mb-1 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                  Open Telegram Bot
+                </h4>
+                <p className={`text-sm mb-3 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
+                  Click below to open {botUsername || 'our bot'}
+                </p>
+                <button
+                  onClick={openTelegramBot}
+                  disabled={!botUsername || !verificationCode}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#0088cc] hover:bg-[#0077b3] text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295-.002 0-.003 0-.005 0l.213-3.054 5.56-5.022c.24-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.64-.203-.658-.64.135-.954l11.566-4.458c.538-.196 1.006.128.832.941z"/>
                   </svg>
-                ) : (
-                  <svg className="w-4 h-4 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
+                  Open Telegram Bot
+                </button>
+                
+                {/* Web User Instructions */}
+                <div className={`mt-3 pt-3 border-t ${
+                  theme === 'dark' ? 'border-white/10' : 'border-gray-200'
+                }`}>
+                  <p className={`text-xs mb-2 ${
+                    theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                  }`}>
+                    <span className={`font-medium ${
+                      theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                    }`}>Using Telegram Web?</span> Click START when the bot opens, then continue to Step 2.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Step 2: Enter Code */}
+          <div className={`border rounded-lg p-5 ${
+            theme === 'dark'
+              ? 'border-white/20 bg-white/5'
+              : 'border-gray-200 bg-white'
+          }`}>
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-6 h-6 bg-[#00B38F] text-white rounded-full flex items-center justify-center text-xs font-bold">
+                2
+              </div>
+              <div className="flex-1">
+                <h4 className={`font-medium mb-1 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                  Send Your Code
+                </h4>
+                <p className={`text-sm mb-3 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
+                  After clicking START, type this code in the chat:
+                </p>
+                <div className={`border rounded-lg p-4 mb-2 ${
+                  theme === 'dark'
+                    ? 'bg-[#000856]/30 border-[#00B38F]/30'
+                    : 'bg-gray-50 border-gray-200'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <code className={`text-xl font-mono font-bold ${
+                      theme === 'dark' ? 'text-white' : 'text-[#000856]'
+                    }`}>
+                      {verificationCode}
+                    </code>
+                    <button
+                      onClick={copyToClipboard}
+                      className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                        theme === 'dark'
+                          ? 'bg-[#00B38F] hover:bg-[#00A87D] text-white'
+                          : 'bg-white border border-gray-200 hover:bg-gray-50 text-gray-700'
+                      }`}
+                    >
+                      {copied ? 'Copied!' : 'Copy'}
+                    </button>
+                  </div>
+                </div>
+                {timeLeft > 0 && (
+                  <p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                    Code expires in {formatTimeLeft(timeLeft)}
+                  </p>
                 )}
-              </button>
+              </div>
             </div>
-            <div className="flex items-center justify-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span>Expires in {formatTimeLeft(timeLeft)}</span>
-            </div>
-          </div>
-
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-            <div className="mb-4">
-              <p className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-3 flex items-center gap-2">
-                <span className="flex items-center justify-center w-6 h-6 bg-blue-600 text-white rounded-full text-xs font-bold">1</span>
-                Open Telegram Bot
-              </p>
-              <p className="text-sm text-blue-800 dark:text-blue-200 mb-3">
-                Click the button below to open {botUsername || 'our bot'} in Telegram
-              </p>
-            </div>
-            
-            <button
-              onClick={openTelegramBot}
-              disabled={!botUsername || !verificationCode}
-              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-[#0088cc] hover:bg-[#0077b3] text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-            >
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295-.002 0-.003 0-.005 0l.213-3.054 5.56-5.022c.24-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.64-.203-.658-.64.135-.954l11.566-4.458c.538-.196 1.006.128.832.941z"/>
-              </svg>
-              Open {botUsername || 'Telegram Bot'}
-            </button>
-          </div>
-
-          <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-4">
-            <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-100 mb-2 flex items-center gap-2">
-              <span className="flex items-center justify-center w-6 h-6 bg-emerald-600 text-white rounded-full text-xs font-bold">2</span>
-              Type Your Code in Telegram
-            </p>
-            <p className="text-sm text-emerald-800 dark:text-emerald-200 mb-3">
-              After opening the bot and clicking START, type or paste your code:
-            </p>
-            <div className="bg-white dark:bg-gray-800 rounded p-3 mb-3 border border-emerald-200 dark:border-emerald-700">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 font-mono">Type in Telegram chat:</p>
-              <p className="text-lg font-bold font-mono text-gray-900 dark:text-white select-all">
-                {verificationCode}
-              </p>
-            </div>
-            <ul className="text-xs text-emerald-700 dark:text-emerald-300 space-y-1.5 ml-4 list-disc">
-              <li>Click START button when you open the bot</li>
-              <li>Simply type or paste the code above</li>
-              <li>The bot will verify instantly!</li>
-            </ul>
-          </div>
-          
-          <div className="text-center">
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-              💡 This page will automatically detect when you're verified
-            </p>
           </div>
         </div>
       )}
 
-      {/* Timer - Show below code display */}
-      {verificationCode && timeLeft > 0 && currentStep === 'bot' && (
-        <div className="mt-4 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-            <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <p className="text-sm text-gray-600 dark:text-gray-300 font-medium">
-              Code expires in <span className="text-emerald-600 dark:text-emerald-400 font-mono">{formatTimeLeft(timeLeft)}</span>
-            </p>
-          </div>
-        </div>
-      )}
+      {/* Expired code */}
       {timeLeft === 0 && verificationCode && (
-        <div className="mt-4 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-            <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <p className="text-sm text-red-600 dark:text-red-400">
-              Code expired.{' '}
-              <button onClick={generateCode} className="underline font-semibold hover:text-red-700 dark:hover:text-red-300">
-                Generate new code
-              </button>
+        <div className="mt-4">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+            <p className="text-sm text-red-600 mb-2">
+              Code expired
             </p>
+            <button onClick={generateCode} className="text-sm text-red-700 font-medium hover:underline">
+              Generate new code
+            </button>
           </div>
         </div>
       )}

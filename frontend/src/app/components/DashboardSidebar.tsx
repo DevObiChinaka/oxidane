@@ -3,7 +3,12 @@
 import { useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
 
-export default function DashboardSidebar() {
+interface DashboardSidebarProps {
+  isMobileMenuOpen?: boolean;
+  setIsMobileMenuOpen?: (open: boolean) => void;
+}
+
+export default function DashboardSidebar({ isMobileMenuOpen = false, setIsMobileMenuOpen }: DashboardSidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -95,8 +100,37 @@ export default function DashboardSidebar() {
   ];
 
   return (
-    <aside className="fixed left-0 top-0 h-full w-72 bg-white border-r border-gray-200 z-40 flex flex-col">
-      {/* Logo Section */}
+    <>
+      {/* Mobile Backdrop */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-gray-900/50 z-40 lg:hidden"
+          onClick={() => setIsMobileMenuOpen?.(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside className={`
+        fixed lg:static inset-y-0 left-0 z-50
+        w-72 bg-white border-r border-gray-200 
+        flex flex-col overflow-y-auto
+        transform transition-transform duration-300 ease-in-out
+        lg:translate-x-0
+        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
+        {/* Mobile Close Button */}
+        <div className="lg:hidden absolute top-4 right-4 z-10">
+          <button
+            onClick={() => setIsMobileMenuOpen?.(false)}
+            className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Logo Section */}
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center space-x-3">
           <div className="w-16 h-16 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
@@ -122,7 +156,10 @@ export default function DashboardSidebar() {
         {menuItems.map((item) => (
           <button
             key={item.path}
-            onClick={() => router.push(item.path)}
+            onClick={() => {
+              router.push(item.path);
+              setIsMobileMenuOpen?.(false); // Close menu on navigation
+            }}
             className={`w-full group relative rounded-lg transition-colors ${
               isActive(item.path)
                 ? 'bg-gray-100 text-gray-900'
@@ -177,5 +214,6 @@ export default function DashboardSidebar() {
         </button>
       </div>
     </aside>
+    </>
   );
 }

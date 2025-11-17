@@ -858,8 +858,9 @@ class VerifyPaymentView(APIView):
                         logger.info(f"Subscription activated for user {request.user.id}: {plan.name}")
                         
                         # Trigger Celery tasks
+                        # NOTE: Don't trigger add_user_to_telegram_groups here - webhook will handle it
+                        # to avoid duplicate invite links
                         activate_subscription.delay(payment.id)
-                        add_user_to_telegram_groups.delay(request.user.id, str(plan.id))
                         send_payment_receipt_email.delay(payment.id)
                         
                     except SubscriptionPlan.DoesNotExist:

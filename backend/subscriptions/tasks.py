@@ -266,6 +266,14 @@ def add_user_to_telegram_groups(self, user_id, plan_id):
     Retries: 3 times with 60-second delay
     """
     try:
+        # Idempotency check: Use cache to prevent duplicate processing within 2 minutes
+        from django.core.cache import cache
+        cache_key = f"telegram_invite_sent:{user_id}:{plan_id}"
+        
+        if cache.get(cache_key):
+            logger.info(f"⏭️ Skipping duplicate: Invite already sent for user {user_id}, plan {plan_id}")
+            return {'success': True, 'message': 'Already processed', 'duplicate': True}
+        
         logger.info(f"Adding user {user_id} to Telegram groups for plan {plan_id}")
         
         # Get user and plan
@@ -472,6 +480,10 @@ def add_user_to_telegram_groups(self, user_id, plan_id):
             
             except Exception as e:
                 logger.error(f"Error sending welcome message: {str(e)}")
+        
+        # Set cache to prevent duplicate processing (2 minute window)
+        cache.set(cache_key, True, timeout=120)
+        logger.info(f"✅ Marked as processed: {cache_key}")
         
         return {
             'success': True,
@@ -1188,15 +1200,37 @@ def _process_verification_code(verification_code, telegram_user_id, telegram_use
             )
             return {'success': False, 'message': 'Invalid code'}
         
+        # Check if this Telegram account is already linked to another user
+        existing_profile = BillingProfile.objects.filter(
+            telegram_user_id=telegram_user_id
+        ).exclude(id=billing_profile.id).first()
+        
+        if existing_profile:
+            error_msg = (
+                "❌ This Telegram account is already linked to another user.\n\n"
+                f"Your Telegram ID ({telegram_user_id}) is already verified with "
+                f"the account: {existing_profile.user.email}\n\n"
+                "Please contact support if you believe this is an error."
+            )
+            _send_telegram_message(chat_id, error_msg, bot_token)
+            
+            # Store error in BillingProfile so status endpoint can show it
+            billing_profile.telegram_verification_error = f"This Telegram account is already linked to {existing_profile.user.email}"
+            billing_profile.save(update_fields=['telegram_verification_error'])
+            
+            return {'success': False, 'message': 'Duplicate Telegram account'}
+        
         # Mark as verified
         billing_profile.telegram_user_id = telegram_user_id
         billing_profile.telegram_username = telegram_username if telegram_username else f"user_{telegram_user_id}"
         billing_profile.telegram_verified = True
+        billing_profile.telegram_verified_at = timezone.now()
         billing_profile.verification_code = None  # Clear code
         billing_profile.verification_code_expires_at = None
+        billing_profile.telegram_verification_error = None  # Clear any errors
         billing_profile.save(update_fields=[
-            'telegram_user_id', 'telegram_username', 'telegram_verified',
-            'verification_code', 'verification_code_expires_at'
+            'telegram_user_id', 'telegram_username', 'telegram_verified', 'telegram_verified_at',
+            'verification_code', 'verification_code_expires_at', 'telegram_verification_error'
         ])
         
         # Send success message

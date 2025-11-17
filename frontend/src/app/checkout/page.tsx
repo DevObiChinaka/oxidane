@@ -602,6 +602,7 @@ function CheckoutContent() {
                     onError={(err) => setError(err)}
                     showInline={false}
                     autoStart={true}
+                    theme="dark"
                   />
                 </div>
               )}

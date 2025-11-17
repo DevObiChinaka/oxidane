@@ -12,6 +12,7 @@ import {
 import { apiGet, apiPost, apiDelete } from '@/lib/api';
 import DashboardSidebar from '../components/DashboardSidebar';
 import { useUserAuth } from '../contexts/UserAuthContext';
+import TelegramVerification from '@/components/TelegramVerification';
 
 interface BillingProfile {
   verified: boolean;
@@ -41,6 +42,7 @@ export default function BillingPage() {
   const [billingProfile, setBillingProfile] = useState<BillingProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     fetchBillingProfile();
@@ -82,9 +84,9 @@ export default function BillingPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <DashboardSidebar />
-        <div className="lg:ml-72 flex-1 flex items-center justify-center min-h-screen">
+      <div className="flex min-h-screen bg-gray-50">
+        <DashboardSidebar isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen} />
+        <div className="flex-1 flex items-center justify-center min-h-screen">
           <div className="flex flex-col items-center space-y-4">
             <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-[#00B38F]"></div>
             <p className="text-gray-600">Loading billing information...</p>
@@ -95,13 +97,25 @@ export default function BillingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <DashboardSidebar />
+    <div className="flex min-h-screen bg-gray-50">
+      <DashboardSidebar isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen} />
 
-      <main className="lg:ml-72 min-h-screen">
+      <main className="flex-1 min-h-screen lg:ml-0">
+        {/* Mobile Menu Button */}
+        <div className="lg:hidden fixed top-4 left-4 z-30">
+          <button
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="p-2 rounded-lg bg-white border border-gray-200 shadow-sm hover:bg-gray-50"
+          >
+            <svg className="w-6 h-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+        </div>
+
         {/* Header */}
         <header className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
-          <div>
+          <div className="ml-12 lg:ml-0">
             <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900">Billing</h2>
             <p className="text-gray-500 text-sm mt-1">Manage your payment methods and Telegram access</p>
           </div>
@@ -250,63 +264,9 @@ function TelegramVerificationSection({
   billingProfile: BillingProfile | null;
   onUpdate: () => void;
 }) {
-  const [verificationCode, setVerificationCode] = useState<string | null>(null);
-  const [expiresAt, setExpiresAt] = useState<string | null>(null);
+  const [showUnlinkConfirm, setShowUnlinkConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
-  const [showUnlinkConfirm, setShowUnlinkConfirm] = useState(false);
-
-  // Clear polling on unmount
-  useEffect(() => {
-    return () => {
-      if (pollingInterval) {
-        clearInterval(pollingInterval);
-      }
-    };
-  }, [pollingInterval]);
-
-  const generateCode = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await apiPost('/billing/telegram/generate-code/');
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to generate verification code');
-      }
-
-      const data = await response.json();
-      setVerificationCode(data.verification_code);
-      setExpiresAt(data.expires_at);
-      
-      // Start polling for verification status
-      startPolling();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate code');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const startPolling = () => {
-    const interval = setInterval(async () => {
-      const response = await apiGet('/billing/telegram/status/');
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.verified) {
-          // Stop polling and update parent
-          if (pollingInterval) clearInterval(pollingInterval);
-          onUpdate();
-        }
-      }
-    }, 3000); // Poll every 3 seconds
-    
-    setPollingInterval(interval);
-  };
 
   const unlinkTelegram = async () => {
     try {
@@ -329,11 +289,7 @@ function TelegramVerificationSection({
     }
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-  };
-
-  // If verified, show verification info
+  // If verified, show verification info with unlink option
   if (billingProfile?.verified) {
     return (
       <div>
@@ -414,7 +370,7 @@ function TelegramVerificationSection({
     );
   }
 
-  // If not verified, show verification flow
+  // If not verified, use the modern TelegramVerification component
   return (
     <div>
       <div className="mb-6">
@@ -424,126 +380,45 @@ function TelegramVerificationSection({
         </p>
       </div>
 
+      {/* Modern Telegram Verification Component */}
+      <div className="bg-white border border-gray-200 rounded-lg p-6">
+        <TelegramVerification
+          onVerified={() => {
+            onUpdate();
+          }}
+          onError={(err) => setError(err)}
+          showInline={true}
+          autoStart={true}
+        />
+      </div>
+
+      {/* Error Display */}
       {error && (
-        <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-4 flex items-start">
+        <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-4 flex items-start">
           <ExclamationCircleIcon className="w-5 h-5 text-red-600 mt-0.5 mr-3 flex-shrink-0" />
           <p className="text-sm text-red-700">{error}</p>
         </div>
       )}
 
-      {!verificationCode ? (
-        <div className="text-center py-12">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-8 max-w-md mx-auto">
-            <UserGroupIcon className="w-16 h-16 text-blue-600 mx-auto mb-4" />
-            <h4 className="text-lg font-semibold text-gray-900 mb-2">Get Started</h4>
-            <p className="text-gray-600 mb-6">
-              Generate a verification code to link your Telegram account and unlock premium features.
+      {/* Helpful Instructions */}
+      <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-start gap-3">
+          <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div className="flex-1">
+            <h4 className="font-medium text-gray-900 text-sm mb-1">Quick & Easy Process</h4>
+            <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside">
+              <li>Click "Generate Verification Link" below</li>
+              <li>Click "Open Telegram Bot" to launch Telegram</li>
+              <li>Tap "START" in the bot chat - that's it!</li>
+            </ol>
+            <p className="text-xs text-gray-500 mt-2">
+              Your verification happens automatically - no need to type any codes!
             </p>
-            <button
-              onClick={generateCode}
-              disabled={loading}
-              className="px-6 py-2.5 bg-[#000856] text-white rounded-lg font-medium hover:bg-[#000856]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {loading ? 'Generating...' : 'Generate Verification Code'}
-            </button>
           </div>
         </div>
-      ) : (
-        <div className="max-w-2xl mx-auto space-y-6">
-          {/* Step 1: Copy Code */}
-          <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <div className="flex items-start mb-4">
-              <div className="w-8 h-8 bg-[#000856] text-white rounded-full flex items-center justify-center font-bold mr-3">
-                1
-              </div>
-              <div className="flex-1">
-                <h4 className="font-semibold text-gray-900 mb-1">Your Verification Code</h4>
-                <p className="text-sm text-gray-600">Copy this code - you'll need it in step 3</p>
-              </div>
-            </div>
-            
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-              <div className="flex items-center justify-between mb-2">
-                <code className="text-2xl font-mono font-bold text-[#000856]">{verificationCode}</code>
-                <button
-                  onClick={() => copyToClipboard(verificationCode)}
-                  className="px-4 py-2 bg-[#000856] text-white rounded-lg text-sm font-medium hover:bg-[#000856]/90 transition-colors"
-                >
-                  Copy Code
-                </button>
-              </div>
-              <p className="text-xs text-gray-500">
-                Expires: {expiresAt ? new Date(expiresAt).toLocaleString() : 'N/A'}
-              </p>
-            </div>
-          </div>
-
-          {/* Step 2: Open Bot */}
-          <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <div className="flex items-start mb-4">
-              <div className="w-8 h-8 bg-[#000856] text-white rounded-full flex items-center justify-center font-bold mr-3">
-                2
-              </div>
-              <div className="flex-1">
-                <h4 className="font-semibold text-gray-900 mb-1">Open Telegram Bot</h4>
-                <p className="text-sm text-gray-600 mb-3">Click the button below to open our bot</p>
-                <a 
-                  href="https://t.me/OxiWorldBot" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors gap-2"
-                >
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.161l-1.626 7.664c-.122.549-.444.681-.9.424l-2.487-1.833-1.199 1.154c-.133.133-.244.244-.5.244l.178-2.533 4.615-4.168c.2-.178-.044-.278-.311-.1l-5.706 3.593-2.455-.766c-.533-.167-.544-.533.111-.789l9.589-3.696c.444-.167.833.1.687.789z"/>
-                  </svg>
-                  Open @OxiWorldBot
-                </a>
-              </div>
-            </div>
-          </div>
-
-          {/* Step 3: Send Command */}
-          <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <div className="flex items-start mb-4">
-              <div className="w-8 h-8 bg-[#000856] text-white rounded-full flex items-center justify-center font-bold mr-3">
-                3
-              </div>
-              <div className="flex-1">
-                <h4 className="font-semibold text-gray-900 mb-1">Send Verification Command</h4>
-                <p className="text-sm text-gray-600 mb-3">Type this command in the bot chat:</p>
-                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                  <code className="text-sm font-mono text-gray-900">/verify {verificationCode}</code>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Waiting Status */}
-          <div className="text-center">
-            <div className="inline-flex items-center px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-3"></div>
-              <span className="text-sm text-blue-900 font-medium">
-                Waiting for verification...
-              </span>
-            </div>
-            <p className="text-xs text-gray-500 mt-2">We're checking every 3 seconds</p>
-          </div>
-
-          {/* Cancel Button */}
-          <div className="text-center pt-4 border-t border-gray-200">
-            <button
-              onClick={() => {
-                setVerificationCode(null);
-                setExpiresAt(null);
-                if (pollingInterval) clearInterval(pollingInterval);
-              }}
-              className="text-sm text-gray-600 hover:text-gray-900 font-medium"
-            >
-              Cancel and generate new code
-            </button>
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

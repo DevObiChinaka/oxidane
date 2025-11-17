@@ -215,9 +215,11 @@ def telegram_verification_status(request):
         
         return Response({
             'verified': billing_profile.telegram_verified,
+            'telegram_verified': billing_profile.telegram_verified,  # For frontend compatibility
             'telegram_username': billing_profile.telegram_username or '',
             'telegram_user_id': billing_profile.telegram_user_id or '',
             'verified_at': billing_profile.telegram_verified_at,
+            'verification_error': billing_profile.telegram_verification_error or None,
             'active_subscriptions': subscription_data,
             'has_pending_code': bool(
                 billing_profile.verification_code and 

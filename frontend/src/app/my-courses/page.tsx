@@ -28,6 +28,7 @@ export default function MyCoursesPage() {
   const [filter, setFilter] = useState<'all' | 'in-progress' | 'completed'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     checkAuthAndFetchCourses();
@@ -97,25 +98,44 @@ export default function MyCoursesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="w-12 h-12 border-3 border-gray-200 border-t-[#00B38F] rounded-full animate-spin"></div>
-          <p className="text-gray-600 text-sm">Loading courses...</p>
+      <div className="flex min-h-screen bg-gray-50">
+        <DashboardSidebar 
+          isMobileMenuOpen={isMobileMenuOpen}
+          setIsMobileMenuOpen={setIsMobileMenuOpen}
+        />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="flex flex-col items-center space-y-4">
+            <div className="w-12 h-12 border-3 border-gray-200 border-t-[#00B38F] rounded-full animate-spin"></div>
+            <p className="text-gray-600 text-sm">Loading courses...</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <DashboardSidebar />
+    <div className="flex min-h-screen bg-gray-50">
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setIsMobileMenuOpen(true)}
+        className="lg:hidden fixed top-4 left-4 z-30 p-2 bg-white rounded-lg shadow-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+      >
+        <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+
+      <DashboardSidebar 
+        isMobileMenuOpen={isMobileMenuOpen}
+        setIsMobileMenuOpen={setIsMobileMenuOpen}
+      />
 
       {/* Main Content */}
-      <main className="lg:ml-72 min-h-screen">
+      <main className="flex-1 min-h-screen">
         {/* Clean Header */}
         <header className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-            <div>
+            <div className="ml-12 lg:ml-0">
               <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-1 sm:mb-2">My Learning Journey</h2>
               <p className="text-gray-500 text-sm">Track your progress and continue where you left off</p>
             </div>

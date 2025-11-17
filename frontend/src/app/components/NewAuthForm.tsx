@@ -451,6 +451,11 @@ export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps)
           }
           sessionStorage.removeItem('login_session_token');
           
+          // Clear any potential sensitive data from browser history
+          if (window.history.replaceState) {
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }
+          
           // Check for redirect parameter
           const redirectPath = searchParams.get('redirect');
           const planId = searchParams.get('plan');
@@ -885,7 +890,7 @@ export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps)
           <div className="absolute inset-[1px] rounded-3xl border border-white/10"></div>
           
           <div className="relative z-10">
-          <form className="space-y-6" onSubmit={handleSubmit}>
+          <form className="space-y-6" onSubmit={handleSubmit} method="POST" autoComplete="on">
             {!isLogin && (
               <>
                 <div className="grid grid-cols-2 gap-4">
@@ -952,6 +957,8 @@ export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps)
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    spellCheck="false"
+                    data-lpignore="true"
                     className={`appearance-none block w-full px-5 py-4 pr-12 bg-white/10 border ${
                       !isLogin && email && emailValidation.accountExists 
                         ? 'border-yellow-400/50' 
@@ -1032,6 +1039,8 @@ export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps)
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    spellCheck="false"
+                    data-lpignore="true"
                     className="appearance-none block w-full px-5 py-4 pr-12 bg-white/10 border border-white/20 rounded-2xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#00B38F]/50 focus:border-[#00B38F] backdrop-blur-sm transition-all duration-300 group-hover:bg-white/15"
                     placeholder="Enter your password"
                   />
@@ -1082,6 +1091,8 @@ export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps)
                       required
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
+                      spellCheck="false"
+                      data-lpignore="true"
                       className="appearance-none block w-full px-5 py-4 pr-12 bg-white/10 border border-white/20 rounded-2xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-[#00B38F]/50 focus:border-[#00B38F] backdrop-blur-sm transition-all duration-300 group-hover:bg-white/15"
                       placeholder="Confirm your password"
                     />

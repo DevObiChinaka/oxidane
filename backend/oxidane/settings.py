@@ -388,9 +388,6 @@ CACHES = {
             'MAX_CONNECTIONS': 5,  # Reduced from 50 to 5 for free tier
             'CONNECTION_POOL_KWARGS': {
                 'max_connections': 5,  # Reduced from 50 to 5
-                # SSL support for Redis Cloud
-                'connection_class': 'redis.connection.SSLConnection',
-                'ssl_cert_reqs': None,
             },
             'IGNORE_EXCEPTIONS': False,  # Show Redis errors to debug
         },

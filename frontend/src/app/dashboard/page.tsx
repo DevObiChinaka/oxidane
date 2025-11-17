@@ -29,6 +29,7 @@ export default function UserDashboard() {
   const [loading, setLoading] = useState(true);
   const [coursesCount, setCoursesCount] = useState(0);
   const [subscriptionData, setSubscriptionData] = useState<SubscriptionData | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -119,29 +120,44 @@ export default function UserDashboard() {
 
   if (loading) {
     return (
-      <div className="ml-72 min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-3 border-gray-200 border-t-[#00B38F] rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 text-sm">Loading dashboard...</p>
+      <div className="flex min-h-screen bg-gray-50">
+        <DashboardSidebar isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen} />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-12 h-12 border-3 border-gray-200 border-t-[#00B38F] rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600 text-sm">Loading dashboard...</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="ml-72 min-h-screen bg-gray-50">
-      <DashboardSidebar />
+    <div className="flex min-h-screen bg-gray-50">
+      <DashboardSidebar isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen} />
 
       {/* Main Content */}
-      <main className="min-h-screen">
+      <main className="flex-1 min-h-screen lg:ml-0">
+        {/* Mobile Menu Button */}
+        <div className="lg:hidden fixed top-4 left-4 z-30">
+          <button
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="p-2 rounded-lg bg-white border border-gray-200 shadow-sm hover:bg-gray-50"
+          >
+            <svg className="w-6 h-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+        </div>
+
         {/* Top Header */}
-        <header className="bg-white border-b border-gray-200 px-8 py-8">
+        <header className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-semibold text-gray-900">
+            <div className="ml-12 lg:ml-0">
+              <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">
                 Welcome back, {user?.first_name || user?.name?.split(' ')[0] || 'User'}
               </h1>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-xs sm:text-sm text-gray-500 mt-1">
                 {subscriptionData?.has_active_subscription 
                   ? `You have ${subscriptionData.active_count} active subscription${subscriptionData.active_count > 1 ? 's' : ''}` 
                   : 'Manage your account and subscriptions'}
@@ -160,7 +176,7 @@ export default function UserDashboard() {
         </header>
 
         {/* Dashboard Content */}
-        <div className="p-8">
+        <div className="p-4 sm:p-6 lg:p-8">
           <div className="max-w-7xl mx-auto space-y-6">
               {/* Stats Cards - Clean and Minimal */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

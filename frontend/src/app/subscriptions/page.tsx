@@ -42,6 +42,7 @@ export default function SubscriptionsPage() {
   const [conversionRate, setConversionRate] = useState<number>(1650); // Default NGN rate
   const [convertedAmounts, setConvertedAmounts] = useState<{ [key: string]: number }>({});
   const [convertedPaidAmounts, setConvertedPaidAmounts] = useState<{ [key: string]: number }>({});
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     checkAuthAndFetchSubscriptions();
@@ -284,9 +285,9 @@ export default function SubscriptionsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <DashboardSidebar />
-        <div className="ml-72 flex-1 flex items-center justify-center min-h-screen">
+      <div className="flex min-h-screen bg-gray-50">
+        <DashboardSidebar isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen} />
+        <div className="flex-1 flex items-center justify-center min-h-screen">
           <div className="flex flex-col items-center space-y-4">
             <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-[#00B38F]"></div>
             <p className="text-gray-600">Loading subscriptions...</p>
@@ -297,14 +298,26 @@ export default function SubscriptionsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <DashboardSidebar />
+    <div className="flex min-h-screen bg-gray-50">
+      <DashboardSidebar isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen} />
 
       {/* Main Content */}
-      <main className="lg:ml-72 min-h-screen">
+      <main className="flex-1 min-h-screen lg:ml-0">
+        {/* Mobile Menu Button */}
+        <div className="lg:hidden fixed top-4 left-4 z-30">
+          <button
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="p-2 rounded-lg bg-white border border-gray-200 shadow-sm hover:bg-gray-50"
+          >
+            <svg className="w-6 h-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+        </div>
+
         {/* Header */}
         <header className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ml-12 lg:ml-0">
             <div>
               <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900">My Subscriptions</h2>
               <p className="text-gray-500 text-sm mt-1">Manage your active plans and billing</p>

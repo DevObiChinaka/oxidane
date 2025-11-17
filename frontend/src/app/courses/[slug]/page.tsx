@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import DashboardSidebar from '@/app/components/DashboardSidebar';
 import { apiGet, apiPost } from '@/lib/api';
 
 interface Lesson {
@@ -50,55 +51,14 @@ export default function CourseDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [showVideo, setShowVideo] = useState(false);
-  const [videoTimeElapsed, setVideoTimeElapsed] = useState(0);
-  const playerRef = useRef<any>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [expandedLessons, setExpandedLessons] = useState(true); // For collapsible lesson list
 
   useEffect(() => {
     if (slug) {
       checkAuthAndFetchCourse();
     }
   }, [slug]);
-
-  useEffect(() => {
-    // Cleanup timeout on unmount
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, []);
-
-  // YouTube API player control
-  useEffect(() => {
-    if (showVideo && videoTimeElapsed === 0) {
-      // Load YouTube IFrame API
-      const tag = document.createElement('script');
-      tag.src = 'https://www.youtube.com/iframe_api';
-      const firstScriptTag = document.getElementsByTagName('script')[0];
-      firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
-
-      // Set up YouTube player
-      (window as any).onYouTubeIframeAPIReady = () => {
-        const previewLesson = getFirstPreviewLesson();
-        if (previewLesson?.video_source === 'youtube' && previewLesson.youtube_video_id) {
-          playerRef.current = new (window as any).YT.Player('youtube-player', {
-            events: {
-              onReady: (event: any) => {
-                event.target.playVideo();
-                // Stop after 10 seconds
-                timeoutRef.current = setTimeout(() => {
-                  event.target.pauseVideo();
-                  setVideoTimeElapsed(10);
-                }, 10000);
-              },
-            },
-          });
-        }
-      };
-    }
-  }, [showVideo]);
 
   const checkAuthAndFetchCourse = async () => {
     try {
@@ -201,26 +161,13 @@ export default function CourseDetailPage() {
   const getDifficultyColor = (level: string) => {
     switch (level) {
       case 'beginner':
-        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+        return 'bg-gray-100 text-gray-700 border-gray-200';
       case 'intermediate':
-        return 'bg-amber-50 text-amber-700 border-amber-200';
+        return 'bg-gray-100 text-gray-700 border-gray-200';
       case 'advanced':
-        return 'bg-rose-50 text-rose-700 border-rose-200';
+        return 'bg-gray-100 text-gray-700 border-gray-200';
       default:
-        return 'bg-gray-50 text-gray-700 border-gray-200';
-    }
-  };
-
-  const getDifficultyIcon = (level: string) => {
-    switch (level) {
-      case 'beginner':
-        return '🌱';
-      case 'intermediate':
-        return '⚡';
-      case 'advanced':
-        return '🚀';
-      default:
-        return '📚';
+        return 'bg-gray-100 text-gray-700 border-gray-200';
     }
   };
 
@@ -233,50 +180,74 @@ export default function CourseDetailPage() {
     return lesson.video_url || '';
   };
 
-  const getFirstPreviewLesson = () => {
-    return course?.lessons.find(lesson => lesson.is_preview) || course?.lessons[0];
-  };
-
-  const handlePlayPreview = () => {
-    setShowVideo(true);
-    setVideoTimeElapsed(0);
-  };
-
-  const handleReplayPreview = () => {
-    setVideoTimeElapsed(0);
-    setShowVideo(false);
-    setTimeout(() => setShowVideo(true), 100);
+  const getVideoThumbnail = (lesson: Lesson) => {
+    // YouTube thumbnail
+    if (lesson.video_source === 'youtube' && lesson.youtube_video_id) {
+      return `https://img.youtube.com/vi/${lesson.youtube_video_id}/mqdefault.jpg`;
+    }
+    // Vimeo thumbnail would require API call, so return null for now
+    // For uploaded videos, return null (will show placeholder)
+    return null;
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#00B38F]"></div>
+      <div className="flex min-h-screen bg-gray-50">
+        <DashboardSidebar 
+          isMobileMenuOpen={isMobileMenuOpen}
+          setIsMobileMenuOpen={setIsMobileMenuOpen}
+        />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#00B38F]"></div>
+        </div>
       </div>
     );
   }
 
   if (error || !course) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">{error || 'Course not found'}</h2>
-          <button
-            onClick={() => router.push('/courses')}
-            className="px-6 py-3 bg-[#00B38F] hover:bg-[#00A87D] text-white rounded-lg transition-all"
-          >
-            Back to Courses
-          </button>
+      <div className="flex min-h-screen bg-gray-50">
+        <DashboardSidebar 
+          isMobileMenuOpen={isMobileMenuOpen}
+          setIsMobileMenuOpen={setIsMobileMenuOpen}
+        />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">{error || 'Course not found'}</h2>
+            <button
+              onClick={() => router.push('/courses')}
+              className="px-6 py-3 bg-[#00B38F] hover:bg-[#00A87D] text-white rounded-lg transition-all"
+            >
+              Back to Courses
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
-  const previewLesson = getFirstPreviewLesson();
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
-      {/* Success Toast */}
+    <div className="flex min-h-screen bg-gray-50">
+      <DashboardSidebar 
+        isMobileMenuOpen={isMobileMenuOpen}
+        setIsMobileMenuOpen={setIsMobileMenuOpen}
+      />
+
+      {/* Main Content */}
+      <main className="flex-1 min-h-screen">
+        {/* Mobile Menu Button */}
+        <div className="lg:hidden fixed top-4 left-4 z-30">
+          <button
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="p-2 rounded-lg bg-white border border-gray-200 shadow-sm hover:bg-gray-50"
+          >
+            <svg className="w-6 h-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+        </div>
+
+          {/* Success Toast */}
       {successMessage && (
         <div className="fixed top-6 right-6 z-50 animate-slide-in-right">
           <div className="bg-white border-l-4 border-emerald-500 shadow-xl rounded-lg px-6 py-4 flex items-center space-x-3 max-w-md">
@@ -317,417 +288,230 @@ export default function CourseDetailPage() {
         </div>
       )}
 
-      {/* Navigation Header */}
-      <div className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <button
-            onClick={() => router.push('/courses')}
-            className="group inline-flex items-center space-x-2 text-gray-600 hover:text-[#00B38F] transition-colors"
-          >
-            <svg className="w-5 h-5 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            <span className="font-medium">Back to Courses</span>
-          </button>
-        </div>
-      </div>
+      {/* Content Wrapper */}
+      <div className="p-4 sm:p-6 lg:p-8">
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Back Navigation */}
+          <div>
+            <button
+              onClick={() => router.push('/courses')}
+              className="inline-flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors ml-12 lg:ml-0"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              <span className="font-medium">Back to Courses</span>
+            </button>
+          </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* Left Column - Main Content */}
-          <div className="lg:col-span-2 space-y-6">
+      {/* Course Header */}
+      <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6">
+        <div className="flex flex-col gap-4 sm:gap-6">
+          <div className="flex-1">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2 sm:mb-3">{course.title}</h1>
+            <p className="text-sm sm:text-base text-gray-600 leading-relaxed mb-3 sm:mb-4">{course.short_description}</p>
             
-            {/* Video Preview Section */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="relative aspect-video bg-gradient-to-br from-gray-900 to-gray-800">
-                {showVideo && previewLesson ? (
-                  <iframe
-                    id="youtube-player"
-                    src={getVideoEmbedUrl(previewLesson)}
-                    className="absolute inset-0 w-full h-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-[#000856] via-[#001B4D] to-[#000856] text-white">
-                    {videoTimeElapsed > 0 ? (
-                      <div className="text-center space-y-4">
-                        <div className="w-20 h-20 mx-auto bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/20">
-                          <svg className="w-10 h-10 text-[#00B38F]" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-                          </svg>
-                        </div>
-                        <div>
-                          <p className="text-lg font-semibold mb-2">Preview Ended</p>
-                          <p className="text-sm text-gray-300 mb-4">Want to see more?</p>
-                          <button
-                            onClick={handleReplayPreview}
-                            className="px-6 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 rounded-lg transition-all"
-                          >
-                            Replay Preview
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-center space-y-4">
-                        <div className="w-20 h-20 mx-auto bg-white/10 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/20">
-                          <svg className="w-10 h-10 text-[#00B38F]" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-                          </svg>
-                        </div>
-                        <div>
-                          <p className="text-lg font-semibold mb-2">Course Preview Available</p>
-                          <p className="text-sm text-gray-300 mb-4">Watch a 10-second preview</p>
-                          <button
-                            onClick={handlePlayPreview}
-                            className="px-6 py-2.5 bg-gradient-to-r from-[#00B38F] to-[#00A87D] hover:from-[#00C99F] hover:to-[#00B38F] rounded-lg transition-all shadow-lg hover:shadow-xl"
-                          >
-                            Play Preview
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-                
-                {/* Floating Badges */}
-                <div className="absolute top-4 left-4 flex items-center space-x-2">
-                  <span className={`px-3 py-1.5 rounded-full text-xs font-semibold backdrop-blur-md border ${
-                    course.course_type === 'free' 
-                      ? 'bg-emerald-500/90 text-white border-emerald-400/50' 
-                      : 'bg-purple-500/90 text-white border-purple-400/50'
-                  }`}>
-                    {course.course_type === 'free' ? '✓ Free' : '⭐ Premium'}
-                  </span>
-                </div>
+            {/* Course Meta */}
+            <div className="flex flex-wrap gap-3 sm:gap-4 text-xs sm:text-sm">
+              <div className="flex items-center gap-2">
+                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+                <span className="text-gray-700">{course.total_lessons} lessons</span>
               </div>
-            </div>
-
-            {/* Course Header */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <h1 className="text-3xl font-bold text-gray-900 mb-3 leading-tight">{course.title}</h1>
-                  <p className="text-lg text-gray-600 leading-relaxed">{course.short_description}</p>
-                </div>
-                <span className={`ml-4 px-4 py-2 rounded-full text-sm font-semibold border ${getDifficultyColor(course.difficulty_level)}`}>
-                  {getDifficultyIcon(course.difficulty_level)} {course.difficulty_level.charAt(0).toUpperCase() + course.difficulty_level.slice(1)}
+              <div className="flex items-center gap-2">
+                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-gray-700">{course.estimated_duration}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded border border-gray-200">
+                  {course.difficulty_level}
                 </span>
               </div>
-
-              {/* Stats Grid */}
-              <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-gray-200">
-                <div className="text-center">
-                  <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-[#00B38F]/10 to-[#00A87D]/10 rounded-xl mb-2">
-                    <svg className="w-6 h-6 text-[#00B38F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                    </svg>
-                  </div>
-                  <p className="text-2xl font-bold text-gray-900">{course.total_lessons}</p>
-                  <p className="text-sm text-gray-500">Lessons</p>
-                </div>
-                <div className="text-center">
-                  <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-xl mb-2">
-                    <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <p className="text-2xl font-bold text-gray-900">{course.estimated_duration}</p>
-                  <p className="text-sm text-gray-500">Duration</p>
-                </div>
-                <div className="text-center">
-                  <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-purple-500/10 to-purple-600/10 rounded-xl mb-2">
-                    <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
-                  </div>
-                  <p className="text-2xl font-bold text-gray-900">{course.is_enrolled ? 'Enrolled' : 'Open'}</p>
-                  <p className="text-sm text-gray-500">Status</p>
-                </div>
-              </div>
-
-              {/* Progress Bar (if enrolled) */}
-              {course.is_enrolled && course.progress_percentage !== undefined && (
-                <div className="mt-6 pt-6 border-t border-gray-200">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-semibold text-gray-700">Your Progress</span>
-                    <span className="text-2xl font-bold bg-gradient-to-r from-[#00B38F] to-[#00A87D] bg-clip-text text-transparent">
-                      {course.progress_percentage}%
-                    </span>
-                  </div>
-                  <div className="h-2.5 bg-gray-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-[#00B38F] to-[#00C99F] rounded-full transition-all duration-500"
-                      style={{ width: `${course.progress_percentage}%` }}
-                    />
-                  </div>
-                  <p className="text-sm text-gray-500 mt-2">
-                    {course.lessons_completed} of {course.total_lessons} lessons completed
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* About Course */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
-              <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                <div className="w-8 h-8 bg-gradient-to-br from-[#00B38F]/10 to-[#00A87D]/10 rounded-lg flex items-center justify-center mr-3">
-                  <svg className="w-5 h-5 text-[#00B38F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                About This Course
-              </h2>
-              <div className="prose prose-gray max-w-none">
-                <p className="text-gray-600 leading-relaxed whitespace-pre-line">{course.description}</p>
-              </div>
-            </div>
-
-            {/* Course Content */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
-              <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                <div className="w-8 h-8 bg-gradient-to-br from-[#00B38F]/10 to-[#00A87D]/10 rounded-lg flex items-center justify-center mr-3">
-                  <svg className="w-5 h-5 text-[#00B38F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  </svg>
-                </div>
-                Course Curriculum
-              </h2>
-              
-              <div className="space-y-3">
-                {course.lessons.length > 0 ? (
-                  course.lessons.map((lesson) => (
-                    <div
-                      key={lesson.id}
-                      className={`group relative rounded-xl border transition-all duration-200 ${
-                        lesson.is_completed
-                          ? 'bg-emerald-50/50 border-emerald-200 hover:border-emerald-300'
-                          : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-sm'
-                      }`}
-                    >
-                      <div className="p-5">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1 mr-4">
-                            {/* Lesson Header */}
-                            <div className="flex items-center space-x-3 mb-2">
-                              <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-gray-100 to-gray-50 text-gray-700 text-sm font-semibold border border-gray-200">
-                                {lesson.order}
-                              </span>
-                              
-                              {lesson.is_preview && (
-                                <span className="px-2.5 py-1 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-md">
-                                  Free
-                                </span>
-                              )}
-                              
-                              {lesson.is_completed && (
-                                <div className="flex items-center space-x-1 px-2.5 py-1 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-md">
-                                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                  </svg>
-                                  <span>Done</span>
-                                </div>
-                              )}
-
-                              <span className="flex items-center space-x-1 text-gray-500 text-xs">
-                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <span>{lesson.duration}</span>
-                              </span>
-                            </div>
-                            
-                            {/* Lesson Title */}
-                            <h3 className="text-gray-900 font-semibold text-base mb-1 group-hover:text-[#00B38F] transition-colors">
-                              {lesson.title}
-                            </h3>
-                            
-                            {/* Lesson Description */}
-                            {(course.can_access || lesson.is_preview) && (
-                              <p className="text-gray-600 text-sm leading-relaxed">{lesson.description}</p>
-                            )}
-                          </div>
-                          
-                          {/* Action Button */}
-                          <div className="flex-shrink-0">
-                            {(course.can_access || lesson.is_preview) ? (
-                              <button
-                                onClick={() => router.push(`/courses/${course.slug}/watch?lesson=${lesson.id}`)}
-                                className="group/btn flex items-center justify-center w-11 h-11 bg-gradient-to-br from-[#00B38F] to-[#00A87D] hover:from-[#00C99F] hover:to-[#00B38F] text-white rounded-xl transition-all shadow-md hover:shadow-lg"
-                              >
-                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                  <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
-                                </svg>
-                              </button>
-                            ) : (
-                              <div className="flex items-center justify-center w-11 h-11 bg-gray-100 text-gray-400 rounded-xl border border-gray-200">
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                </svg>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-16">
-                    <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-                      <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                      </svg>
-                    </div>
-                    <p className="text-gray-500 font-medium">No lessons available yet</p>
-                    <p className="text-gray-400 text-sm mt-1">Check back soon for new content</p>
-                  </div>
-                )}
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded border border-gray-200">
+                  {course.course_type}
+                </span>
               </div>
             </div>
           </div>
 
-          {/* Right Column - Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-24 space-y-6">
-              
-              {/* CTA Card */}
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-                {course.can_access ? (
-                  <div className="space-y-4">
-                    <button
-                      onClick={handleStartLearning}
-                      className="w-full px-6 py-4 bg-gradient-to-r from-[#00B38F] to-[#00A87D] hover:from-[#00C99F] hover:to-[#00B38F] text-white rounded-xl transition-all font-semibold shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <span>{course.is_enrolled ? 'Continue Learning' : 'Start Learning'}</span>
-                    </button>
-                    <p className="text-center text-sm text-gray-500">
-                      {course.is_enrolled ? 'Pick up where you left off' : 'Begin your journey today'}
-                    </p>
-                  </div>
-                ) : course.requires_subscription ? (
-                  <div className="space-y-4">
-                    <div className="text-center mb-4">
-                      <div className="w-14 h-14 mx-auto mb-3 bg-gradient-to-br from-purple-100 to-purple-50 rounded-2xl flex items-center justify-center">
-                        <svg className="w-7 h-7 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                        </svg>
-                      </div>
-                      <h3 className="font-bold text-gray-900 mb-1">Premium Course</h3>
-                      <p className="text-sm text-gray-600">
-                        Requires active mentorship subscription
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => router.push('/pricing')}
-                      className="w-full px-6 py-4 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white rounded-xl transition-all font-semibold shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                      </svg>
-                      <span>Upgrade to Premium</span>
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="text-center mb-4">
-                      <div className="w-14 h-14 mx-auto mb-3 bg-gradient-to-br from-emerald-100 to-emerald-50 rounded-2xl flex items-center justify-center">
-                        <svg className="w-7 h-7 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-                        </svg>
-                      </div>
-                      <h3 className="font-bold text-gray-900 mb-1">Free Course</h3>
-                      <p className="text-sm text-gray-600">
-                        Start learning at no cost
-                      </p>
-                    </div>
-                    <button
-                      onClick={handleEnroll}
-                      disabled={enrolling}
-                      className="w-full px-6 py-4 bg-gradient-to-r from-[#00B38F] to-[#00A87D] hover:from-[#00C99F] hover:to-[#00B38F] text-white rounded-xl transition-all font-semibold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
-                    >
-                      {enrolling ? (
-                        <>
-                          <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                          <span>Enrolling...</span>
-                        </>
-                      ) : (
-                        <>
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                          </svg>
-                          <span>Enroll for Free</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                )}
+          {/* CTA Section */}
+          <div className="w-full">
+            {course.can_access ? (
+              <button
+                onClick={handleStartLearning}
+                className="w-full px-4 sm:px-6 py-2.5 sm:py-3 bg-[#00B38F] hover:bg-[#00A87D] text-white rounded-lg transition-all font-medium text-sm sm:text-base"
+              >
+                {course.is_enrolled ? 'Continue Learning' : 'Start Learning'}
+              </button>
+            ) : course.requires_subscription ? (
+              <div className="space-y-2 sm:space-y-3">
+                <p className="text-xs sm:text-sm text-gray-600 text-center">Requires mentorship subscription</p>
+                <button
+                  onClick={() => router.push('/pricing')}
+                  className="w-full px-4 sm:px-6 py-2.5 sm:py-3 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-all font-medium text-sm sm:text-base"
+                >
+                  Upgrade to Premium
+                </button>
               </div>
-
-              {/* Course Details Card */}
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-                <h3 className="font-bold text-gray-900 mb-4 flex items-center">
-                  <svg className="w-5 h-5 mr-2 text-[#00B38F]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Course Details
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                    <span className="text-sm text-gray-600">Lessons</span>
-                    <span className="font-semibold text-gray-900">{course.total_lessons}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                    <span className="text-sm text-gray-600">Duration</span>
-                    <span className="font-semibold text-gray-900">{course.estimated_duration}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-2 border-b border-gray-100">
-                    <span className="text-sm text-gray-600">Level</span>
-                    <span className="font-semibold text-gray-900 capitalize">{course.difficulty_level}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-2">
-                    <span className="text-sm text-gray-600">Access</span>
-                    <span className="font-semibold text-gray-900 capitalize">{course.course_type}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Quick Actions */}
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-                <h3 className="font-bold text-gray-900 mb-4">Quick Actions</h3>
-                <div className="space-y-2">
-                  <button
-                    onClick={() => router.push('/courses')}
-                    className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg transition-all flex items-center justify-center space-x-2 font-medium"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                    </svg>
-                    <span>Browse Courses</span>
-                  </button>
-                  {course.is_enrolled && (
-                    <button
-                      onClick={() => router.push('/my-courses')}
-                      className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg transition-all flex items-center justify-center space-x-2 font-medium"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      <span>My Courses</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-
-            </div>
+            ) : (
+              <button
+                onClick={handleEnroll}
+                disabled={enrolling}
+                className="w-full px-4 sm:px-6 py-2.5 sm:py-3 bg-[#00B38F] hover:bg-[#00A87D] text-white rounded-lg transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+              >
+                {enrolling ? 'Enrolling...' : 'Enroll for Free'}
+              </button>
+            )}
           </div>
         </div>
+
+        {/* Progress Bar (if enrolled) */}
+        {course.is_enrolled && course.progress_percentage !== undefined && (
+          <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-gray-200">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs sm:text-sm font-medium text-gray-700">Your Progress</span>
+              <span className="text-sm sm:text-base font-semibold text-gray-900">{course.progress_percentage}%</span>
+            </div>
+            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-[#00B38F] rounded-full transition-all duration-500"
+                style={{ width: `${course.progress_percentage}%` }}
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              {course.lessons_completed} of {course.total_lessons} lessons completed
+            </p>
+          </div>
+        )}
       </div>
-    </div>
+
+      {/* About Course */}
+      <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6">
+        <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">About This Course</h2>
+        <p className="text-sm sm:text-base text-gray-600 leading-relaxed whitespace-pre-line">{course.description}</p>
+      </div>
+
+      {/* Course Content */}
+      <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6 lg:p-8">
+        <div className="flex items-center justify-between mb-4 sm:mb-6">
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900">Course Curriculum</h2>
+          <button
+            onClick={() => setExpandedLessons(!expandedLessons)}
+            className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            <span>{expandedLessons ? 'Collapse' : 'Expand'}</span>
+            <svg 
+              className={`w-4 h-4 transition-transform ${expandedLessons ? 'rotate-180' : ''}`} 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+        </div>
+
+        {expandedLessons && (
+          <div className="space-y-2">
+            {course.lessons.length > 0 ? (
+              course.lessons.map((lesson) => (
+                <div
+                  key={lesson.id}
+                  className={`group rounded-lg border transition-all ${
+                    lesson.is_completed
+                      ? 'bg-gray-50 border-gray-200'
+                      : 'bg-white border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="p-3 sm:p-4">
+                    <div className="flex items-start gap-2 sm:gap-3 md:gap-4">
+                      {/* Lesson Thumbnail/Icon */}
+                      <div className="flex-shrink-0 w-20 h-12 sm:w-28 sm:h-16 md:w-32 md:h-20 bg-gray-900 rounded-md sm:rounded-lg border border-gray-300 sm:border-2 flex items-center justify-center relative overflow-hidden group-hover:border-[#00B38F] group-hover:shadow-md transition-all">
+                        {getVideoThumbnail(lesson) ? (
+                          <>
+                            <img 
+                              src={getVideoThumbnail(lesson)!} 
+                              alt={lesson.title}
+                              className="absolute inset-0 w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-all"></div>
+                            <svg className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-white relative z-10 drop-shadow-lg group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                            </svg>
+                          </>
+                        ) : (
+                          <>
+                            <div className="absolute inset-0 bg-gradient-to-br from-gray-200 via-gray-100 to-gray-50"></div>
+                            <div className="absolute inset-0 bg-gradient-to-br from-[#00B38F]/10 to-transparent"></div>
+                            <svg className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-gray-500 relative z-10 group-hover:text-[#00B38F] transition-colors" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                            </svg>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Lesson Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2 sm:gap-4 mb-1 sm:mb-2">
+                          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                            <span className="text-xs font-medium text-gray-500">Lesson {lesson.order}</span>
+                            {lesson.is_completed && (
+                              <span className="px-1.5 sm:px-2 py-0.5 bg-gray-200 text-gray-700 text-xs rounded">
+                                Completed
+                              </span>
+                            )}
+                            <span className="text-xs text-gray-500">{lesson.duration}</span>
+                          </div>
+                        </div>
+                        <h3 className="text-xs sm:text-sm font-medium text-gray-900 mb-0.5 sm:mb-1 group-hover:text-[#00B38F] transition-colors line-clamp-2">
+                          {lesson.title}
+                        </h3>
+                        {(course.can_access || lesson.is_preview) && lesson.description && (
+                          <p className="text-xs sm:text-sm text-gray-600 line-clamp-2 hidden sm:block">{lesson.description}</p>
+                        )}
+                      </div>
+
+                      {/* Action Button */}
+                      <div className="flex-shrink-0">
+                        {(course.can_access || lesson.is_preview) ? (
+                          <button
+                            onClick={() => router.push(`/courses/${course.slug}/watch?lesson=${lesson.id}`)}
+                            className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-[#00B38F] hover:bg-[#00A87D] text-white rounded-lg transition-all"
+                          >
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                            </svg>
+                          </button>
+                        ) : (
+                          <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-gray-100 text-gray-400 rounded-lg border border-gray-200">
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-12">
+                <svg className="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+                <p className="text-gray-500 font-medium">No lessons available yet</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+        </div>
+      </div>
+    </main>
+  </div>
   );
 }

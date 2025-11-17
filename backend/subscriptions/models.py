@@ -70,6 +70,8 @@ class BillingProfile(models.Model):
                                         help_text="6-character alphanumeric code for Telegram verification")
     verification_code_created_at = models.DateTimeField(null=True, blank=True)
     verification_code_expires_at = models.DateTimeField(null=True, blank=True)
+    telegram_verification_error = models.TextField(blank=True, null=True,
+                                                   help_text="Last verification error message (cleared on success)")
     
     # Billing Information
     country = models.CharField(max_length=2, blank=True, help_text="ISO country code")
@@ -113,10 +115,11 @@ class BillingProfile(models.Model):
         self.telegram_username = telegram_username
         self.telegram_verified = True
         self.telegram_verified_at = timezone.now()
-        # Clear verification code after use
+        # Clear verification code and errors after use
         self.verification_code = None
         self.verification_code_created_at = None
         self.verification_code_expires_at = None
+        self.telegram_verification_error = None  # Clear any previous errors
         self.save()
     
     def is_verification_code_valid(self):

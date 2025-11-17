@@ -493,6 +493,7 @@ export async function checkTelegramStatus(): Promise<{
   telegram_verified: boolean;
   telegram_username?: string;
   telegram_user_id?: string;
+  verification_error?: string | null;
 }> {
   const response = await fetch(
     `${API_BASE_URL}/billing/telegram/status/`,
