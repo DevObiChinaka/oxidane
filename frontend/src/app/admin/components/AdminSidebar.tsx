@@ -11,6 +11,11 @@ interface SetupStatus {
   completion_percentage: number;
 }
 
+interface AdminSidebarProps {
+  isMobileMenuOpen: boolean;
+  setIsMobileMenuOpen: (open: boolean) => void;
+}
+
 // Icon Component
 const Icon: React.FC<{ name: string; className?: string }> = ({ name, className = "w-5 h-5" }) => {
   const icons: Record<string, string> = {
@@ -55,7 +60,7 @@ const Icon: React.FC<{ name: string; className?: string }> = ({ name, className 
   );
 };
 
-export default function AdminSidebar() {
+export default function AdminSidebar({ isMobileMenuOpen, setIsMobileMenuOpen }: AdminSidebarProps) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -64,6 +69,11 @@ export default function AdminSidebar() {
   useEffect(() => {
     fetchSetupStatus();
   }, []);
+
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname, setIsMobileMenuOpen]);
 
   const fetchSetupStatus = async () => {
     try {
@@ -148,26 +158,56 @@ export default function AdminSidebar() {
   };
 
   return (
-    <div className="w-64 bg-white border-r border-gray-200 overflow-y-auto flex-shrink-0 flex flex-col">
-      {/* Branding Header */}
-      <div className="px-4 py-6 border-b border-gray-200">
-        <div className="flex items-center space-x-3">
-          <div className="w-12 h-12 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
-            <Image 
-              src="/logo_main.png" 
-              alt="OxiWorld Logo" 
-              width={48} 
-              height={48}
-              className="object-contain"
-            />
-          </div>
-          <div>
-            <h1 className="text-lg font-semibold text-[#000856]">OxiWorld Admin</h1>
-            <p className="text-xs text-gray-500">Forex Academy Management</p>
+    <>
+      {/* Mobile Backdrop */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-gray-900/50 z-40 md:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <div className={`
+        fixed md:static inset-y-0 left-0 z-50
+        w-64 bg-white border-r border-gray-200 
+        overflow-y-auto flex-shrink-0 flex flex-col
+        transform transition-transform duration-300 ease-in-out
+        md:translate-x-0
+        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
+        {/* Mobile Close Button */}
+        <div className="md:hidden absolute top-4 right-4 z-10">
+          <button
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Branding Header */}
+        <div className="px-4 py-6 border-b border-gray-200">
+          <div className="flex items-center space-x-3">
+            <div className="w-12 h-12 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
+              <Image 
+                src="/logo_main.png" 
+                alt="OxiWorld Logo" 
+                width={48} 
+                height={48}
+                className="object-contain"
+              />
+            </div>
+            <div>
+              <h1 className="text-lg font-semibold text-[#000856]">OxiWorld Admin</h1>
+              <p className="text-xs text-gray-500">Forex Academy Management</p>
+            </div>
           </div>
         </div>
-      </div>
-      <div className="p-4 flex-1">
+
+        <div className="p-4 flex-1">
         {/* Setup Status Banner */}
         {setupStatus && !setupStatus.setup_complete && (
           <div className="mb-6 bg-blue-50 border border-blue-200 p-4 rounded-lg">
@@ -254,12 +294,12 @@ export default function AdminSidebar() {
             </div>
           );
         })}
-      </div>
+        </div>
       
-      {/* User Profile & System Status */}
-      <div className="mt-auto border-t border-gray-200">
-        {/* User Profile */}
-        <div className="p-4">
+        {/* User Profile & System Status */}
+        <div className="mt-auto border-t border-gray-200">
+          {/* User Profile */}
+          <div className="p-4">
           <div className="relative">
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
@@ -286,15 +326,15 @@ export default function AdminSidebar() {
                   <p className="text-xs text-gray-500">{user?.email}</p>
                 </div>
                 
-                <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                <Link href="/admin/profile" className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
                   <Icon name="profile" className="w-4 h-4" />
                   Profile Settings
-                </button>
+                </Link>
                 
-                <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                <Link href="/admin/change-password" className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
                   <Icon name="lock" className="w-4 h-4" />
                   Change Password
-                </button>
+                </Link>
                 
                 <hr className="my-1" />
                 
@@ -321,6 +361,7 @@ export default function AdminSidebar() {
           </div>
         </div>
       </div>
+      </div>
       
       {/* Click outside to close dropdown */}
       {showUserMenu && (
@@ -329,6 +370,6 @@ export default function AdminSidebar() {
           onClick={() => setShowUserMenu(false)}
         />
       )}
-    </div>
+    </>
   );
 }

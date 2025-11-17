@@ -347,9 +347,19 @@ class PaystackService:
         
         try:
             response = requests.post(url, json=payload, headers=headers, timeout=30)
-            response.raise_for_status()
             
+            # Parse response before raising for status to get error details
             data = response.json()
+            
+            if response.status_code != 200:
+                error_message = data.get('message', 'Unknown error')
+                logger.error(f"Paystack charge authorization failed (HTTP {response.status_code}): {error_message}")
+                logger.error(f"Payload sent: {payload}")
+                return {
+                    'success': False,
+                    'error': error_message,
+                    'message': error_message
+                }
             
             if data.get('status'):
                 transaction = data['data']

@@ -6,9 +6,11 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.db.models import Sum, Count, Q, Avg
+from django.db.models.functions import TruncMonth
 from django.utils import timezone
 from datetime import timedelta
 from decimal import Decimal
+import calendar
 
 from .models import Subscription, SubscriptionPlan
 from .permissions import IsAdmin
@@ -195,5 +197,96 @@ def payment_transactions_list(request):
         print(traceback.format_exc())
         return Response({
             'error': 'Failed to fetch payment transactions',
+            'detail': str(e)
+        }, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def revenue_analytics(request):
+    """
+    Get monthly revenue analytics for the last 12 months
+    Returns revenue breakdown by month for charts
+    """
+    try:
+        # Get last 12 months of data
+        twelve_months_ago = timezone.now() - timedelta(days=365)
+        
+        # Group subscriptions by month and sum revenue
+        monthly_revenue = Subscription.objects.filter(
+            created_at__gte=twelve_months_ago
+        ).annotate(
+            month=TruncMonth('created_at')
+        ).values('month').annotate(
+            revenue=Sum('amount_paid'),
+            count=Count('id')
+        ).order_by('month')
+        
+        # Format the data for frontend
+        revenue_data = []
+        for item in monthly_revenue:
+            month_date = item['month']
+            revenue_data.append({
+                'month': month_date.strftime('%Y-%m'),
+                'month_name': calendar.month_abbr[month_date.month],
+                'revenue': float(item['revenue'] or 0),
+                'count': item['count'],
+                'year': month_date.year,
+                'month_number': month_date.month,
+            })
+        
+        # Fill in missing months with zero revenue
+        all_months = []
+        current_date = timezone.now()
+        for i in range(12):
+            month_date = current_date - timedelta(days=30 * i)
+            month_key = month_date.strftime('%Y-%m')
+            
+            existing = next((r for r in revenue_data if r['month'] == month_key), None)
+            if existing:
+                all_months.append(existing)
+            else:
+                all_months.append({
+                    'month': month_key,
+                    'month_name': calendar.month_abbr[month_date.month],
+                    'revenue': 0.0,
+                    'count': 0,
+                    'year': month_date.year,
+                    'month_number': month_date.month,
+                })
+        
+        # Sort by date (oldest first)
+        all_months.sort(key=lambda x: x['month'])
+        
+        # Calculate growth rate
+        for i in range(1, len(all_months)):
+            prev_revenue = all_months[i-1]['revenue']
+            curr_revenue = all_months[i]['revenue']
+            
+            if prev_revenue > 0:
+                growth = ((curr_revenue - prev_revenue) / prev_revenue) * 100
+                all_months[i]['growth_rate'] = round(growth, 2)
+            else:
+                all_months[i]['growth_rate'] = 0.0
+        
+        if all_months:
+            all_months[0]['growth_rate'] = 0.0
+        
+        # Calculate total revenue
+        total_revenue = sum(m['revenue'] for m in all_months)
+        
+        return Response({
+            'success': True,
+            'monthly_revenue': all_months,
+            'total_revenue': round(total_revenue, 2),
+            'total_months': len(all_months),
+        })
+        
+    except Exception as e:
+        import traceback
+        print(f"Error in revenue_analytics: {str(e)}")
+        print(traceback.format_exc())
+        return Response({
+            'error': 'Failed to fetch revenue analytics',
             'detail': str(e)
         }, status=500)

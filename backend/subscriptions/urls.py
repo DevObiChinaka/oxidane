@@ -18,11 +18,12 @@ from .api_views import (
 from .views import (
     InitializePaymentView, VerifyPaymentView, PaymentHistoryView,
     InvoiceDownloadView, paystack_webhook, stripe_webhook,
-    CheckSubscriptionConflictView
+    CheckSubscriptionConflictView, charge_with_saved_card
 )  # Phase 2.1 - Payment API Endpoints
 from .views.payment_method_views import (
     save_payment_method, list_payment_methods, 
-    set_default_payment_method, delete_payment_method
+    set_default_payment_method, delete_payment_method,
+    get_payment_config
 )  # Payment method tokenization for auto-renewal
 # REMOVED: Telegram webhooks - Using polling instead (no ngrok needed)
 # from .views.telegram_webhook import (
@@ -64,6 +65,10 @@ urlpatterns = [
     # Admin API endpoints for pricing management
     path('admin/', include(router.urls)),
     
+    # User subscription management API - ViewSet routes
+    # This includes: /api/subscriptions/<id>/auto-renewal/
+    path('', include(user_router.urls)),
+    
     # User subscription management API - Function-based view
     # MUST be before api_router to avoid being matched as detail view with pk='my-subscriptions'
     # Path: /api/subscriptions/my-subscriptions/
@@ -100,6 +105,7 @@ urlpatterns = [
     
     # Payment Initialization & Verification
     path('payments/initialize/', InitializePaymentView.as_view(), name='initialize_payment'),
+    path('payments/charge-saved-card/', charge_with_saved_card, name='charge_with_saved_card'),
     path('payments/verify/', VerifyPaymentView.as_view(), name='verify_payment'),
     path('payments/check-conflict/', CheckSubscriptionConflictView.as_view(), name='check_subscription_conflict'),
     
@@ -112,6 +118,7 @@ urlpatterns = [
     path('payments/<int:payment_id>/invoice/', InvoiceDownloadView.as_view(), name='payment_invoice'),
     
     # Payment Method Management (Auto-renewal tokenization)
+    path('payment-methods/config/', get_payment_config, name='get_payment_config'),
     path('payment-methods/save/', save_payment_method, name='save_payment_method'),
     path('payment-methods/', list_payment_methods, name='list_payment_methods'),
     path('payment-methods/<uuid:payment_method_id>/set-default/', set_default_payment_method, name='set_default_payment_method'),
@@ -191,4 +198,5 @@ urlpatterns = [
     # PAYMENT TRANSACTIONS MANAGEMENT
     # ============================================================================
     path('admin/payments/transactions/', payment_admin_views.payment_transactions_list, name='payment_transactions_list'),
+    path('admin/revenue/analytics/', payment_admin_views.revenue_analytics, name='revenue_analytics'),
 ]

@@ -46,6 +46,8 @@ export default function RootLayout({
         <meta name="msapplication-TileImage" content="/favicon.png?v=2025-fixed" />
         <meta name="theme-color" content="#667eea" />
         <link rel="manifest" href="/manifest.json" />
+        {/* Paystack inline script */}
+        <script src="https://js.paystack.co/v1/inline.js"></script>
         <style dangerouslySetInnerHTML={{
           __html: `
             /* Enhanced favicon visibility */

@@ -408,8 +408,8 @@ export function usePricingPlans(params?: {
       const queryParams = new URLSearchParams();
       if (params?.plan_category) queryParams.append('plan_category', params.plan_category);
       if (params?.billing_cycle) queryParams.append('billing_cycle', params.billing_cycle);
-      if (params?.active_only) queryParams.append('active_only', params.active_only.toString());
-      return apiClient.get(`/admin/pricing/plans/?${queryParams.toString()}`);
+      if (params?.active_only) queryParams.append('is_active', 'true');
+      return apiClient.get(`/admin/plans/?${queryParams.toString()}`);
     },
     [params?.plan_category, params?.billing_cycle, params?.active_only]
   );

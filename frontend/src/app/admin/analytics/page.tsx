@@ -34,6 +34,30 @@ interface UserMetrics {
   verification_rate: number;
 }
 
+interface SubscriptionStats {
+  total_count: number;
+  active_count: number;
+  total_revenue_usd: number;
+  recent_revenue_30d: number;
+}
+
+interface EmailStats {
+  total_templates: number;
+  active_templates: number;
+  total_sent: number;
+  recent_sent: number;
+}
+
+interface RevenueMonthlyData {
+  month: string;
+  month_name: string;
+  revenue: number;
+  count: number;
+  year: number;
+  month_number: number;
+  growth_rate?: number;
+}
+
 interface PopularCourse {
   id: string;
   title: string;
@@ -85,36 +109,30 @@ interface AnalyticsData {
   generated_at: string;
 }
 
-// Consistent Metric Card Component (matches dashboard style)
+// Updated Metric Card Component with Icons (matches dashboard)
 function MetricCard({ 
   title, 
   value, 
   icon, 
-  change, 
-  changeType 
+  subtitle
 }: {
   title: string;
   value: string | number;
-  icon: string;
-  change: string;
-  changeType: 'positive' | 'negative' | 'neutral';
+  icon: React.ReactNode;
+  subtitle?: string;
 }) {
-  const changeColor = {
-    positive: 'text-green-600',
-    negative: 'text-red-600',
-    neutral: 'text-gray-600'
-  }[changeType];
-
   return (
-    <div className="bg-white rounded-lg shadow-sm border p-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-gray-700">{title}</p>
-          <p className="text-2xl font-semibold text-gray-900">{value}</p>
-          <p className={`text-xs ${changeColor}`}>{change}</p>
+    <div className="bg-white rounded-lg border border-gray-200 p-6">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-medium text-gray-600">{title}</h3>
+        <div className="text-gray-600">
+          {icon}
         </div>
-        <span className="text-2xl">{icon}</span>
       </div>
+      <p className="text-3xl font-bold text-gray-900 mb-1">{value}</p>
+      {subtitle && (
+        <p className="text-sm text-gray-500">{subtitle}</p>
+      )}
     </div>
   );
 }
@@ -142,8 +160,16 @@ const transformDifficultyData = (difficultyData: any[]) => {
   return difficultyData.map(item => ({
     label: item.difficulty_level,
     value: item.count,
-    color: item.difficulty_level === 'beginner' ? '#3B82F6' : 
-           item.difficulty_level === 'intermediate' ? '#10B981' : '#F59E0B'
+    color: item.difficulty_level === 'beginner' ? '#9CA3AF' : 
+           item.difficulty_level === 'intermediate' ? '#6B7280' : '#00B38F'
+  }));
+};
+
+const transformRevenueData = (revenueData: RevenueMonthlyData[]) => {
+  return revenueData.map(item => ({
+    label: item.month_name,
+    value: item.revenue,
+    color: '#00B38F'
   }));
 };
 
@@ -158,6 +184,9 @@ const transformPopularCoursesData = (popularCourses: PopularCourse[]) => {
 // Main Analytics Page Component with Chart.js
 export default function AnalyticsPage() {
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
+  const [subscriptionStats, setSubscriptionStats] = useState<SubscriptionStats | null>(null);
+  const [emailStats, setEmailStats] = useState<EmailStats | null>(null);
+  const [revenueData, setRevenueData] = useState<RevenueMonthlyData[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -172,6 +201,33 @@ export default function AnalyticsPage() {
       setError(null);
       const data = await adminAPI.getDashboardAnalytics();
       setAnalyticsData(data);
+      
+      // Fetch subscription and email stats
+      const token = localStorage.getItem('access_token');
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+
+      const subsResponse = await fetch('http://localhost:8000/api/admin/subscriptions-management/?page=1&page_size=1', { headers });
+      if (subsResponse.ok) {
+        const subsData = await subsResponse.json();
+        setSubscriptionStats(subsData.analytics);
+      }
+
+      const emailResponse = await fetch('http://localhost:8000/api/admin/email-analytics/', { headers });
+      if (emailResponse.ok) {
+        const emailData = await emailResponse.json();
+        setEmailStats(emailData.analytics);
+      }
+
+      // Fetch revenue analytics
+      const revenueResponse = await fetch('http://localhost:8000/api/admin/revenue/analytics/', { headers });
+      if (revenueResponse.ok) {
+        const revenueDataRes = await revenueResponse.json();
+        setRevenueData(revenueDataRes.monthly_revenue || []);
+      }
+
       setLastUpdate(new Date().toLocaleTimeString());
     } catch (err) {
       console.error('Failed to fetch analytics:', err);
@@ -182,14 +238,14 @@ export default function AnalyticsPage() {
     }
   };
 
-  // Initial load and auto-refresh setup
+  // Initial load and auto-refresh setup (increased to 60s)
   useEffect(() => {
     fetchAnalytics();
     
-    // Auto-refresh every 30 seconds
+    // Auto-refresh every 60 seconds
     const interval = setInterval(() => {
       fetchAnalytics(true);
-    }, 30000);
+    }, 60000);
 
     return () => clearInterval(interval);
   }, []);
@@ -220,12 +276,16 @@ export default function AnalyticsPage() {
       <div className="min-h-screen bg-gray-50 p-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center py-12">
-            <div className="text-red-600 text-6xl mb-4">⚠️</div>
+            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Analytics Unavailable</h2>
             <p className="text-gray-600 mb-6">{error}</p>
             <button
               onClick={() => fetchAnalytics()}
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+              className="bg-teal-600 text-white px-6 py-3 rounded-lg hover:bg-teal-700 transition-colors"
             >
               Try Again
             </button>
@@ -242,31 +302,31 @@ export default function AnalyticsPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b">
+      <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Analytics Dashboard</h1>
-              <p className="mt-1 text-sm text-gray-500">
-                Live business metrics and performance insights
+              <h1 className="text-2xl font-bold text-gray-900">Analytics</h1>
+              <p className="mt-1 text-sm text-gray-600">
+                Platform performance and business metrics
               </p>
             </div>
             <div className="flex items-center space-x-4">
               {lastUpdate && (
                 <span className="text-sm text-gray-500">
-                  Last updated: {lastUpdate}
+                  Updated {lastUpdate}
                 </span>
               )}
               <div className="flex items-center space-x-2">
-                <div className={`w-2 h-2 rounded-full ${refreshing ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'}`}></div>
+                <div className={`w-2 h-2 rounded-full ${refreshing ? 'bg-amber-500 animate-pulse' : 'bg-teal-500'}`}></div>
                 <span className="text-sm text-gray-600">
-                  {refreshing ? 'Updating...' : 'Live (Auto-refresh: 30s)'}
+                  {refreshing ? 'Updating...' : 'Auto-refresh: 60s'}
                 </span>
               </div>
               <button
                 onClick={() => fetchAnalytics(true)}
                 disabled={refreshing}
-                className="inline-flex items-center bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors text-sm font-medium"
+                className="inline-flex items-center bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 disabled:opacity-50 transition-colors text-sm font-medium"
               >
                 {refreshing ? (
                   <>
@@ -281,7 +341,7 @@ export default function AnalyticsPage() {
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
-                    Refresh Now
+                    Refresh
                   </>
                 )}
               </button>
@@ -291,57 +351,66 @@ export default function AnalyticsPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Key Metrics Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-6">
-          <MetricCard
-            title="Total Courses"
-            value={course_metrics.total_courses}
-            icon="📚"
-            change={`${course_metrics.published_courses} published (${course_metrics.publish_rate.toFixed(1)}%)`}
-            changeType={course_metrics.publish_rate > 75 ? 'positive' : course_metrics.publish_rate > 50 ? 'neutral' : 'negative'}
-          />
-          <MetricCard
-            title="Total Lessons"
-            value={content_metrics.total_lessons}
-            icon="🎥"
-            change={`${content_metrics.total_duration_hours.toFixed(1)} hours content`}
-            changeType="positive"
-          />
+        {/* Key Metrics Grid - MVP Focus */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           <MetricCard
             title="Total Users"
             value={user_metrics.total_users}
-            icon="👥"
-            change={`${user_metrics.verified_users} verified (${user_metrics.verification_rate.toFixed(1)}%)`}
-            changeType={user_metrics.verification_rate > 75 ? 'positive' : 'neutral'}
+            icon={
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            }
+            subtitle={`${user_metrics.verified_users} verified (${user_metrics.verification_rate.toFixed(1)}%)`}
           />
           <MetricCard
-            title="Course Growth"
-            value={`${growth_metrics?.course_trend_summary?.percentage > 0 ? '+' : ''}${(growth_metrics?.course_trend_summary?.percentage || 0).toFixed(1)}%`}
-            icon="📈"
-            change="Last 3 months trend"
-            changeType={
-              growth_metrics?.course_trend_summary?.trend === 'up' ? 'positive' : 
-              growth_metrics?.course_trend_summary?.trend === 'down' ? 'negative' : 'neutral'
+            title="Total Revenue"
+            value={`$${subscriptionStats?.total_revenue_usd.toFixed(2) || '0.00'}`}
+            icon={
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
             }
+            subtitle={`$${subscriptionStats?.recent_revenue_30d?.toFixed(2) || '0.00'} this month`}
           />
           <MetricCard
-            title="User Growth"
-            value={`${growth_metrics?.user_trend_summary?.percentage > 0 ? '+' : ''}${(growth_metrics?.user_trend_summary?.percentage || 0).toFixed(1)}%`}
-            icon="👤"
-            change="User registration trend"
-            changeType={
-              growth_metrics?.user_trend_summary?.trend === 'up' ? 'positive' : 
-              growth_metrics?.user_trend_summary?.trend === 'down' ? 'negative' : 'neutral'
+            title="Active Subscriptions"
+            value={subscriptionStats?.active_count || 0}
+            icon={
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
             }
+            subtitle={`${subscriptionStats?.total_count || 0} total subscriptions`}
+          />
+          <MetricCard
+            title="Total Courses"
+            value={course_metrics.total_courses}
+            icon={
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+            }
+            subtitle={`${course_metrics.published_courses} published`}
+          />
+          <MetricCard
+            title="Email Templates"
+            value={emailStats?.total_templates || 0}
+            icon={
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            }
+            subtitle={`${emailStats?.recent_sent || 0} sent this month`}
           />
         </div>
 
         {/* Charts Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Growth Trends Chart */}
-          <div className="bg-white rounded-lg shadow-sm p-4 overflow-hidden">
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Growth Trends</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Platform Growth Trends</h2>
               <div className="text-xs text-gray-500">
                 Last 12 months
               </div>
@@ -354,82 +423,48 @@ export default function AnalyticsPage() {
             </div>
           </div>
 
-          {/* Difficulty Distribution */}
-          <div className="bg-white rounded-lg shadow-sm p-4 overflow-hidden">
+          {/* Revenue Growth Chart */}
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Course Difficulty Distribution</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Monthly Revenue</h2>
+              <div className="text-xs text-gray-500">
+                Last 12 months
+              </div>
             </div>
             <div className="w-full overflow-hidden">
-              <DonutChart
-                data={transformDifficultyData(course_metrics.difficulty_distribution)}
-                height={240}
-                showLegend={true}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Second Row of Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* Popular Courses */}
-          <div className="bg-white rounded-lg shadow-sm p-4 overflow-hidden">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Popular Courses by Lessons</h2>
-            </div>
-            <div className="w-full overflow-hidden">
-              <BarChart
-                data={transformPopularCoursesData(popular_courses)}
+              <BarChart 
+                data={transformRevenueData(revenueData)}
                 title=""
                 height={240}
                 horizontal={false}
-                showValues={false}
-                maxBars={6}
-              />
-            </div>
-          </div>
-
-          {/* Course Types */}
-          <div className="bg-white rounded-lg shadow-sm p-4 overflow-hidden">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Course Types</h2>
-            </div>
-            <div className="w-full overflow-hidden">
-              <DonutChart
-                data={[
-                  { label: 'Free Courses', value: course_metrics.free_courses, color: '#10B981' },
-                  { label: 'Premium Courses', value: course_metrics.premium_courses, color: '#8B5CF6' }
-                ]}
-                height={240}
-                showLegend={true}
+                showValues={true}
+                maxBars={12}
               />
             </div>
           </div>
         </div>
 
-        {/* Recent Activity Summary */}
-        <div className="bg-white rounded-lg shadow-sm p-4">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Activity Summary</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <MetricCard
-              title="Recent Registrations (7d)"
-              value={user_metrics.recent_registrations_7d}
-              icon="🆕"
-              change="Last 7 days"
-              changeType="positive"
-            />
-            <MetricCard
-              title="Recent Registrations (30d)"
-              value={user_metrics.recent_registrations_30d}
-              icon="📊"
-              change="Last 30 days"
-              changeType="positive"
-            />
-            <MetricCard
-              title="Preview Lessons"
-              value={content_metrics.preview_lessons}
-              icon="👁️"
-              change={`${content_metrics.preview_percentage.toFixed(1)}% of total`}
-              changeType="neutral"
+        {/* Subscription Status Chart */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Subscription Status</h2>
+          </div>
+          <div className="w-full overflow-hidden">
+            <DonutChart
+              data={[
+                { 
+                  label: 'Active', 
+                  value: subscriptionStats?.active_count || 0, 
+                  color: '#00B38F' 
+                },
+                { 
+                  label: 'Inactive', 
+                  value: (subscriptionStats?.total_count || 0) - (subscriptionStats?.active_count || 0), 
+                  color: '#E5E7EB' 
+                }
+              ]}
+              height={300}
+              showLegend={true}
             />
           </div>
         </div>

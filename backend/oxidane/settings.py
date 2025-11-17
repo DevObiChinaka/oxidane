@@ -334,15 +334,42 @@ REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
 # Celery Configuration
 CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', REDIS_URL)
 CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', REDIS_URL)
+
+# SSL Configuration for Redis Cloud (production only)
+# Only apply SSL settings if using rediss:// scheme
+if REDIS_URL.startswith('rediss://'):
+    CELERY_BROKER_USE_SSL = {
+        'ssl_cert_reqs': 'CERT_NONE'  # Accept self-signed certs from Redis Cloud
+    }
+    CELERY_REDIS_BACKEND_USE_SSL = {
+        'ssl_cert_reqs': 'CERT_NONE'
+    }
+
+# Connection Settings (Reduced for Redis Free Tier - 30 max connections)
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_BROKER_CONNECTION_MAX_RETRIES = 10
+CELERY_BROKER_POOL_LIMIT = 2  # Reduced from 10 to 2 (saves connections)
+
+# Task Serialization
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = 'UTC'
-CELERY_TASK_TRACK_STARTED = True
-CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
-CELERY_RESULT_EXPIRES = 3600  # 1 hour
 
-# Celery Beat Schedule (will be populated in Phase 4)
+# Task Execution Settings
+CELERY_TIMEZONE = 'UTC'
+CELERY_ENABLE_UTC = True
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes hard limit
+CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60  # 25 minutes soft limit
+CELERY_TASK_ACKS_LATE = True  # Acknowledge tasks after completion (safer)
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1  # Fetch one task at a time
+CELERY_WORKER_MAX_TASKS_PER_CHILD = 50  # Recycle worker after 50 tasks (releases connections)
+
+# Result Backend Settings
+CELERY_RESULT_EXPIRES = 3600  # Results expire after 1 hour
+CELERY_RESULT_PERSISTENT = False  # Don't persist results after expiry
+
+# Celery Beat Schedule (populated in celery.py)
 CELERY_BEAT_SCHEDULE = {}
 
 # ========================================
@@ -358,9 +385,14 @@ CACHES = {
             'SOCKET_CONNECT_TIMEOUT': 5,
             'SOCKET_TIMEOUT': 5,
             'RETRY_ON_TIMEOUT': True,
-            'MAX_CONNECTIONS': 50,
-            'CONNECTION_POOL_KWARGS': {'max_connections': 50},
-            'IGNORE_EXCEPTIONS': True,  # Don't crash if Redis is down
+            'MAX_CONNECTIONS': 5,  # Reduced from 50 to 5 for free tier
+            'CONNECTION_POOL_KWARGS': {
+                'max_connections': 5,  # Reduced from 50 to 5
+                # SSL support for Redis Cloud
+                'connection_class': 'redis.connection.SSLConnection',
+                'ssl_cert_reqs': None,
+            },
+            'IGNORE_EXCEPTIONS': False,  # Show Redis errors to debug
         },
         'KEY_PREFIX': 'oxidane',
         'TIMEOUT': 300,  # 5 minutes default

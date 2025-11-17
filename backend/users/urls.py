@@ -66,6 +66,14 @@ urlpatterns = [
     path('admin/users/bulk-action/', admin_views.bulk_user_action, name='admin_bulk_user_action'),
     path('admin/users-analytics/', admin_views.users_analytics, name='admin_users_analytics'),
     
+    # Admin profile management
+    path('admin/profile/', admin_views.admin_profile, name='admin_profile'),
+    path('admin/change-password/', admin_views.admin_change_password, name='admin_change_password'),
+    path('admin/request-email-change/', admin_views.request_email_change, name='request_email_change'),
+    path('admin/verify-email-change/', admin_views.verify_email_change, name='verify_email_change'),
+    path('admin/request-email-verification/', admin_views.request_email_verification, name='request_email_verification'),
+    path('admin/verify-email/', admin_views.verify_email_with_otp, name='verify_email_with_otp'),
+    
     # Email template management
     path('admin/email-templates/', email_admin_views.email_templates_list, name='admin_email_templates'),
     path('admin/email-templates/<uuid:template_id>/', email_admin_views.email_template_detail, name='admin_email_template_detail'),

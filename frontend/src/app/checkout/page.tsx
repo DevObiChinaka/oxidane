@@ -49,6 +49,12 @@ function CheckoutContent() {
   const [error, setError] = useState('');
   const [conflict, setConflict] = useState<CheckConflictResponse | null>(null);
   const [conflictChecking, setConflictChecking] = useState(false);
+  const [savedPaymentMethod, setSavedPaymentMethod] = useState<{
+    id: string;
+    card_brand: string;
+    card_last4: string;
+  } | null>(null);
+  const [showNoCardModal, setShowNoCardModal] = useState(false);
 
   // Form state
   const [currency, setCurrency] = useState<'NGN' | 'USD'>('NGN');
@@ -117,6 +123,35 @@ function CheckoutContent() {
 
     fetchPlan();
   }, [planId, router]);
+
+  // Fetch saved payment method
+  useEffect(() => {
+    const fetchSavedPaymentMethod = async () => {
+      if (!isAuthenticated) return;
+      
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/payment-methods/`,
+          {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('user_auth_token')}`
+            }
+          }
+        );
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.payment_methods && data.payment_methods.length > 0) {
+            setSavedPaymentMethod(data.payment_methods[0]);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching payment method:', err);
+      }
+    };
+    
+    fetchSavedPaymentMethod();
+  }, [isAuthenticated]);
 
   // Check for subscription conflicts
   useEffect(() => {
@@ -244,58 +279,53 @@ function CheckoutContent() {
       return;
     }
 
+    // Check if user has a saved payment method
+    if (!savedPaymentMethod) {
+      setShowNoCardModal(true);
+      return;
+    }
+
     try {
       setProcessing(true);
       setError('');
 
-      const request: InitializePaymentRequest = {
-        plan_id: planId!,
-        currency,
-        gateway,
-        callback_url: `${window.location.origin}/payment/callback`
-      };
-
-      if (couponApplied && couponCode) {
-        request.coupon_code = couponCode;
-      }
-
-      const data = await initializePayment(request);
-
-      if (data.success && data.reference) {
-        // Use Paystack inline popup if Paystack gateway and script is loaded
-        if (gateway === 'paystack' && window.PaystackPop && data.paystack_public_key) {
-          const handler = window.PaystackPop.setup({
-            key: data.paystack_public_key, // Use key from backend
-            email: user?.email || '',
-            amount: Math.round(data.total_amount * 100), // Convert to kobo/cents
+      // Charge using saved card
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/payments/charge-saved-card/`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('user_auth_token')}`
+          },
+          body: JSON.stringify({
+            plan_id: planId,
+            coupon_code: couponApplied ? couponCode : undefined,
             currency: currency,
-            ref: data.reference,
-            metadata: {
-              plan_id: planId,
-              plan_name: plan?.name || '',
-              custom_fields: []
-            },
-            callback: function(response: any) {
-              // Payment successful - redirect to callback page
-              window.location.href = `/payment/callback?reference=${response.reference}`;
-            },
-            onClose: function() {
-              setProcessing(false);
-              setError('Payment was cancelled');
-            }
-          });
-          handler.openIframe();
-        } else if (data.payment_url) {
-          // Fallback to redirect for Stripe or if Paystack script not loaded
-          window.location.href = data.payment_url;
-        } else {
-          throw new Error('Payment initialization failed');
+            amount: basePriceConverted  // Send the already-converted base price
+          })
         }
+      );
+
+      const data = await response.json();
+
+      console.log('Charge saved card response:', data);
+
+      if (data.success) {
+        // Payment successful - redirect to success page
+        console.log('Redirecting to success page with reference:', data.reference);
+        router.push(`/payment/callback?reference=${data.reference}&status=success`);
       } else {
-        throw new Error('Failed to initialize payment');
+        // Payment failed
+        if (data.redirect_to_billing) {
+          setShowNoCardModal(true);
+        } else {
+          setError(data.error || 'Payment failed. Please try again.');
+        }
+        setProcessing(false);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to initialize payment');
+      setError(err instanceof Error ? err.message : 'Failed to process payment');
       setProcessing(false);
     }
   };
@@ -494,6 +524,35 @@ function CheckoutContent() {
 
           {/* Right Column - Payment Form */}
           <div className="space-y-6">
+            {/* Saved Payment Method Display */}
+            {savedPaymentMethod && (
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl border-2 border-[#00B38F]/50 p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-white font-semibold">Payment Method</h3>
+                  <button
+                    onClick={() => router.push('/billing')}
+                    className="text-[#00B38F] text-sm hover:underline"
+                  >
+                    Change
+                  </button>
+                </div>
+                <div className="flex items-center gap-3 bg-black/20 rounded-lg p-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-gray-700 to-gray-900 rounded-lg flex items-center justify-center">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-white font-medium capitalize">{savedPaymentMethod.card_brand}</p>
+                    <p className="text-gray-400 text-sm">•••• •••• •••• {savedPaymentMethod.card_last4}</p>
+                  </div>
+                </div>
+                <p className="text-gray-400 text-xs mt-2">
+                  This card will be charged for your subscription
+                </p>
+              </div>
+            )}
+
             {/* Telegram Verification Status */}
             <div className={`bg-white/10 backdrop-blur-md rounded-2xl border-2 p-6 ${
               telegramVerified ? 'border-green-500/50' : 'border-yellow-500/50'
@@ -705,6 +764,40 @@ function CheckoutContent() {
           </div>
         </div>
       </div>
+
+      {/* No Payment Method Modal */}
+      {showNoCardModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+          <div className="bg-gradient-to-br from-[#001845] to-[#003366] rounded-2xl max-w-md w-full p-8 border border-[#00B38F]/30">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-2">No Payment Method</h3>
+              <p className="text-gray-300 mb-6">
+                You need to add a payment method before you can subscribe to a plan. Your card will be charged ₦50 for verification (refunded immediately).
+              </p>
+            </div>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowNoCardModal(false)}
+                className="flex-1 px-4 py-3 bg-gray-700 text-white rounded-lg font-medium hover:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => router.push('/billing')}
+                className="flex-1 px-4 py-3 bg-gradient-to-r from-[#00B38F] to-[#00B39F] text-white rounded-lg font-medium hover:opacity-90 transition-opacity"
+              >
+                Add Payment Method
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>

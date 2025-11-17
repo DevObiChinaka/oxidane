@@ -726,3 +726,492 @@ def subscription_plans_list(request):
             'error': 'Failed to fetch subscription plans',
             'details': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET', 'PUT'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def admin_profile(request):
+    """Get or update admin profile"""
+    try:
+        user = request.user
+        
+        if request.method == 'GET':
+            # Return admin profile data
+            return Response({
+                'id': str(user.id),
+                'username': user.username,
+                'email': user.email,
+                'first_name': user.first_name or '',
+                'last_name': user.last_name or '',
+                'phone_number': '',  # Not stored in User model
+                'is_email_verified': user.is_email_verified,
+                'is_admin': user.is_staff,
+                'is_superuser': user.is_superuser,
+                'date_joined': user.created_at.isoformat(),
+                'last_login': user.last_login.isoformat() if user.last_login else None,
+            })
+        
+        elif request.method == 'PUT':
+            # Update admin profile
+            data = request.data
+            
+            # Update allowed fields
+            if 'first_name' in data:
+                user.first_name = data['first_name'].strip()
+            
+            if 'last_name' in data:
+                user.last_name = data['last_name'].strip()
+            
+            if 'email' in data:
+                new_email = data['email'].strip().lower()
+                # Check if email is already taken by another user
+                if User.objects.filter(email=new_email).exclude(id=user.id).exists():
+                    return Response({
+                        'error': 'This email is already in use by another account'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                
+                # If email changed, mark as unverified
+                if user.email != new_email:
+                    user.email = new_email
+                    user.is_email_verified = False
+            
+            # Note: phone_number is not stored in User model, so we ignore it
+            
+            user.save()
+            
+            # Log admin action (fixed field names)
+            AdminAction.objects.create(
+                admin_user=user,
+                admin_email=user.email,
+                action='other',
+                action_display=f'Admin {user.username} updated their profile',
+                details={'action': 'profile_update', 'timestamp': timezone.now().isoformat()}
+            )
+            
+            return Response({
+                'id': str(user.id),
+                'username': user.username,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'phone_number': '',
+                'is_email_verified': user.is_email_verified,
+                'is_admin': user.is_staff,
+                'is_superuser': user.is_superuser,
+                'date_joined': user.created_at.isoformat(),
+                'last_login': user.last_login.isoformat() if user.last_login else None,
+            })
+    
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return Response({
+            'error': 'Failed to process profile request',
+            'details': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def admin_change_password(request):
+    """Change admin password"""
+    try:
+        user = request.user
+        data = request.data
+        
+        # Validate required fields
+        current_password = data.get('current_password')
+        new_password = data.get('new_password')
+        
+        if not current_password or not new_password:
+            return Response({
+                'error': 'Both current_password and new_password are required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Verify current password
+        if not user.check_password(current_password):
+            return Response({
+                'error': 'Current password is incorrect'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Validate new password strength
+        if len(new_password) < 8:
+            return Response({
+                'error': 'New password must be at least 8 characters long'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if new password is different from current
+        if user.check_password(new_password):
+            return Response({
+                'error': 'New password must be different from current password'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Update password
+        user.set_password(new_password)
+        user.save()
+        
+        # Log admin action (fixed field names)
+        AdminAction.objects.create(
+            admin_user=user,
+            admin_email=user.email,
+            action='other',
+            action_display=f'Admin {user.username} changed their password',
+            details={'action': 'password_change', 'timestamp': timezone.now().isoformat()}
+        )
+        
+        return Response({
+            'success': True,
+            'message': 'Password changed successfully'
+        })
+    
+    except Exception as e:
+        return Response({
+            'error': 'Failed to change password',
+            'details': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def request_email_change(request):
+    """Request email change - sends OTP to current email for verification"""
+    try:
+        from .otp_manager import OTPManager
+        from .email_service import EmailTemplateService
+        
+        user = request.user
+        new_email = request.data.get('new_email', '').strip().lower()
+        
+        if not new_email:
+            return Response({
+                'error': 'New email address is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Validate email format
+        import re
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_pattern, new_email):
+            return Response({
+                'error': 'Invalid email format'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if new email is same as current
+        if user.email.lower() == new_email:
+            return Response({
+                'error': 'New email must be different from current email'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if email is already taken
+        if User.objects.filter(email=new_email).exists():
+            return Response({
+                'error': 'This email address is already in use'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Store new email in session/cache (using JSONField for now)
+        if not user.usage_stats:
+            user.usage_stats = {}
+        user.usage_stats['pending_email_change'] = new_email
+        user.save()
+        
+        # Generate OTP manually and send via EmailTemplateService
+        identifier = f"email_change_{str(user.id)}"
+        print(f"[EMAIL_CHANGE_REQUEST] User ID: {user.id}")
+        print(f"[EMAIL_CHANGE_REQUEST] User ID type: {type(user.id)}")
+        print(f"[EMAIL_CHANGE_REQUEST] Using identifier: {identifier}")
+        print(f"[EMAIL_CHANGE_REQUEST] Sending OTP to: {user.email}")
+        print(f"[EMAIL_CHANGE_REQUEST] New email will be: {new_email}")
+        
+        # Check rate limit
+        is_allowed, wait_time = OTPManager.check_rate_limit(identifier)
+        if not is_allowed:
+            return Response({
+                'error': f'Too many requests. Please wait {wait_time} seconds.'
+            }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+        
+        # Generate OTP
+        otp = OTPManager.generate_otp()
+        
+        # Store OTP in cache
+        from django.core.cache import cache
+        otp_key = f"otp:{identifier}"
+        attempts_key = f"otp_attempts:{identifier}"
+        
+        print(f"[EMAIL_CHANGE_REQUEST] About to store OTP in cache")
+        print(f"[EMAIL_CHANGE_REQUEST] OTP Key: {otp_key}")
+        print(f"[EMAIL_CHANGE_REQUEST] OTP Value: {otp}")
+        
+        cache.set(otp_key, otp, 10 * 60)  # 10 minutes
+        cache.set(attempts_key, 0, 10 * 60)
+        
+        # Verify it was stored
+        stored_otp = cache.get(otp_key)
+        print(f"[EMAIL_CHANGE_REQUEST] Stored OTP verification: {stored_otp}")
+        print(f"[EMAIL_CHANGE_REQUEST] Storage successful: {stored_otp == otp}")
+        
+        if stored_otp != otp:
+            print(f"[EMAIL_CHANGE_REQUEST] WARNING: Cache storage failed!")
+            print(f"[EMAIL_CHANGE_REQUEST] Expected: {otp}, Got: {stored_otp}")
+        
+        # Increment rate limit
+        OTPManager.increment_rate_limit(identifier)
+        
+        # Send email using the email change verification template
+        from .email_service import EmailTemplateService
+        email_service = EmailTemplateService()
+        
+        try:
+            result = email_service.send_email(
+                template_type='custom',
+                recipient_email=user.email,
+                user=user,
+                custom_vars={
+                    'otp_code': otp,
+                },
+                template_name='Email Change Verification',
+                test_mode=False
+            )
+            print(f"[EMAIL_CHANGE_REQUEST] Email sent successfully with OTP: {otp}")
+        except Exception as e:
+            print(f"[EMAIL_CHANGE_REQUEST] Email send error: {str(e)}")
+            # Don't fail the request - OTP is stored
+        
+        print(f"[EMAIL_CHANGE_REQUEST] OTP generated and stored successfully")
+        
+        return Response({
+            'success': True,
+            'message': f'Verification code sent to {user.email}',
+            'current_email_masked': f"{user.email[:3]}***{user.email[user.email.index('@'):]}"
+        })
+    
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return Response({
+            'error': 'Failed to request email change',
+            'details': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def verify_email_change(request):
+    """Verify email change with OTP sent to current email"""
+    try:
+        from .otp_manager import OTPManager
+        
+        user = request.user
+        otp = request.data.get('otp', '').strip()
+        
+        # Debug logging
+        print(f"[EMAIL_CHANGE_VERIFY] User ID: {user.id}")
+        print(f"[EMAIL_CHANGE_VERIFY] OTP received: {otp}")
+        
+        if not otp:
+            return Response({
+                'error': 'Verification code is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get pending email from user's temp data
+        pending_email = user.usage_stats.get('pending_email_change') if user.usage_stats else None
+        
+        print(f"[EMAIL_CHANGE_VERIFY] Pending email: {pending_email}")
+        
+        if not pending_email:
+            return Response({
+                'error': 'No pending email change request found'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Verify OTP
+        identifier = f"email_change_{str(user.id)}"
+        print(f"[EMAIL_CHANGE_VERIFY] User ID type: {type(user.id)}")
+        print(f"[EMAIL_CHANGE_VERIFY] Using identifier: {identifier}")
+        is_valid, message = OTPManager.verify_otp(identifier, otp, 'email_change')
+        print(f"[EMAIL_CHANGE_VERIFY] Verification result: is_valid={is_valid}, message={message}")
+        
+        if not is_valid:
+            return Response({
+                'error': message
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Update email
+        old_email = user.email
+        user.email = pending_email
+        user.is_email_verified = False  # Require verification of new email
+        
+        # Clear OTP and pending email
+        user.email_verification_otp = None
+        user.email_verification_otp_expires = None
+        if user.usage_stats and 'pending_email_change' in user.usage_stats:
+            del user.usage_stats['pending_email_change']
+        
+        user.save()
+        
+        # Log admin action
+        AdminAction.objects.create(
+            admin_user=user,
+            admin_email=user.email,
+            action='other',
+            action_display=f'Admin {user.username} changed email from {old_email} to {user.email}',
+            details={
+                'action': 'email_change',
+                'old_email': old_email,
+                'new_email': user.email,
+                'timestamp': timezone.now().isoformat()
+            }
+        )
+        
+        return Response({
+            'success': True,
+            'message': 'Email address updated successfully',
+            'new_email': user.email,
+            'requires_verification': True
+        })
+    
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return Response({
+            'error': 'Failed to verify email change',
+            'details': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def request_email_verification(request):
+    """Send OTP to admin's email for verification"""
+    try:
+        from .otp_manager import OTPManager
+        from .email_service import EmailTemplateService
+        from django.core.cache import cache
+        
+        user = request.user
+        
+        # Check if email is already verified
+        if user.is_email_verified:
+            return Response({
+                'error': 'Email is already verified'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Generate OTP
+        otp = OTPManager.generate_otp()
+        print(f"[EMAIL_VERIFICATION_REQUEST] Generated OTP: {otp} for user {user.id}")
+        
+        # Store OTP in cache with identifier
+        identifier = f"email_verification_{str(user.id)}"
+        cache_key = f"otp:{identifier}"
+        cache.set(cache_key, otp, 10 * 60)  # 10 minutes
+        
+        # Verify storage
+        stored_otp = cache.get(cache_key)
+        print(f"[EMAIL_VERIFICATION_REQUEST] Stored OTP verification: {stored_otp}")
+        print(f"[EMAIL_VERIFICATION_REQUEST] Cache key: {cache_key}")
+        print(f"[EMAIL_VERIFICATION_REQUEST] Storage successful: {stored_otp == otp}")
+        
+        # Send email using email template service
+        email_service = EmailTemplateService()
+        
+        try:
+            result = email_service.send_email(
+                template_type='custom',
+                recipient_email=user.email,
+                user=user,
+                custom_vars={'otp_code': otp},
+                template_name='Email Verification',
+                test_mode=False
+            )
+            
+            print(f"[EMAIL_VERIFICATION_REQUEST] Email send result: {result}")
+            
+        except Exception as email_error:
+            print(f"[EMAIL_VERIFICATION_REQUEST] Email send error: {email_error}")
+            import traceback
+            traceback.print_exc()
+        
+        # Mask email for display
+        email_parts = user.email.split('@')
+        if len(email_parts[0]) > 3:
+            masked_email = email_parts[0][:2] + '*' * (len(email_parts[0]) - 2) + '@' + email_parts[1]
+        else:
+            masked_email = '*' * len(email_parts[0]) + '@' + email_parts[1]
+        
+        return Response({
+            'success': True,
+            'message': f'Verification code sent to {masked_email}',
+            'masked_email': masked_email
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return Response({
+            'error': 'Failed to send verification code',
+            'details': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def verify_email_with_otp(request):
+    """Verify admin's email using OTP"""
+    try:
+        from .otp_manager import OTPManager
+        
+        user = request.user
+        otp = request.data.get('otp', '').strip()
+        
+        if not otp:
+            return Response({
+                'error': 'OTP is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if already verified
+        if user.is_email_verified:
+            return Response({
+                'error': 'Email is already verified'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Verify OTP
+        identifier = f"email_verification_{str(user.id)}"
+        is_valid, message = OTPManager.verify_otp(identifier, otp, 'email_verification')
+        
+        print(f"[EMAIL_VERIFICATION_VERIFY] OTP validation result: {is_valid}, {message}")
+        
+        if not is_valid:
+            return Response({
+                'error': message or 'Invalid or expired verification code'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Mark email as verified
+        old_status = user.is_email_verified
+        user.is_email_verified = True
+        user.save()
+        
+        print(f"[EMAIL_VERIFICATION_VERIFY] Email verified for user {user.id}")
+        
+        # Log admin action
+        AdminAction.objects.create(
+            admin_user=user,
+            admin_email=user.email,
+            action='other',
+            action_display=f'Admin {user.username} verified email address',
+            details={
+                'action': 'email_verification',
+                'email': user.email,
+                'timestamp': timezone.now().isoformat()
+            }
+        )
+        
+        return Response({
+            'success': True,
+            'message': 'Email verified successfully',
+            'is_email_verified': True
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return Response({
+            'error': 'Failed to verify email',
+            'details': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

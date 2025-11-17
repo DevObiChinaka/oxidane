@@ -19,6 +19,7 @@ import json
 from decimal import Decimal
 from datetime import timedelta
 from django.conf import settings
+from django.db import transaction
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
@@ -116,29 +117,38 @@ class InitializePaymentView(APIView):
                 }
             )
             
-            # Check for existing active recurring subscriptions (lifetime exempted)
-            if plan.billing_period != 'lifetime':
+            # Validate subscription rules
+            # Rule 1: Only one active recurring plan allowed
+            if plan.billing_period in ['weekly', 'monthly', 'quarterly', 'yearly']:
                 existing_recurring = Subscription.objects.filter(
                     billing_profile=billing_profile,
                     status='active',
                     plan__billing_period__in=['weekly', 'monthly', 'quarterly', 'yearly']
-                ).exclude(
-                    plan__billing_period='lifetime'
                 ).select_related('plan').first()
                 
                 if existing_recurring:
                     return Response({
                         'success': False,
-                        'error': 'Active subscription exists',
-                        'message': f'You already have an active {existing_recurring.plan.get_billing_period_display()} subscription ({existing_recurring.plan.name}). Please cancel it before purchasing a new plan.',
-                        'existing_plan': {
-                            'id': str(existing_recurring.plan.id),
-                            'name': existing_recurring.plan.name,
-                            'billing_period': existing_recurring.plan.billing_period,
-                            'end_date': existing_recurring.end_date.isoformat() if existing_recurring.end_date else None
-                        },
+                        'error': f'You already have an active subscription ({existing_recurring.plan.name}). Please wait until it expires before purchasing another recurring plan.',
+                        'current_plan': existing_recurring.plan.name,
+                        'current_plan_expires': existing_recurring.end_date.isoformat() if existing_recurring.end_date else None,
                         'conflict': True
                     }, status=status.HTTP_409_CONFLICT)
+            
+            # Rule 2: Prevent duplicate lifetime/one-time plans
+            if plan.billing_period in ['lifetime', 'one_time']:
+                existing_lifetime = Subscription.objects.filter(
+                    billing_profile=billing_profile,
+                    plan=plan,
+                    status='active'
+                ).first()
+                
+                if existing_lifetime:
+                    return Response({
+                        'success': False,
+                        'error': f'You already have access to {plan.name}.',
+                        'redirect_to_subscriptions': True
+                    }, status=status.HTTP_400_BAD_REQUEST)
             
             # Validate Telegram connection for plans with Telegram groups
             if plan.telegram_groups.filter(is_active=True).exists():
@@ -403,6 +413,273 @@ class InitializePaymentView(APIView):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def charge_with_saved_card(request):
+    """
+    Charge user using their saved payment method
+    
+    POST /api/payments/charge-saved-card/
+    
+    Request Body:
+        {
+            "plan_id": "uuid",
+            "coupon_code": "SAVE20"  # Optional
+        }
+    
+    Response:
+        {
+            "success": true,
+            "reference": "PAY_123456",
+            "subscription_id": "uuid",
+            "message": "Payment processed successfully"
+        }
+    """
+    try:
+        user = request.user
+        plan_id = request.data.get('plan_id')
+        coupon_code = request.data.get('coupon_code', '').strip().upper()
+        currency = request.data.get('currency', 'NGN').upper()  # Get currency from request, default to NGN
+        amount = request.data.get('amount')  # Get the already-converted amount from frontend
+        
+        if not plan_id:
+            return Response({
+                'success': False,
+                'error': 'Plan ID is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not amount:
+            return Response({
+                'success': False,
+                'error': 'Amount is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get billing profile
+        billing_profile, _ = BillingProfile.objects.get_or_create(user=user)
+        
+        # Get user's active payment method
+        payment_method = PaymentMethod.objects.filter(
+            billing_profile=billing_profile,
+            is_active=True
+        ).first()
+        
+        if not payment_method:
+            return Response({
+                'success': False,
+                'error': 'No payment method found. Please add a payment method first.',
+                'redirect_to_billing': True
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get plan
+        try:
+            plan = SubscriptionPlan.objects.get(id=plan_id, is_active=True)
+        except SubscriptionPlan.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Subscription plan not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Validate subscription rules
+        # Rule 1: Only one active recurring plan allowed
+        if plan.billing_period in ['weekly', 'monthly', 'quarterly', 'yearly']:
+            existing_recurring = Subscription.objects.filter(
+                billing_profile=billing_profile,
+                status='active',
+                plan__billing_period__in=['weekly', 'monthly', 'quarterly', 'yearly']
+            ).first()
+            
+            if existing_recurring:
+                return Response({
+                    'success': False,
+                    'error': f'You already have an active subscription ({existing_recurring.plan.name}). Please wait until it expires before purchasing another recurring plan.',
+                    'current_plan': existing_recurring.plan.name,
+                    'current_plan_expires': existing_recurring.end_date.isoformat() if existing_recurring.end_date else None
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Rule 2: Prevent duplicate lifetime/one-time plans
+        if plan.billing_period in ['lifetime', 'one_time']:
+            existing_lifetime = Subscription.objects.filter(
+                billing_profile=billing_profile,
+                plan=plan,
+                status='active'
+            ).first()
+            
+            if existing_lifetime:
+                return Response({
+                    'success': False,
+                    'error': f'You already have access to {plan.name}.',
+                    'redirect_to_subscriptions': True
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Calculate pricing
+        # Amount is already converted to the selected currency by the frontend
+        amount = Decimal(str(amount))
+        discount_amount = Decimal('0.00')
+        
+        # Validate and apply coupon if provided
+        if coupon_code:
+            try:
+                coupon = Coupon.objects.get(
+                    code=coupon_code,
+                    is_active=True,
+                    valid_from__lte=timezone.now(),
+                    valid_until__gte=timezone.now()
+                )
+                
+                # Check if coupon applies to this plan
+                if coupon.applicable_plans.exists() and plan not in coupon.applicable_plans.all():
+                    return Response({
+                        'success': False,
+                        'error': 'This coupon is not applicable to the selected plan'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                
+                # Calculate discount
+                if coupon.discount_type == 'percentage':
+                    discount_amount = (amount * coupon.discount_value) / Decimal('100')
+                else:  # fixed_amount
+                    discount_amount = min(coupon.discount_value, amount)
+                
+            except Coupon.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'error': 'Invalid coupon code'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Calculate final amount
+        calculator = PaymentCalculator()
+        calculation = calculator.calculate_total_with_fees(
+            base_amount=amount - discount_amount,
+            currency=currency,
+            pass_fee_to_customer=True
+        )
+        
+        processing_fee = calculation['processing_fee']
+        total_amount = calculation['total_to_charge']
+        
+        # Generate reference
+        reference = f"PAY_{uuid.uuid4().hex[:12].upper()}"
+        
+        # Create payment record
+        payment = Payment.objects.create(
+            billing_profile=billing_profile,
+            amount=amount - discount_amount,
+            processing_fee=processing_fee,
+            total_amount=total_amount,
+            currency=currency,
+            payment_gateway='paystack',
+            gateway_reference=reference,
+            status='processing',
+            gateway_response={}
+        )
+        
+        # Charge the saved card
+        paystack = PaystackService()
+        charge_result = paystack.charge_authorization(
+            authorization_code=payment_method.gateway_authorization_code,
+            email=user.email,
+            amount=total_amount,
+            currency=currency,
+            metadata={
+                'plan_id': str(plan.id),
+                'plan_name': plan.name,
+                'user_id': str(user.id),
+                'user_email': user.email,
+                'payment_id': str(payment.id),
+                'coupon_code': coupon_code if coupon_code else None
+            }
+        )
+        
+        if charge_result.get('success'):
+            # Payment successful - wrap in atomic transaction
+            with transaction.atomic():
+                # Update payment with Paystack's reference
+                payment.status = 'verified'
+                payment.gateway_reference = charge_result.get('reference')
+                payment.gateway_response = charge_result
+                payment.log_event('payment_successful', charge_result)
+                payment.save()
+                
+                # Create subscription
+                subscription_start = timezone.now()
+                if plan.billing_period == 'weekly':
+                    subscription_end = subscription_start + timedelta(days=7)
+                    next_billing_date = subscription_start + timedelta(days=7)
+                elif plan.billing_period == 'monthly':
+                    subscription_end = subscription_start + timedelta(days=30)
+                    next_billing_date = subscription_start + timedelta(days=30)
+                elif plan.billing_period == 'quarterly':
+                    subscription_end = subscription_start + timedelta(days=90)
+                    next_billing_date = subscription_start + timedelta(days=90)
+                elif plan.billing_period == 'yearly':
+                    subscription_end = subscription_start + timedelta(days=365)
+                    next_billing_date = subscription_start + timedelta(days=365)
+                elif plan.billing_period == 'lifetime':
+                    subscription_end = subscription_start + timedelta(days=36500)
+                    next_billing_date = None
+                else:
+                    subscription_end = subscription_start + timedelta(days=30)
+                    next_billing_date = subscription_start + timedelta(days=30)
+                
+                # Create or update subscription (match on billing_profile AND plan)
+                subscription, created = Subscription.objects.update_or_create(
+                    billing_profile=billing_profile,
+                    plan=plan,
+                    defaults={
+                        'status': 'active',
+                        'start_date': subscription_start,
+                        'end_date': subscription_end,
+                        'amount_paid': amount - discount_amount,
+                        'currency': currency,
+                        'auto_renew': True,
+                        'payment_method': payment_method,
+                        'next_billing_date': next_billing_date,
+                    }
+                )
+                
+                # Link payment to subscription
+                payment.subscription = subscription
+                payment.save()
+                
+                # Update user subscription fields
+                user.current_plan = plan
+                user.subscription_status = 'active'
+                user.save()
+            
+            # Queue Celery tasks AFTER database commit
+            transaction.on_commit(lambda: activate_subscription.delay(payment.id))
+            transaction.on_commit(lambda: add_user_to_telegram_groups.delay(user.id, str(plan.id)))
+            transaction.on_commit(lambda: send_payment_receipt_email.delay(payment.id))
+            
+            logger.info(f"Charged saved card for user {user.email}: {currency} {total_amount}")
+            
+            return Response({
+                'success': True,
+                'reference': charge_result.get('reference'),  # Return Paystack's reference
+                'subscription_id': str(subscription.id),
+                'message': 'Payment processed successfully',
+                'amount': float(total_amount),
+                'currency': currency
+            }, status=status.HTTP_200_OK)
+        else:
+            # Payment failed
+            payment.status = 'failed'
+            payment.failure_reason = charge_result.get('message', 'Payment declined')
+            payment.gateway_response = charge_result
+            payment.save()
+            
+            return Response({
+                'success': False,
+                'error': charge_result.get('message', 'Payment was declined. Please try another card.')
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+    except Exception as e:
+        logger.error(f"Error charging saved card: {str(e)}", exc_info=True)
+        return Response({
+            'success': False,
+            'error': 'An error occurred while processing payment'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 class VerifyPaymentView(APIView):
     """
     Verify a payment transaction
@@ -497,10 +774,6 @@ class VerifyPaymentView(APIView):
                     try:
                         plan = SubscriptionPlan.objects.get(id=plan_id)
                         
-                        # Trials disabled - all subscriptions are paid
-                        is_trial = False
-                        trial_end_date = None
-                        
                         # Calculate subscription dates
                         start_date = timezone.now()
                         
@@ -557,16 +830,14 @@ class VerifyPaymentView(APIView):
                                 else:
                                     logger.info(f"Payment method updated from trial signup: {auth_data['last4']}")
                         
-                        # Create or update subscription (use billing_profile, not user)
+                        # Create or update subscription (match on billing_profile AND plan)
                         subscription, created = Subscription.objects.update_or_create(
                             billing_profile=payment.billing_profile,
+                            plan=plan,
                             defaults={
-                                'plan': plan,
                                 'status': 'active',
                                 'start_date': start_date,
                                 'end_date': end_date,
-                                'is_trial': is_trial,
-                                'trial_end_date': trial_end_date,
                                 'amount_paid': payment.amount,
                                 'currency': payment.currency,
                                 'auto_renew': True,
@@ -681,26 +952,29 @@ def paystack_webhook(request):
             try:
                 payment = Payment.objects.get(gateway_reference=reference)
                 
-                # Update payment status
-                if payment.status != 'success':
-                    payment.mark_as_paid()
-                    payment.gateway_response = event_data
-                    payment.save()
-                    
-                    logger.info(f"Payment {reference} marked as paid via webhook")
-                    
-                    # Trigger Celery tasks
-                    activate_subscription.delay(payment.id)
-                    
-                    # Get plan_id from metadata for Telegram groups
-                    metadata = event_data.get('metadata', {})
-                    plan_id = metadata.get('plan_id')
-                    user_id = metadata.get('user_id')
-                    
-                    if plan_id and user_id:
-                        add_user_to_telegram_groups.delay(user_id, plan_id)
-                    
-                    send_payment_receipt_email.delay(payment.id)
+                # Use atomic transaction for consistency
+                with transaction.atomic():
+                    # Update payment status if not already paid
+                    if payment.status != 'success':
+                        payment.mark_as_paid()
+                        payment.gateway_response = event_data
+                        payment.log_event('webhook_received', {'event': event, 'reference': reference})
+                        payment.save()
+                        
+                        logger.info(f"Payment {reference} marked as paid via webhook")
+                
+                # Queue Celery tasks AFTER database commit (idempotent)
+                transaction.on_commit(lambda: activate_subscription.delay(payment.id))
+                
+                # Get plan_id from metadata for Telegram groups
+                metadata = event_data.get('metadata', {})
+                plan_id = metadata.get('plan_id')
+                user_id = metadata.get('user_id')
+                
+                if plan_id and user_id:
+                    transaction.on_commit(lambda: add_user_to_telegram_groups.delay(user_id, plan_id))
+                
+                transaction.on_commit(lambda: send_payment_receipt_email.delay(payment.id))
                 
             except Payment.DoesNotExist:
                 logger.warning(f"Payment not found for reference: {reference}")

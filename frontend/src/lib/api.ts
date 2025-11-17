@@ -28,7 +28,7 @@ export async function apiFetch(
 
   // Add auth token if required
   if (requiresAuth) {
-    const token = localStorage.getItem('access_token');
+    const token = localStorage.getItem('user_auth_token');
     if (token) {
       requestHeaders['Authorization'] = `Bearer ${token}`;
     }
@@ -44,7 +44,7 @@ export async function apiFetch(
   // Handle 401 Unauthorized globally
   if (response.status === 401 && typeof window !== 'undefined') {
     // Clear tokens
-    localStorage.removeItem('access_token');
+    localStorage.removeItem('user_auth_token');
     localStorage.removeItem('refresh_token');
     
     // Redirect to login with current path for post-login redirect

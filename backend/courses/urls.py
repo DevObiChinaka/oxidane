@@ -1,5 +1,5 @@
 from django.urls import path
-from . import admin_views, views
+from . import admin_views, views, video_views
 
 app_name = 'courses'
 
@@ -10,6 +10,9 @@ urlpatterns = [
     path('courses/<slug:slug>/', views.course_detail, name='course_detail'),
     path('courses/<slug:slug>/enroll/', views.enroll_course, name='enroll_course'),
     path('courses/lessons/<uuid:lesson_id>/progress/', views.update_lesson_progress, name='update_lesson_progress'),
+    
+    # Video streaming endpoint
+    path('lessons/<uuid:lesson_id>/video-embed/', video_views.get_video_embed, name='get_video_embed'),
     
     # Admin dashboard endpoints
     path('admin/dashboard/metrics/', admin_views.admin_dashboard_metrics, name='admin_dashboard_metrics'),

@@ -17,6 +17,7 @@ export default function AdminLayoutWrapper({ children }: AdminLayoutWrapperProps
   const [setupChecked, setSetupChecked] = useState(false);
   const [setupComplete, setSetupComplete] = useState(false);
   const [checkingSetup, setCheckingSetup] = useState(true);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // Don't protect login and password reset pages
   const publicPages = ['/admin/login', '/admin/forgot-password'];
@@ -103,8 +104,27 @@ export default function AdminLayoutWrapper({ children }: AdminLayoutWrapperProps
     <ProtectedRoute requireAdmin>
       <div className="flex h-screen bg-gray-50">
         {/* Don't show sidebar on setup page */}
-        {!isSetupPage && <AdminSidebar />}
-        <main className={`flex-1 overflow-y-auto ${isSetupPage ? '' : ''}`}>
+        {!isSetupPage && (
+          <AdminSidebar 
+            isMobileMenuOpen={isMobileMenuOpen}
+            setIsMobileMenuOpen={setIsMobileMenuOpen}
+          />
+        )}
+        <main className="flex-1 overflow-y-auto">
+          {/* Mobile Menu Button - Only visible on mobile */}
+          {!isSetupPage && (
+            <div className="md:hidden sticky top-0 z-40 bg-white border-b border-gray-200 px-4 py-3">
+              <button
+                onClick={() => setIsMobileMenuOpen(true)}
+                className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
+              >
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+                <span className="text-sm font-medium">Menu</span>
+              </button>
+            </div>
+          )}
           {children}
         </main>
       </div>

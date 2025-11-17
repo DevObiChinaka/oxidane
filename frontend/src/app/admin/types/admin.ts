@@ -40,6 +40,7 @@ export interface Course {
   trailer_video_url?: string;
   estimated_duration: number;
   order: number;
+  required_plans?: string[]; // IDs of subscription plans that grant access
   created_at: string;
   updated_at: string;
   published_at?: string;

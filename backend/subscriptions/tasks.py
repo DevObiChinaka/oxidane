@@ -24,25 +24,41 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60)
+@shared_task(
+    bind=True, 
+    max_retries=5,
+    autoretry_for=(Exception,),
+    retry_backoff=True,  # Exponential backoff: 2^retry seconds
+    retry_backoff_max=600,  # Max 10 minutes between retries
+    retry_jitter=True,  # Add randomness to prevent thundering herd
+)
 def activate_subscription(self, payment_id):
     """
-    Activate subscription after successful payment
+    Activate subscription after successful payment with safety mechanisms
     
     Args:
         payment_id: ID of the successful payment
         
-    Actions:
-        1. Get payment and plan details
-        2. Create or update subscription
-        3. Update user subscription fields
-        4. Set subscription dates based on billing period
-        5. Log activation
+    Safety Features:
+        - Idempotency: Won't reactivate if already completed
+        - Atomic operations: All-or-nothing database updates
+        - Retry logic: Exponential backoff for transient failures
+        - Audit trail: Logs every state change
         
-    Retries: 3 times with 60-second delay
+    Actions:
+        1. Check if already activated (idempotency)
+        2. Mark activation as processing
+        3. Create/update subscription
+        4. Update user subscription fields
+        5. Mark activation as completed
+        6. Log all events
+        
+    Retries: 5 times with exponential backoff (2s, 4s, 8s, 16s, 32s)
     """
+    from django.db import transaction
+    
     try:
-        logger.info(f"Activating subscription for payment {payment_id}")
+        logger.info(f"[Payment {payment_id}] Starting subscription activation")
         
         # Get payment
         try:
@@ -54,10 +70,26 @@ def activate_subscription(self, payment_id):
             logger.error(f"Payment {payment_id} not found")
             return {'success': False, 'error': 'Payment not found'}
         
+        # IDEMPOTENCY CHECK: Skip if already activated
+        if payment.activation_status == 'completed':
+            logger.info(f"[Payment {payment_id}] Already activated, skipping")
+            return {
+                'success': True, 
+                'message': 'Already activated',
+                'idempotent': True,
+                'subscription_id': str(payment.subscription.id) if payment.subscription else None
+            }
+        
+        # Mark as processing (increment attempts)
+        payment.mark_activation_started()
+        logger.info(f"[Payment {payment_id}] Activation attempt #{payment.activation_attempts}")
+        
         # Verify payment is successful
         if payment.status != 'success':
-            logger.warning(f"Payment {payment_id} status is {payment.status}, not 'success'")
-            return {'success': False, 'error': f'Payment status is {payment.status}'}
+            error_msg = f'Payment status is {payment.status}, expected success'
+            logger.warning(f"[Payment {payment_id}] {error_msg}")
+            payment.mark_activation_failed(error_msg)
+            return {'success': False, 'error': error_msg}
         
         # Get plan from metadata or subscription
         if payment.subscription and payment.subscription.plan:
@@ -70,14 +102,18 @@ def activate_subscription(self, payment_id):
                 plan_id = metadata.get('plan_id')
             
             if not plan_id:
-                logger.error(f"No plan_id found for payment {payment_id}")
-                return {'success': False, 'error': 'No plan associated with payment'}
+                error_msg = 'No plan_id found in payment data'
+                logger.error(f"[Payment {payment_id}] {error_msg}")
+                payment.mark_activation_failed(error_msg)
+                return {'success': False, 'error': error_msg}
             
             try:
                 plan = SubscriptionPlan.objects.get(id=plan_id)
             except SubscriptionPlan.DoesNotExist:
-                logger.error(f"Plan {plan_id} not found")
-                return {'success': False, 'error': 'Plan not found'}
+                error_msg = f'Plan {plan_id} not found'
+                logger.error(f"[Payment {payment_id}] {error_msg}")
+                payment.mark_activation_failed(error_msg)
+                return {'success': False, 'error': error_msg}
         
         user = payment.billing_profile.user
         
@@ -97,33 +133,95 @@ def activate_subscription(self, payment_id):
         else:
             end_date = start_date + timedelta(days=30)  # Default to monthly
         
-        # Create or update subscription (get the active one or create new)
-        subscription, created = Subscription.objects.update_or_create(
-            billing_profile=payment.billing_profile,
-            status='active',  # Only update active subscriptions
-            defaults={
-                'plan': plan,
-                'start_date': start_date,
-                'end_date': end_date,
-                'amount_paid': payment.amount,
-                'currency': payment.currency,
-            }
-        )
-        
-        # Link payment to subscription if not already linked
-        if not payment.subscription:
-            payment.subscription = subscription
-            payment.save()
-        
-        # Update user subscription fields
-        user.current_plan = plan
-        user.subscription_status = 'active'
-        user.subscription_start_date = start_date
-        user.subscription_end_date = end_date
-        user.save()
+        # ATOMIC TRANSACTION: All database operations succeed or all fail
+        with transaction.atomic():
+            # Check if subscription already exists for this payment
+            if payment.subscription:
+                # Update existing subscription linked to this payment
+                subscription = payment.subscription
+                subscription.plan = plan
+                subscription.status = 'active'
+                subscription.start_date = start_date
+                subscription.end_date = end_date
+                subscription.amount_paid = payment.amount
+                subscription.currency = payment.currency
+                subscription.save()
+                created = False
+            else:
+                # Check if user already has this exact plan active (prevent duplicates of same plan)
+                existing_sub = Subscription.objects.filter(
+                    billing_profile=payment.billing_profile,
+                    plan=plan,
+                    status='active'
+                ).first()
+                
+                if existing_sub:
+                    # Extend/update the existing subscription for the same plan
+                    subscription = existing_sub
+                    subscription.start_date = start_date
+                    subscription.end_date = end_date
+                    subscription.amount_paid = payment.amount
+                    subscription.currency = payment.currency
+                    subscription.save()
+                    created = False
+                else:
+                    # BUSINESS RULE: Only ONE recurring (auto-renewing) subscription allowed
+                    # BUT multiple lifetime/one-time subscriptions are OK
+                    is_recurring_plan = plan.billing_period in ['weekly', 'monthly', 'quarterly', 'yearly']
+                    
+                    if is_recurring_plan:
+                        # Check for existing active recurring subscription
+                        existing_recurring = Subscription.objects.filter(
+                            billing_profile=payment.billing_profile,
+                            status='active',
+                            plan__billing_period__in=['weekly', 'monthly', 'quarterly', 'yearly']
+                        ).exclude(plan=plan).first()
+                        
+                        if existing_recurring:
+                            error_msg = f'User already has active recurring subscription: {existing_recurring.plan.name}. Only one recurring subscription allowed at a time.'
+                            logger.warning(f"[Payment {payment_id}] {error_msg}")
+                            payment.mark_activation_failed(error_msg)
+                            return {
+                                'success': False, 
+                                'error': error_msg,
+                                'existing_subscription': str(existing_recurring.id)
+                            }
+                    
+                    # Create NEW subscription (allows multiple lifetime plans or first recurring)
+                    subscription = Subscription.objects.create(
+                        billing_profile=payment.billing_profile,
+                        plan=plan,
+                        status='active',
+                        start_date=start_date,
+                        end_date=end_date,
+                        amount_paid=payment.amount,
+                        currency=payment.currency,
+                        auto_renew=is_recurring_plan,  # Set auto_renew based on plan type
+                    )
+                    created = True
+            
+            # Link payment to subscription if not already linked
+            if not payment.subscription:
+                payment.subscription = subscription
+                payment.save()
+            
+            # Update user subscription fields
+            user.current_plan = plan
+            user.subscription_status = 'active'
+            user.subscription_start_date = start_date
+            user.subscription_end_date = end_date
+            user.save()
+            
+            # Mark activation as completed
+            payment.mark_activation_completed()
+            
+            # Queue email receipt task after successful activation
+            transaction.on_commit(
+                lambda: send_payment_receipt_email.delay(payment_id)
+            )
         
         action = 'Created' if created else 'Updated'
-        logger.info(f"{action} subscription {subscription.id} for user {user.id} with plan {plan.name}")
+        logger.info(f"[Payment {payment_id}] ✅ {action} subscription {subscription.id} for user {user.id} with plan {plan.name}")
         
         return {
             'success': True,
@@ -132,17 +230,20 @@ def activate_subscription(self, payment_id):
             'plan_name': plan.name,
             'start_date': start_date.isoformat(),
             'end_date': end_date.isoformat(),
+            'created': created,
         }
     
     except Exception as e:
-        logger.error(f"Error activating subscription for payment {payment_id}: {str(e)}", exc_info=True)
+        logger.error(f"[Payment {payment_id}] ❌ Error activating subscription: {str(e)}", exc_info=True)
         
-        # Retry the task
+        # Mark activation as failed
         try:
-            raise self.retry(exc=e)
-        except self.MaxRetriesExceededError:
-            logger.error(f"Max retries exceeded for activate_subscription (payment {payment_id})")
-            return {'success': False, 'error': str(e)}
+            payment.mark_activation_failed(e)
+        except:
+            pass  # Don't fail the retry if we can't mark it
+        
+        # Retry with exponential backoff
+        raise self.retry(exc=e)
 
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
@@ -770,20 +871,48 @@ def send_renewal_reminders():
     return {'success': True, 'reminders_sent': count}
 
 
-@shared_task
-def update_exchange_rates():
+@shared_task(bind=True, max_retries=3)
+def update_exchange_rates(self):
     """
     Update exchange rates from external API
     
     Runs: Every 6 hours (configured in celery.py)
+    Uses: exchangerate-api.io (free tier, 250 requests/month)
     
-    TODO: Implement actual exchange rate API integration
+    Returns dict with success status and details
     """
-    logger.info("Updating exchange rates (placeholder)")
+    from .services.exchange_rate_service import ExchangeRateService
     
-    # TODO: Fetch from external API (e.g., exchangerate-api.com)
+    try:
+        logger.info("Starting exchange rate update task")
+        
+        service = ExchangeRateService(base_currency='USD')
+        success = service.fetch_and_update_rates(
+            base_currency='USD',
+            use_fixer=False,  # Use free exchangerate-api.io
+            force_update=False  # Only update if stale (>24h old)
+        )
+        
+        if success:
+            logger.info("Exchange rates updated successfully")
+            return {
+                'success': True,
+                'message': 'Exchange rates updated',
+                'timestamp': timezone.now().isoformat()
+            }
+        else:
+            logger.warning("Exchange rate update returned False")
+            return {
+                'success': False,
+                'message': 'Exchange rate update failed (check logs)',
+                'timestamp': timezone.now().isoformat()
+            }
     
-    return {'success': True, 'note': 'Exchange rate update not implemented'}
+    except Exception as exc:
+        logger.error(f"Exchange rate update task failed: {exc}", exc_info=True)
+        
+        # Retry with exponential backoff (30s, 60s, 120s)
+        raise self.retry(exc=exc, countdown=30 * (2 ** self.request.retries))
 
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=30)
@@ -1344,46 +1473,104 @@ def process_single_renewal(self, subscription_id):
         else:
             # Renewal payment failed
             error_message = charge_result.get('message', 'Unknown error')
-            logger.error(f"Renewal payment failed for {subscription_id}: {error_message}")
+            logger.error(f"❌ Auto-renewal failed for {subscription_id}: {error_message}")
             
-            # Retry
-            if self.request.retries < self.max_retries:
-                logger.info(f"Retrying renewal for {subscription_id} (attempt {self.request.retries + 1}/{self.max_retries})")
-                raise self.retry(exc=Exception(error_message))
-            else:
-                # Max retries exhausted - disable auto-renewal and let it expire naturally
-                logger.error(f"Max retries exceeded for {subscription_id}, disabling auto-renew")
-                
-                subscription.auto_renew = False
-                subscription.save(update_fields=['auto_renew'])
-                
-                # Note: Subscription will expire at end_date (handled by check_expired_subscriptions task)
-                # This allows user to manually renew before expiration if they want
-                
-                logger.info(f"Subscription {subscription_id} will expire on {subscription.end_date}")
-                
-                # TODO: Send email about failed renewal and upcoming expiration
-                
-                return {
-                    'success': False,
-                    'error': error_message,
-                    'action': 'auto_renew_disabled',
-                    'retries_exhausted': True
-                }
+            # Retry (up to max_retries)
+            raise self.retry(exc=Exception(error_message))
     
-    except Exception as e:
-        logger.error(f"Error in process_single_renewal for {subscription_id}: {str(e)}", exc_info=True)
+    except self.MaxRetriesExceededError:
+        # Max retries exceeded - disable auto-renew
+        logger.error(f"Max retries exceeded for subscription {subscription_id} - disabling auto-renew")
         
         try:
-            raise self.retry(exc=e)
-        except self.MaxRetriesExceededError:
-            logger.error(f"Max retries exceeded for renewal {subscription_id}")
+            subscription.auto_renew = False
+            subscription.save(update_fields=['auto_renew'])
+            # TODO: Send email about failed renewal and disabled auto-renew
+        except:
+            pass
+        
+        return {
+            'success': False,
+            'error': 'Max retries exceeded',
+            'action': 'auto_renew_disabled'
+        }
+    
+    except Exception as e:
+        logger.error(f"Error processing renewal for {subscription_id}: {str(e)}", exc_info=True)
+        raise self.retry(exc=e)
+
+
+@shared_task
+def reconcile_payments():
+    """
+    Payment Reconciliation Task
+    
+    Finds payments that succeeded but subscriptions weren't activated,
+    and retries the activation process.
+    
+    Run daily to catch any edge cases where activation failed despite successful payment.
+    This ensures no user pays but doesn't get their service.
+    
+    Returns:
+        dict: Summary of reconciliation results
+    """
+    from django.db import transaction
+    
+    logger.info("Starting payment reconciliation")
+    
+    # Find payments that are:
+    # 1. Successfully paid (status='success')
+    # 2. But activation is pending or failed
+    # 3. Created within last 7 days (don't retry very old ones)
+    seven_days_ago = timezone.now() - timedelta(days=7)
+    
+    failed_activations = Payment.objects.filter(
+        status='success',
+        activation_status__in=['pending', 'failed'],
+        created_at__gte=seven_days_ago
+    ).select_related('billing_profile__user', 'subscription')
+    
+    total_found = failed_activations.count()
+    logger.info(f"Found {total_found} payments needing reconciliation")
+    
+    if total_found == 0:
+        return {
+            'success': True,
+            'total_found': 0,
+            'retried': 0,
+            'message': 'No payments need reconciliation'
+        }
+    
+    retried_count = 0
+    errors = []
+    
+    for payment in failed_activations:
+        try:
+            # Log reconciliation attempt
+            payment.log_event('reconciliation_attempted', {
+                'activation_status': payment.activation_status,
+                'activation_attempts': payment.activation_attempts,
+                'last_error': payment.last_activation_error[:200] if payment.last_activation_error else None
+            })
             
-            try:
-                subscription = Subscription.objects.get(id=subscription_id)
-                subscription.auto_renew = False
-                subscription.save(update_fields=['auto_renew'])
-            except Exception as save_error:
-                logger.error(f"Failed to disable auto_renew: {str(save_error)}")
+            # Retry activation (task is idempotent, won't duplicate if already activated)
+            activate_subscription.delay(payment.id)
+            retried_count += 1
             
-            return {'success': False, 'error': str(e), 'action': 'auto_renew_disabled'}
+            logger.info(f"Reconciliation: Retrying activation for payment {payment.gateway_reference}")
+            
+        except Exception as e:
+            error_msg = f"Failed to retry payment {payment.gateway_reference}: {str(e)}"
+            logger.error(error_msg)
+            errors.append(error_msg)
+    
+    result = {
+        'success': True,
+        'total_found': total_found,
+        'retried': retried_count,
+        'errors': errors,
+        'message': f'Reconciled {retried_count} of {total_found} payments'
+    }
+    
+    logger.info(f"Payment reconciliation complete: {result['message']}")
+    return result

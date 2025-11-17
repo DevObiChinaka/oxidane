@@ -118,6 +118,7 @@ def my_subscriptions(request):
             'days_remaining': days_remaining,
             'is_lifetime': sub.plan.billing_period == 'lifetime' if sub.plan else False,
             'amount_paid': float(sub.amount_paid) if sub.amount_paid else 0,  # Actual amount paid
+            'amount': float(sub.amount_paid) if sub.amount_paid else 0,  # Add 'amount' alias for frontend compatibility
             'currency': sub.currency,  # Currency they paid in (NGN/USD)
             'plan_base_price': float(sub.plan.base_price) if sub.plan else 0,  # Plan's base price in USD
             'plan_currency': 'USD',  # Plans are priced in USD by default
@@ -127,21 +128,41 @@ def my_subscriptions(request):
         
         subscription_list.append(subscription_data)
         
-        # Add to monthly cost using plan base price (USD) for consistency
-        # This represents the recurring cost, not what they paid with coupons/discounts
-        if is_active and sub.plan:
-            total_monthly_cost += float(sub.plan.base_price)
+        # Add to monthly cost - ONLY recurring plans, not lifetime
+        # This represents the recurring cost in the user's actual currency
+        if is_active and sub.plan and sub.plan.billing_period != 'lifetime':
+            # Use the amount they actually paid in their currency
+            amount_paid = float(sub.amount_paid) if sub.amount_paid else 0
+            billing_period = sub.plan.billing_period
+            
+            # Convert to monthly equivalent using actual paid amount
+            if billing_period == 'weekly':
+                monthly_equivalent = amount_paid * 4.33  # Average weeks per month
+            elif billing_period == 'monthly':
+                monthly_equivalent = amount_paid
+            elif billing_period == 'quarterly':
+                monthly_equivalent = amount_paid / 3
+            elif billing_period == 'yearly':
+                monthly_equivalent = amount_paid / 12
+            else:
+                monthly_equivalent = 0
+            
+            total_monthly_cost += monthly_equivalent
     
     # Calculate days until renewal
     days_until_renewal = None
     if next_renewal_date:
         days_until_renewal = (next_renewal_date - timezone.now()).days
     
+    # Get primary currency from first subscription
+    primary_currency = subscription_list[0]['currency'] if subscription_list else 'USD'
+    
     return Response({
         'subscriptions': subscription_list,
         'stats': {
             'active_count': len([s for s in subscription_list if s['status'] == 'active']),
             'total_monthly_cost': total_monthly_cost,
+            'monthly_cost_currency': primary_currency,
             'next_renewal_date': next_renewal_date.isoformat() if next_renewal_date else None,
             'days_until_renewal': days_until_renewal,
         }

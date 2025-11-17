@@ -513,6 +513,13 @@ class Payment(models.Model):
         ('refunded', 'Refunded'),
     ]
     
+    ACTIVATION_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('processing', 'Processing'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    ]
+    
     PAYMENT_GATEWAYS = [
         ('paystack', 'Paystack'),
         ('manual', 'Manual/Admin'),
@@ -546,11 +553,39 @@ class Payment(models.Model):
     payment_method = models.ForeignKey(PaymentMethod, on_delete=models.SET_NULL, 
                                       null=True, blank=True)
     
+    # Activation Status (separate from payment status for safety)
+    activation_status = models.CharField(
+        max_length=20, 
+        choices=ACTIVATION_STATUS_CHOICES, 
+        default='pending',
+        help_text="Status of subscription activation (separate from payment processing)"
+    )
+    activation_attempts = models.IntegerField(
+        default=0,
+        help_text="Number of times activation was attempted"
+    )
+    last_activation_error = models.TextField(
+        blank=True,
+        help_text="Last error encountered during activation"
+    )
+    
+    # Idempotency
+    idempotency_key = models.CharField(
+        max_length=255, 
+        unique=True, 
+        null=True, 
+        blank=True,
+        db_index=True,
+        help_text="Unique key to prevent duplicate payments"
+    )
+    
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     paid_at = models.DateTimeField(null=True, blank=True)
     failed_at = models.DateTimeField(null=True, blank=True)
     refunded_at = models.DateTimeField(null=True, blank=True)
+    activated_at = models.DateTimeField(null=True, blank=True,
+                                       help_text="When subscription was successfully activated")
     
     # Additional Info
     failure_reason = models.TextField(blank=True)
@@ -562,6 +597,8 @@ class Payment(models.Model):
         indexes = [
             models.Index(fields=['billing_profile', 'status']),
             models.Index(fields=['gateway_reference']),
+            models.Index(fields=['activation_status']),
+            models.Index(fields=['idempotency_key']),
         ]
     
     def __str__(self):
@@ -572,6 +609,8 @@ class Payment(models.Model):
         self.status = 'success'
         self.paid_at = timezone.now()
         self.save()
+        # Log event
+        self.log_event('payment_successful', {'paid_at': str(self.paid_at)})
     
     def mark_as_failed(self, reason=""):
         """Mark payment as failed"""
@@ -579,6 +618,71 @@ class Payment(models.Model):
         self.failed_at = timezone.now()
         self.failure_reason = reason
         self.save()
+        # Log event
+        self.log_event('payment_failed', {'reason': reason})
+    
+    def mark_activation_started(self):
+        """Mark activation as started"""
+        self.activation_status = 'processing'
+        self.activation_attempts += 1
+        self.save()
+        self.log_event('activation_started', {'attempt': self.activation_attempts})
+    
+    def mark_activation_completed(self):
+        """Mark activation as completed"""
+        self.activation_status = 'completed'
+        self.activated_at = timezone.now()
+        self.save()
+        self.log_event('activation_completed', {'activated_at': str(self.activated_at)})
+    
+    def mark_activation_failed(self, error):
+        """Mark activation as failed"""
+        self.activation_status = 'failed'
+        self.last_activation_error = str(error)
+        self.save()
+        self.log_event('activation_failed', {'error': str(error), 'attempt': self.activation_attempts})
+    
+    def log_event(self, event_type, details=None):
+        """Log a payment event for audit trail"""
+        PaymentEvent.objects.create(
+            payment=self,
+            event_type=event_type,
+            details=details or {}
+        )
+
+
+class PaymentEvent(models.Model):
+    """
+    Audit trail for payment state changes.
+    Tracks every significant event in a payment's lifecycle for debugging and reconciliation.
+    """
+    EVENT_TYPES = [
+        ('created', 'Payment Created'),
+        ('payment_processing', 'Payment Processing'),
+        ('payment_successful', 'Payment Successful'),
+        ('payment_failed', 'Payment Failed'),
+        ('activation_started', 'Activation Started'),
+        ('activation_completed', 'Activation Completed'),
+        ('activation_failed', 'Activation Failed'),
+        ('webhook_received', 'Webhook Received'),
+        ('reconciliation_attempted', 'Reconciliation Attempted'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    payment = models.ForeignKey(Payment, on_delete=models.CASCADE, related_name='events')
+    event_type = models.CharField(max_length=50, choices=EVENT_TYPES)
+    details = models.JSONField(default=dict, help_text="Additional event details")
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['payment', 'event_type']),
+            models.Index(fields=['created_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.event_type} - {self.payment.gateway_reference} - {self.created_at}"
 
 
 # ============================================================================

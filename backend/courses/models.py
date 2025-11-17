@@ -550,3 +550,38 @@ class CourseProgress(models.Model):
         )['total'] or 0
         
         self.save()
+
+
+class VideoAccessLog(models.Model):
+    """Track video access tokens for secure streaming"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='video_access_logs')
+    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name='access_logs')
+    access_token = models.CharField(max_length=255, unique=True, db_index=True)
+    ip_address = models.GenericIPAddressField()
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    last_accessed = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
+    access_count = models.PositiveIntegerField(default=0, help_text="Number of times this token was used")
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['access_token']),
+            models.Index(fields=['user', 'lesson']),
+            models.Index(fields=['expires_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.email} - {self.lesson.title} - {self.access_token[:8]}..."
+    
+    def is_valid(self):
+        """Check if token is still valid"""
+        return self.is_active and timezone.now() < self.expires_at
+    
+    def increment_access(self):
+        """Increment access count and update last accessed time"""
+        self.access_count += 1
+        self.save(update_fields=['access_count', 'last_accessed'])

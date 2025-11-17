@@ -49,6 +49,12 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour=9, minute=0),  # Daily at 9 AM
     },
     
+    # Reconcile payments (find and retry failed activations)
+    'reconcile-payments': {
+        'task': 'subscriptions.tasks.reconcile_payments',
+        'schedule': crontab(hour=3, minute=0),  # Daily at 3 AM
+    },
+    
     # Example: Update exchange rates
     'update-exchange-rates': {
         'task': 'subscriptions.tasks.update_exchange_rates',

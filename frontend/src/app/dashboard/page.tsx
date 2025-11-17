@@ -181,11 +181,28 @@ export default function UserDashboard() {
                       </svg>
                     </div>
                   </div>
-                  <p className="text-sm text-gray-600">
-                    {subscriptionData?.plan_names && subscriptionData.plan_names.length > 0 
-                      ? subscriptionData.plan_names.join(', ') 
-                      : 'No active plan'}
-                  </p>
+                  <div className="text-sm text-gray-600 space-y-1">
+                    {subscriptionData?.plan_names && subscriptionData.plan_names.length > 0 ? (
+                      <>
+                        {subscriptionData.plan_names.slice(0, 2).map((name, idx) => (
+                          <div key={idx} className="flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full flex-shrink-0" />
+                            <span className="truncate">{name}</span>
+                          </div>
+                        ))}
+                        {subscriptionData.plan_names.length > 2 && (
+                          <button
+                            onClick={() => router.push('/subscriptions')}
+                            className="text-xs text-blue-600 hover:text-blue-700 hover:underline ml-3.5 transition-colors"
+                          >
+                            +{subscriptionData.plan_names.length - 2} more plan{subscriptionData.plan_names.length - 2 > 1 ? 's' : ''}
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <span>No active plans</span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Enrolled Courses Card */}

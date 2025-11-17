@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Course } from '../types/admin';
+import { usePricingPlans } from '../hooks/useAdminAPI';
+import { PricingPlan } from '@/types/pricing';
 
 interface CourseFormModalProps {
   isOpen: boolean;
@@ -24,6 +26,7 @@ interface CourseFormData {
   keywords: string;
   estimated_duration: number;
   order: number;
+  required_plans: string[];
 }
 
 export default function CourseFormModal({ 
@@ -46,10 +49,23 @@ export default function CourseFormModal({
     keywords: '',
     estimated_duration: 0,
     order: 0,
+    required_plans: [],
   });
 
   const [errors, setErrors] = useState<Partial<Record<keyof CourseFormData, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Fetch pricing plans for the multi-select
+  const { data: plansResponse, loading: plansLoading, error: plansError } = usePricingPlans({ active_only: true });
+  const pricingPlans = plansResponse?.results || [];
+
+  // Debug logging
+  React.useEffect(() => {
+    console.log('[CourseFormModal] Plans Response:', plansResponse);
+    console.log('[CourseFormModal] Plans Loading:', plansLoading);
+    console.log('[CourseFormModal] Plans Error:', plansError);
+    console.log('[CourseFormModal] Pricing Plans:', pricingPlans);
+  }, [plansResponse, plansLoading, plansError, pricingPlans]);
 
   // Generate slug from title
   const generateSlug = (title: string): string => {
@@ -145,6 +161,7 @@ export default function CourseFormModal({
         keywords: course.keywords || '',
         estimated_duration: course.estimated_duration || 0,
         order: course.order || 0,
+        required_plans: course.required_plans || [],
       });
     } else {
       // Reset form for create with default SEO suggestions
@@ -161,6 +178,7 @@ export default function CourseFormModal({
         keywords: 'forex trading, currency trading, forex education, trading strategies, forex academy',
         estimated_duration: 0,
         order: 0,
+        required_plans: [],
       };
       setFormData(defaultData);
     }
@@ -413,6 +431,81 @@ export default function CourseFormModal({
                 <option value="advanced">Advanced</option>
               </select>
             </div>
+
+            {/* Subscription Plans Selection - Only for Premium Courses */}
+            {formData.course_type === 'premium' && (
+              <div className="lg:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Required Subscription Plans
+                  <span className="ml-2 text-xs text-gray-500">
+                    (Select which plans grant access to this course)
+                  </span>
+                </label>
+                <div className="border border-gray-300 bg-white rounded-xl p-4 max-h-48 overflow-y-auto">
+                  {plansLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-blue-600"></div>
+                      <span className="ml-3 text-gray-600">Loading plans...</span>
+                    </div>
+                  ) : pricingPlans.length === 0 ? (
+                    <p className="text-gray-500 text-sm py-4 text-center">
+                      No active subscription plans found. Create plans first.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {pricingPlans.map((plan: PricingPlan) => (
+                        <label
+                          key={plan.id}
+                          className="flex items-start p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={formData.required_plans.includes(plan.id)}
+                            onChange={(e) => {
+                              const newPlans = e.target.checked
+                                ? [...formData.required_plans, plan.id]
+                                : formData.required_plans.filter(id => id !== plan.id);
+                              setFormData(prev => ({ ...prev, required_plans: newPlans }));
+                            }}
+                            className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            disabled={isSubmitting}
+                          />
+                          <div className="ml-3 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-900">{plan.name}</span>
+                              <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full">
+                                ${plan.price}/{plan.billing_cycle}
+                              </span>
+                            </div>
+                            {plan.description && (
+                              <p className="text-sm text-gray-600 mt-1">{plan.description}</p>
+                            )}
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <p className="mt-2 text-xs text-gray-600">
+                  <strong>Tip:</strong> Leave empty to make this course available to all users with any active subscription. 
+                  Select specific plans to create "combo plans" (e.g., VIP Plan + Course Bundle).
+                </p>
+                {formData.required_plans.length > 0 && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-700">
+                      {formData.required_plans.length} plan{formData.required_plans.length !== 1 ? 's' : ''} selected
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, required_plans: [] }))}
+                      className="text-xs text-red-600 hover:text-red-700 underline"
+                    >
+                      Clear all
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">

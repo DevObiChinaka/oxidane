@@ -85,13 +85,13 @@ export default function MyCoursesPage() {
   const getLevelColor = (level: string) => {
     switch (level) {
       case 'beginner':
-        return 'bg-green-100 text-green-700';
+        return 'text-green-600';
       case 'intermediate':
-        return 'bg-amber-100 text-amber-700';
+        return 'text-amber-600';
       case 'advanced':
-        return 'bg-red-100 text-red-700';
+        return 'text-red-600';
       default:
-        return 'bg-gray-100 text-gray-700';
+        return 'text-gray-600';
     }
   };
 
@@ -111,15 +111,15 @@ export default function MyCoursesPage() {
       <DashboardSidebar />
 
       {/* Main Content */}
-      <main className="ml-72 min-h-screen">
+      <main className="lg:ml-72 min-h-screen">
         {/* Clean Header */}
-        <header className="bg-white border-b border-gray-200 px-8 py-8">
-          <div className="flex items-center justify-between">
+        <header className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-semibold text-gray-900 mb-2">My Learning Journey</h2>
+              <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-1 sm:mb-2">My Learning Journey</h2>
               <p className="text-gray-500 text-sm">Track your progress and continue where you left off</p>
             </div>
-            <div className="hidden md:flex items-center gap-6">
+            <div className="hidden sm:flex items-center gap-4 lg:gap-6">
               <div className="text-center px-4">
                 <div className="text-2xl font-bold text-[#000856]">{courses.length}</div>
                 <div className="text-xs text-gray-500">Enrolled</div>
@@ -138,13 +138,13 @@ export default function MyCoursesPage() {
           </div>
         </header>
 
-        <div className="p-8">
+        <div className="p-4 sm:p-6 lg:p-8">
           {/* Filters and Search */}
-          <div className="mb-8 flex items-center justify-between flex-wrap gap-4">
-            <div className="flex space-x-2">
+          <div className="mb-6 lg:mb-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setFilter('all')}
-                className={`px-5 py-2.5 rounded-lg font-medium text-sm transition-colors ${
+                className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg font-medium text-sm transition-colors ${
                   filter === 'all'
                     ? 'bg-gray-100 text-gray-900 border border-gray-200'
                     : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
@@ -154,7 +154,7 @@ export default function MyCoursesPage() {
               </button>
               <button
                 onClick={() => setFilter('in-progress')}
-                className={`px-5 py-2.5 rounded-lg font-medium text-sm transition-colors ${
+                className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg font-medium text-sm transition-colors ${
                   filter === 'in-progress'
                     ? 'bg-gray-100 text-gray-900 border border-gray-200'
                     : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
@@ -164,7 +164,7 @@ export default function MyCoursesPage() {
               </button>
               <button
                 onClick={() => setFilter('completed')}
-                className={`px-5 py-2.5 rounded-lg font-medium text-sm transition-colors ${
+                className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg font-medium text-sm transition-colors ${
                   filter === 'completed'
                     ? 'bg-gray-100 text-gray-900 border border-gray-200'
                     : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
@@ -174,13 +174,13 @@ export default function MyCoursesPage() {
               </button>
             </div>
 
-            <div className="relative">
+            <div className="relative w-full sm:w-auto">
               <input
                 type="text"
                 placeholder="Search courses..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="px-4 py-2.5 pl-10 bg-white border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-transparent w-80 text-sm"
+                className="px-4 py-2.5 pl-10 bg-white border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-transparent w-full sm:w-80 text-sm"
               />
               <svg
                 className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2"
@@ -216,21 +216,21 @@ export default function MyCoursesPage() {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               {filteredCourses.map((course) => (
                 <div
                   key={course.id}
                   className="group bg-white border border-gray-200 rounded-xl hover:shadow-lg transition-all cursor-pointer overflow-hidden"
                   onClick={() => router.push(`/courses/${course.slug}`)}
                 >
-                  <div className="p-6">
+                  <div className="p-4 sm:p-6">
                     {/* Header Row */}
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-start gap-4 flex-1">
+                    <div className="flex flex-col sm:flex-row items-start justify-between mb-4 gap-4">
+                      <div className="flex items-start gap-3 sm:gap-4 flex-1 w-full">
                         {/* Course Icon - Navy book icon */}
-                        <div className="w-14 h-14 rounded-xl bg-gray-50 flex items-center justify-center flex-shrink-0">
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-gray-50 flex items-center justify-center flex-shrink-0">
                           <svg
-                            className="w-7 h-7 text-[#000856]"
+                            className="w-6 h-6 sm:w-7 sm:h-7 text-[#000856]"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -241,21 +241,26 @@ export default function MyCoursesPage() {
                         
                         {/* Title & Badge */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-2">
-                            <h3 className="text-lg font-semibold text-gray-900 group-hover:text-[#000856] transition-colors line-clamp-1">
-                              {course.title}
-                            </h3>
+                          <h3 className="text-base sm:text-lg font-semibold text-gray-900 group-hover:text-[#000856] transition-colors line-clamp-2 mb-2">
+                            {course.title}
+                          </h3>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`text-xs font-medium uppercase tracking-wide ${getLevelColor(course.difficulty_level)}`}>
+                              {course.difficulty_level}
+                            </span>
+                            {course.course_type === 'premium' && (
+                              <span className="text-xs font-medium uppercase tracking-wide text-purple-600">
+                                Premium
+                              </span>
+                            )}
                           </div>
-                          <span className={`inline-block px-2.5 py-1 rounded-md text-xs font-medium ${getLevelColor(course.difficulty_level)}`}>
-                            {course.difficulty_level}
-                          </span>
                         </div>
                       </div>
 
                       {/* Progress Circle */}
-                      <div className="flex-shrink-0 ml-4">
-                        <div className="relative w-14 h-14">
-                          <svg className="w-14 h-14 transform -rotate-90">
+                      <div className="flex-shrink-0">
+                        <div className="relative w-12 h-12 sm:w-14 sm:h-14">
+                          <svg className="w-12 h-12 sm:w-14 sm:h-14 transform -rotate-90">
                             <circle
                               cx="28"
                               cy="28"
@@ -289,8 +294,8 @@ export default function MyCoursesPage() {
                     <p className="text-sm text-gray-600 mb-4 line-clamp-2">{course.short_description}</p>
 
                     {/* Stats Row */}
-                    <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                      <div className="flex items-center gap-4 text-sm text-gray-500">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pt-4 border-t border-gray-100 gap-3">
+                      <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-500 flex-wrap">
                         <div className="flex items-center gap-1.5">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
@@ -311,7 +316,7 @@ export default function MyCoursesPage() {
                           e.stopPropagation();
                           router.push(`/courses/${course.slug}/watch`);
                         }}
-                        className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium ${
+                        className={`px-3 sm:px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-medium whitespace-nowrap ${
                           course.progress_percentage === 100
                             ? 'bg-green-50 text-green-700 hover:bg-green-100'
                             : 'bg-[#00B38F] text-white hover:bg-[#00A87D]'

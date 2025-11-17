@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from django.utils import timezone
 import logging
 
-from subscriptions.models import BillingProfile, PaymentMethod
+from subscriptions.models import BillingProfile, PaymentMethod, Subscription, PaymentConfiguration
 from subscriptions.payment_service import PaystackService
 
 logger = logging.getLogger(__name__)
@@ -74,19 +74,27 @@ def save_payment_method(request):
             status=status.HTTP_400_BAD_REQUEST
         )
     
-    # Check if payment method already exists
+    # Check if payment method already exists with same authorization
     existing_method = PaymentMethod.objects.filter(
         billing_profile=billing_profile,
         gateway_authorization_code=authorization['authorization_code']
     ).first()
     
     if existing_method:
-        # Update last used
+        # Update last used and make it active/default
         existing_method.last_used_at = timezone.now()
+        existing_method.is_active = True
+        existing_method.is_default = True
         existing_method.save()
         
+        # Deactivate all other payment methods (enforce single payment method)
+        PaymentMethod.objects.filter(
+            billing_profile=billing_profile,
+            is_active=True
+        ).exclude(id=existing_method.id).update(is_active=False, is_default=False)
+        
         return Response({
-            'message': 'Payment method already exists',
+            'message': 'Payment method updated as your primary card',
             'payment_method': {
                 'id': str(existing_method.id),
                 'card_type': existing_method.card_brand,
@@ -97,9 +105,16 @@ def save_payment_method(request):
             }
         }, status=status.HTTP_200_OK)
     
-    # Create new payment method
-    is_first_method = not billing_profile.payment_methods.exists()
+    # Deactivate all existing payment methods (enforce single payment method policy)
+    old_methods = PaymentMethod.objects.filter(
+        billing_profile=billing_profile,
+        is_active=True
+    )
+    if old_methods.exists():
+        logger.info(f"Replacing {old_methods.count()} old payment method(s) for user {user.email}")
+        old_methods.update(is_active=False, is_default=False)
     
+    # Create new payment method (always set as default since it's the only active one)
     payment_method = PaymentMethod.objects.create(
         billing_profile=billing_profile,
         payment_type='card',
@@ -109,7 +124,7 @@ def save_payment_method(request):
         card_exp_month=authorization['exp_month'],
         card_exp_year=authorization['exp_year'],
         bank_name=authorization.get('bank', ''),
-        is_default=is_first_method,  # First card is default
+        is_default=True,  # Always default (only one active)
         is_active=True
     )
     
@@ -249,7 +264,6 @@ def delete_payment_method(request, payment_method_id):
         )
     
     # Check if any active subscriptions depend on this payment method
-    from .models import Subscription
     dependent_subscriptions = Subscription.objects.filter(
         billing_profile=billing_profile,
         payment_method=payment_method,
@@ -272,4 +286,26 @@ def delete_payment_method(request, payment_method_id):
     return Response({
         'message': 'Payment method deleted successfully',
         'affected_subscriptions': dependent_subscriptions.count()
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_payment_config(request):
+    """
+    Get Paystack public key for frontend integration
+    
+    GET /api/payment-methods/config/
+    
+    Returns:
+        200: { 
+            "paystack_public_key": "pk_test_...",
+            "paystack_enabled": true
+        }
+    """
+    config = PaymentConfiguration.get_instance()
+    
+    return Response({
+        'paystack_public_key': config.paystack_public_key,
+        'paystack_enabled': config.paystack_enabled
     }, status=status.HTTP_200_OK)

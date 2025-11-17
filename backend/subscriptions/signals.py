@@ -123,49 +123,13 @@ def track_subscription_analytics(sender, subscription, user, **kwargs):
         logger.error(f"Failed to track subscription analytics: {str(e)}")
 
 
-@receiver(subscription_created)
-def credit_referrer_on_subscription(sender, subscription, user, **kwargs):
-    """
-    Credit the referrer when referred user subscribes.
-    
-    If subscription has a referral, create a ReferralCredit for the referrer.
-    """
-    if not subscription.referral:
-        return
-    
-    try:
-        from .models import ReferralCredit
-        
-        referral = subscription.referral
-        referrer_code = referral.referral_code
-        
-        # Calculate commission (from referral code settings)
-        commission_percentage = referrer_code.referrer_discount_value or Decimal('10.00')
-        subscription_amount = subscription.plan.base_price if subscription.plan else Decimal('0')
-        commission_amount = (subscription_amount * commission_percentage) / Decimal('100')
-        
-        # Create credit for referrer
-        credit = ReferralCredit.objects.create(
-            user=referrer_code.referrer,
-            earned_from_referral=referral,
-            credit_percentage=commission_percentage,
-            notes=f"Commission from referral: {user.email} subscribed to {subscription.plan.name if subscription.plan else 'N/A'}"
-        )
-        
-        # Fire commission earned signal
-        referral_commission_earned.send(
-            sender=ReferralCredit,
-            credit=credit,
-            referrer=referrer_code.referrer,
-            amount=commission_amount
-        )
-        
-        logger.info(
-            f"Credited {commission_amount} ({commission_percentage}%) to referrer "
-            f"{referrer_code.referrer.email} for subscription {subscription.id}"
-        )
-    except Exception as e:
-        logger.error(f"Failed to credit referrer: {str(e)}")
+# Referral system removed - signal handler disabled
+# @receiver(subscription_created)
+# def credit_referrer_on_subscription(sender, subscription, user, **kwargs):
+#     """
+#     Credit the referrer when referred user subscribes.
+#     """
+#     pass
 
 
 @receiver(subscription_cancelled)

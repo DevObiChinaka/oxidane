@@ -52,7 +52,7 @@ class UserSubscriptionViewSet(viewsets.ViewSet):
         signal_subs = Subscription.objects.filter(
             billing_profile=billing_profile,
             status='active'
-        ).exclude(plan__slug__icontains='mentorship').select_related('plan').order_by('-created_at')
+        ).exclude(plan__slug__icontains='mentorship').select_related('plan', 'payment_method').order_by('-created_at')
         
         for sub in signal_subs:
             # Check if subscription is active
@@ -79,8 +79,26 @@ class UserSubscriptionViewSet(viewsets.ViewSet):
             # Get features based on plan
             features = self._get_plan_features(sub, 'signal')
             
-            # TODO: Get actual payment amount from Payment model (Phase 0.5.17+)
-            amount = float(sub.plan.base_price) if sub.plan else 0
+            # Use actual amount paid, fallback to plan price if not set
+            if sub.amount_paid:
+                amount = float(sub.amount_paid)
+            elif sub.plan and sub.plan.base_price:
+                amount = float(sub.plan.base_price)
+            else:
+                amount = 0
+            
+            # Get payment method details if exists
+            payment_method_data = None
+            if sub.payment_method and sub.payment_method.is_active:
+                payment_method_data = {
+                    'id': str(sub.payment_method.id),
+                    'card_brand': sub.payment_method.card_brand,
+                    'card_last4': sub.payment_method.card_last4,
+                    'card_exp_month': sub.payment_method.card_exp_month,
+                    'card_exp_year': sub.payment_method.card_exp_year,
+                    'is_default': sub.payment_method.is_default,
+                    'last_used_at': sub.payment_method.last_used_at.isoformat() if sub.payment_method.last_used_at else None,
+                }
             
             subscriptions.append({
                 'id': str(sub.id),
@@ -88,7 +106,9 @@ class UserSubscriptionViewSet(viewsets.ViewSet):
                 'plan_type': 'signal',
                 'status': subscription_status,
                 'amount': amount,
-                'currency': billing_profile.currency_preference or 'USD',
+                'currency': sub.currency or 'USD',
+                'plan_base_price': float(sub.plan.base_price) if sub.plan else 0,
+                'plan_currency': 'USD',
                 'billing_cycle': sub.plan.billing_period if sub.plan else 'monthly',
                 'start_date': sub.start_date.date().isoformat() if sub.start_date else sub.created_at.date().isoformat(),
                 'end_date': sub.end_date.date().isoformat() if sub.end_date else None,
@@ -96,6 +116,8 @@ class UserSubscriptionViewSet(viewsets.ViewSet):
                 'features': features,
                 'telegram_username': billing_profile.telegram_username,
                 'days_remaining': days_remaining,
+                'is_lifetime': False,
+                'payment_method': payment_method_data,
             })
         
         # Get Mentorship Purchases
@@ -112,8 +134,16 @@ class UserSubscriptionViewSet(viewsets.ViewSet):
             
             features = self._get_plan_features(sub, 'mentorship')
             
-            # TODO: Get actual payment amount from Payment model (Phase 0.5.17+)
-            amount = float(sub.plan.base_price) if sub.plan else 0
+            # Use actual amount paid, fallback to plan price if not set
+            if sub.amount_paid:
+                amount = float(sub.amount_paid)
+            elif sub.plan and sub.plan.base_price:
+                amount = float(sub.plan.base_price)
+            else:
+                amount = 0
+            
+            # Mentorship is one-time, no payment method needed
+            payment_method_data = None
             
             subscriptions.append({
                 'id': str(sub.id),
@@ -121,13 +151,17 @@ class UserSubscriptionViewSet(viewsets.ViewSet):
                 'plan_type': 'mentorship',
                 'status': 'active' if is_active else 'inactive',
                 'amount': amount,
-                'currency': billing_profile.currency_preference or 'USD',
-                'billing_cycle': 'one_time',
+                'currency': sub.currency or 'USD',
+                'plan_base_price': float(sub.plan.base_price) if sub.plan else 0,
+                'plan_currency': 'USD',
+                'billing_cycle': 'lifetime',
                 'start_date': sub.start_date.date().isoformat() if sub.start_date else sub.created_at.date().isoformat(),
                 'end_date': None,  # Lifetime access
                 'auto_renew': False,  # One-time payment
                 'features': features,
                 'days_remaining': days_remaining,
+                'is_lifetime': True,
+                'payment_method': payment_method_data,
             })
         
         # Calculate stats
@@ -205,7 +239,7 @@ class UserSubscriptionViewSet(viewsets.ViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-    @action(detail=True, methods=['patch'], url_path='auto-renewal')
+    @action(detail=True, methods=['post', 'patch'], url_path='auto-renewal')
     def toggle_auto_renewal(self, request, pk=None):
         """
         Toggle auto-renewal for a subscription

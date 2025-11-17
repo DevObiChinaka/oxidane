@@ -107,6 +107,11 @@ class PricingPlanSerializer(serializers.ModelSerializer):
     subscription_count = serializers.SerializerMethodField()
     revenue_total = serializers.SerializerMethodField()
     
+    # Alias fields for frontend compatibility
+    price = serializers.DecimalField(source='base_price', max_digits=10, decimal_places=2, read_only=True)
+    currency = serializers.SerializerMethodField()
+    billing_cycle = serializers.CharField(source='billing_period', read_only=True)
+    
     # Nested serializers for reading (GET requests)
     features = serializers.SerializerMethodField()
     telegram_groups = serializers.SerializerMethodField()
@@ -126,7 +131,7 @@ class PricingPlanSerializer(serializers.ModelSerializer):
     class Meta:
         model = SubscriptionPlan
         fields = [
-            'id', 'name', 'slug', 'description', 'base_price', 'billing_period',
+            'id', 'name', 'slug', 'description', 'base_price', 'price', 'currency', 'billing_period', 'billing_cycle',
             'limits', 'paystack_plan_code',
             'is_active', 'is_featured', 'sort_order',
             'price_display', 'monthly_equivalent', 'feature_count',
@@ -135,6 +140,10 @@ class PricingPlanSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'slug']
+    
+    def get_currency(self, obj):
+        """Return USD as default currency (can be enhanced for multi-currency support)"""
+        return 'USD'
     
     def validate_base_price(self, value):
         """Validate base_price is positive"""

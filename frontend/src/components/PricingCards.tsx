@@ -231,7 +231,10 @@ export default function PricingCards({
         // Get conflict information for this plan
         const conflict = conflictData.get(plan.id);
         const isCurrentPlan = conflict?.existing_subscription?.plan_id === plan.id;
-        const hasConflict = conflict?.conflict === true;
+        
+        // Only block recurring plans if user has active recurring subscription
+        const isRecurringPlan = ['weekly', 'monthly', 'quarterly', 'yearly'].includes(plan.billing_period);
+        const hasRecurringConflict = isRecurringPlan && conflict?.conflict === true;
         const canPurchase = conflict?.can_purchase !== false; // Default to true if no data
         
         return (
@@ -240,7 +243,7 @@ export default function PricingCards({
           className={`relative bg-white/10 backdrop-blur-md rounded-xl border-2 transition-all duration-300 ${
             isCurrentPlan
               ? 'border-[#00B38F] shadow-lg'
-              : hasConflict
+              : hasRecurringConflict
               ? 'border-yellow-400/30 opacity-75'
               : plan.is_featured 
               ? 'border-[#00B38F]/50 shadow-md hover:shadow-lg hover:bg-white/15' 
@@ -254,19 +257,20 @@ export default function PricingCards({
             </div>
           )}
           
-          {/* Conflict Warning Banner */}
-          {hasConflict && !isCurrentPlan && conflict?.existing_subscription && (
+          {/* Conflict Warning Banner - Only for recurring plans */}
+          {hasRecurringConflict && !isCurrentPlan && conflict?.existing_subscription && (
             <div className="absolute top-0 left-0 right-0 bg-yellow-50/95 backdrop-blur-sm border-b border-yellow-200 rounded-t-xl p-3 z-10">
               <p className="text-xs text-yellow-900 leading-tight">
-                ⚠️ You have an active {conflict.existing_subscription.billing_period_display.toLowerCase()} subscription. 
-                <a href="/subscriptions" className="underline font-medium hover:text-yellow-700 ml-1">
-                  Cancel it first
-                </a>
+                ⚠️ You have an active {conflict.existing_subscription.billing_period_display.toLowerCase()} subscription ({conflict.existing_subscription.plan_name}).
+                Please wait until it expires before purchasing another recurring plan.
+                {conflict.existing_subscription.end_date && (
+                  <span className="font-medium"> Expires: {new Date(conflict.existing_subscription.end_date).toLocaleDateString()}</span>
+                )}
               </p>
             </div>
           )}
           
-          <div className={`p-6 ${hasConflict && !isCurrentPlan ? 'pt-16' : ''}`}>
+          <div className={`p-6 ${hasRecurringConflict && !isCurrentPlan ? 'pt-16' : ''}`}>
             {/* Plan Name */}
             <h3 className="text-lg font-bold text-white mb-1">{plan.name}</h3>
             <p className="text-sm text-gray-300 mb-6 min-h-[40px]">{plan.description}</p>
@@ -307,14 +311,22 @@ export default function PricingCards({
                 Manage Subscription →
               </a>
             </div>
-          ) : hasConflict ? (
-            <button
-              disabled
-              className="w-full py-2.5 px-4 rounded-lg font-semibold text-sm bg-gray-200 text-gray-500 cursor-not-allowed opacity-60"
-              title={conflict?.message || 'Cannot purchase due to existing subscription'}
-            >
-              Not Available
-            </button>
+          ) : hasRecurringConflict ? (
+            <div className="relative group">
+              <button
+                disabled
+                className="w-full py-2.5 px-4 rounded-lg font-semibold text-sm bg-gray-200 text-gray-500 cursor-not-allowed opacity-60"
+              >
+                Not Available
+              </button>
+              {/* Tooltip */}
+              <div className="absolute bottom-full left-0 right-0 mb-2 p-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-20 shadow-lg">
+                <p className="text-center">
+                  You have an active subscription. Please wait until it expires to purchase this plan.
+                </p>
+                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900"></div>
+              </div>
+            </div>
           ) : (
             <>
               <button
@@ -325,7 +337,7 @@ export default function PricingCards({
               </button>
               
               {/* Lifetime Plan Info when user has recurring subscription */}
-              {plan.billing_period === 'lifetime' && conflict?.existing_subscription && !hasConflict && (
+              {plan.billing_period === 'lifetime' && conflict?.existing_subscription && !hasRecurringConflict && (
                 <div className="mt-3 bg-blue-50/10 border border-blue-400/30 rounded-lg p-2">
                   <p className="text-xs text-blue-200 leading-tight">
                     💡 Lifetime access works alongside your {conflict.existing_subscription.billing_period_display.toLowerCase()} subscription

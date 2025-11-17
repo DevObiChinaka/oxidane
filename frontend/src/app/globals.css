@@ -363,6 +363,16 @@ body {
   box-shadow: 0 0 0 3px rgba(var(--primary-purple), 0.3);
 }
 
+/* Scrollbar Hide Utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}
+
 /* Toast Notification Animation */
 @keyframes slide-in-right {
   from {

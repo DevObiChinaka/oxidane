@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { CheckCircleIcon, XMarkIcon, TrophyIcon } from '@heroicons/react/24/solid';
 import { apiGet, apiPost } from '@/lib/api';
+import SecureVideoPlayer from '@/components/user/SecureVideoPlayer';
 
 interface Lesson {
   id: string;  // UUID
@@ -80,75 +81,6 @@ export default function VideoPlayerPage() {
       }
     }
   }, [course, lessonIdParam]);
-
-  // Setup YouTube and Vimeo player event listeners
-  useEffect(() => {
-    if (!currentLesson) return;
-
-    // YouTube Player API
-    if (currentLesson.video_source === 'youtube') {
-      // Load YouTube IFrame API
-      if (!(window as any).YT) {
-        const tag = document.createElement('script');
-        tag.src = 'https://www.youtube.com/iframe_api';
-        const firstScriptTag = document.getElementsByTagName('script')[0];
-        firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
-      }
-
-      // Initialize player when API is ready
-      (window as any).onYouTubeIframeAPIReady = () => {
-        const player = new (window as any).YT.Player('youtube-player', {
-          events: {
-            'onStateChange': (event: any) => {
-              // 0 = ended
-              if (event.data === 0) {
-                handleVideoEnd();
-              }
-            }
-          }
-        });
-      };
-
-      // If API already loaded, initialize immediately
-      if ((window as any).YT && (window as any).YT.Player) {
-        setTimeout(() => {
-          const player = new (window as any).YT.Player('youtube-player', {
-            events: {
-              'onStateChange': (event: any) => {
-                if (event.data === 0) {
-                  handleVideoEnd();
-                }
-              }
-            }
-          });
-        }, 1000);
-      }
-    }
-
-    // Vimeo Player API
-    if (currentLesson.video_source === 'vimeo') {
-      // Load Vimeo Player API
-      if (!(window as any).Vimeo) {
-        const script = document.createElement('script');
-        script.src = 'https://player.vimeo.com/api/player.js';
-        document.head.appendChild(script);
-        
-        script.onload = () => {
-          const iframe = document.getElementById('vimeo-player');
-          if (iframe && (window as any).Vimeo) {
-            const player = new (window as any).Vimeo.Player(iframe);
-            player.on('ended', handleVideoEnd);
-          }
-        };
-      } else {
-        const iframe = document.getElementById('vimeo-player');
-        if (iframe) {
-          const player = new (window as any).Vimeo.Player(iframe);
-          player.on('ended', handleVideoEnd);
-        }
-      }
-    }
-  }, [currentLesson]);
 
   const checkAuthAndFetchCourse = async () => {
     try {
@@ -317,53 +249,15 @@ export default function VideoPlayerPage() {
   const getVideoPlayer = () => {
     if (!currentLesson) return null;
 
-    if (currentLesson.video_source === 'youtube' && currentLesson.youtube_video_id) {
-      return (
-        <iframe
-          id="youtube-player"
-          src={`https://www.youtube.com/embed/${currentLesson.youtube_video_id}?autoplay=1&enablejsapi=1`}
-          className="w-full h-full"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-        />
-      );
-    } else if (currentLesson.video_source === 'vimeo' && currentLesson.video_url) {
-      const vimeoId = currentLesson.video_url.split('/').pop();
-      return (
-        <iframe
-          id="vimeo-player"
-          src={`https://player.vimeo.com/video/${vimeoId}?autoplay=1`}
-          className="w-full h-full"
-          allow="autoplay; fullscreen; picture-in-picture"
-          allowFullScreen
-        />
-      );
-    } else if (currentLesson.video_source === 'upload' && currentLesson.video_file_url) {
-      return (
-        <video
-          src={currentLesson.video_file_url}
-          controls
-          autoPlay
-          className="w-full h-full"
-          onEnded={handleVideoEnd}
-        />
-      );
-    } else if (currentLesson.video_url) {
-      return (
-        <video
-          src={currentLesson.video_url}
-          controls
-          autoPlay
-          className="w-full h-full"
-          onEnded={handleVideoEnd}
-        />
-      );
-    }
-
+    // Use SecureVideoPlayer for all video sources
     return (
-      <div className="w-full h-full flex items-center justify-center bg-slate-800">
-        <p className="text-slate-400">No video available</p>
-      </div>
+      <SecureVideoPlayer
+        lessonId={currentLesson.id}
+        lessonTitle={currentLesson.title}
+        videoSource={currentLesson.video_source}
+        onVideoEnd={handleVideoEnd}
+        className="w-full h-full"
+      />
     );
   };
 
