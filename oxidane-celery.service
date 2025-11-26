@@ -1,0 +1,25 @@
+[Unit]
+Description=Oxidane Celery Worker
+After=network.target
+
+[Service]
+Type=forking
+User=oxidane
+Group=oxidane
+EnvironmentFile=/var/www/oxidane/.env
+WorkingDirectory=/var/www/oxidane/backend
+ExecStart=/var/www/oxidane/venv/bin/celery -A oxidane worker --loglevel=info --detach --pidfile=/var/run/celery/worker.pid --logfile=/var/log/celery/worker.log
+ExecStop=/bin/kill -s TERM $MAINPID
+ExecReload=/bin/kill -s HUP $MAINPID
+PIDFile=/var/run/celery/worker.pid
+Restart=on-failure
+RestartSec=10
+
+# Create directories
+RuntimeDirectory=celery
+RuntimeDirectoryMode=755
+LogsDirectory=celery
+LogsDirectoryMode=755
+
+[Install]
+WantedBy=multi-user.target

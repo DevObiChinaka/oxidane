@@ -2,8 +2,25 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter, usePathname } from 'next/navigation';
 
 export default function Footer() {
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // Smart navigation handler for hash links
+  const handleHashNavigation = (hash: string) => {
+    if (pathname === '/') {
+      // On landing page - smooth scroll to section
+      const element = document.getElementById(hash.replace('#', ''));
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    } else {
+      // On other pages - navigate to landing page with hash
+      router.push(`/${hash}`);
+    }
+  };
   return (
     <footer className="bg-[#000856]/95 backdrop-blur-2xl border-t border-white/15 text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -31,22 +48,28 @@ export default function Footer() {
               and professional signals from industry leaders.
             </p>
             <div className="flex space-x-4">
-              <a href="#" className="text-gray-400 hover:text-[#00B39F] transition-colors">
+              <a href="https://t.me/tradewithoxidane" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-[#00B39F] transition-colors">
                 <span className="sr-only">Telegram</span>
                 <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/>
                 </svg>
               </a>
-              <a href="#" className="text-gray-400 hover:text-[#00B39F] transition-colors">
+              <a href="https://www.youtube.com/channel/UCWIKCG9AppJAJrSyMTGhOFQ" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-[#00B39F] transition-colors">
                 <span className="sr-only">YouTube</span>
                 <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
                 </svg>
               </a>
-              <a href="#" className="text-gray-400 hover:text-[#00B39F] transition-colors">
-                <span className="sr-only">Instagram</span>
+              <a href="https://www.tiktok.com/@morrisoxidane" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-[#00B39F] transition-colors">
+                <span className="sr-only">TikTok</span>
                 <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 6.62 5.367 11.987 11.988 11.987c6.62 0 11.987-5.367 11.987-11.987C24.014 5.367 18.637.001 12.017.001zM8.449 16.988c-1.297 0-2.448-.49-3.33-1.297L3.722 14.3c-.886-.807-1.297-1.953-1.297-3.33s.49-2.448 1.297-3.33L5.119 6.243c.807-.886 1.953-1.297 3.33-1.297s2.448.49 3.33 1.297L13.176 7.64c.886.807 1.297 1.953 1.297 3.33s-.49 2.448-1.297 3.33L11.779 15.69c-.807.886-1.953 1.297-3.33 1.297z"/>
+                  <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.2 1.74 2.89 2.89 0 012.31-4.64 2.93 2.93 0 01.88.13V9.4a6.84 6.84 0 00-.88-.05A6.33 6.33 0 005 20.1a6.34 6.34 0 0010.86-4.43v-7a8.16 8.16 0 004.77 1.52v-3.4a4.85 4.85 0 01-1-.1z"/>
+                </svg>
+              </a>
+              <a href="https://x.com/MorrisOxidane" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-[#00B39F] transition-colors">
+                <span className="sr-only">X (Twitter)</span>
+                <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
                 </svg>
               </a>
             </div>
@@ -56,11 +79,11 @@ export default function Footer() {
           <div className="space-y-4">
             <h4 className="text-lg font-semibold">Education</h4>
             <ul className="space-y-2 text-sm">
-              <li><Link href="/courses" className="text-gray-400 hover:text-white transition-colors">Free Courses</Link></li>
-              <li><Link href="/beginner" className="text-gray-400 hover:text-white transition-colors">Beginner Guide</Link></li>
-              <li><Link href="/advanced" className="text-gray-400 hover:text-white transition-colors">Advanced Strategies</Link></li>
-              <li><Link href="/resources" className="text-gray-400 hover:text-white transition-colors">Trading Resources</Link></li>
-              <li><Link href="/blog" className="text-gray-400 hover:text-white transition-colors">Market Analysis</Link></li>
+              <li><button onClick={() => handleHashNavigation('#services')} className="text-gray-400 hover:text-white transition-colors cursor-pointer">Trading Education</button></li>
+              <li><button onClick={() => handleHashNavigation('#hero')} className="text-gray-400 hover:text-white transition-colors cursor-pointer">Market Analysis</button></li>
+              <li><button onClick={() => handleHashNavigation('#educational-value')} className="text-gray-400 hover:text-white transition-colors cursor-pointer">Free Resources</button></li>
+              <li><Link href="/auth" className="text-gray-400 hover:text-white transition-colors">Access Learning</Link></li>
+              <li><button onClick={() => handleHashNavigation('#testimonials')} className="text-gray-400 hover:text-white transition-colors cursor-pointer">Success Stories</button></li>
             </ul>
           </div>
 
@@ -68,11 +91,11 @@ export default function Footer() {
           <div className="space-y-4">
             <h4 className="text-lg font-semibold">Services</h4>
             <ul className="space-y-2 text-sm">
-              <li><Link href="/mentorship" className="text-gray-400 hover:text-white transition-colors">1-on-1 Mentorship</Link></li>
-              <li><Link href="/signals" className="text-gray-400 hover:text-white transition-colors">Trading Signals</Link></li>
-              <li><Link href="/consulting" className="text-gray-400 hover:text-white transition-colors">Portfolio Review</Link></li>
-              <li><Link href="/community" className="text-gray-400 hover:text-white transition-colors">Trading Community</Link></li>
-              <li><Link href="/support" className="text-gray-400 hover:text-white transition-colors">24/7 Support</Link></li>
+              <li><button onClick={() => handleHashNavigation('#services')} className="text-gray-400 hover:text-white transition-colors cursor-pointer">Forex Signals</button></li>
+              <li><button onClick={() => handleHashNavigation('#services')} className="text-gray-400 hover:text-white transition-colors cursor-pointer">Community Mentorship</button></li>
+              <li><Link href="/pricing" className="text-gray-400 hover:text-white transition-colors">Pricing Plans</Link></li>
+              <li><Link href="/auth" className="text-gray-400 hover:text-white transition-colors">Join Community</Link></li>
+              <li><button onClick={() => handleHashNavigation('#hero')} className="text-gray-400 hover:text-white transition-colors cursor-pointer">Live Market Data</button></li>
             </ul>
           </div>
 
@@ -80,11 +103,11 @@ export default function Footer() {
           <div className="space-y-4">
             <h4 className="text-lg font-semibold">Company</h4>
             <ul className="space-y-2 text-sm">
-              <li><Link href="/about" className="text-gray-400 hover:text-white transition-colors">About Us</Link></li>
-              <li><Link href="/contact" className="text-gray-400 hover:text-white transition-colors">Contact</Link></li>
-              <li><Link href="/careers" className="text-gray-400 hover:text-white transition-colors">Careers</Link></li>
+              <li><a href="#testimonials" className="text-gray-400 hover:text-white transition-colors cursor-pointer">Our Results</a></li>
+              <li><Link href="/auth" className="text-gray-400 hover:text-white transition-colors">Get Started</Link></li>
               <li><Link href="/privacy" className="text-gray-400 hover:text-white transition-colors">Privacy Policy</Link></li>
-              <li><Link href="/terms" className="text-gray-400 hover:text-white transition-colors">Terms of Service</Link></li>
+              <li><a href="#hero" className="text-gray-400 hover:text-white transition-colors cursor-pointer">Professional Trading</a></li>
+              <li><a href="#services" className="text-gray-400 hover:text-white transition-colors cursor-pointer">Why Choose Us</a></li>
             </ul>
           </div>
         </div>

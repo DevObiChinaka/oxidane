@@ -134,7 +134,7 @@ export default function TestimonialsCredibility() {
   }, []);
 
   return (
-    <section className="py-20 bg-white">
+    <section id="testimonials" className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Real Results */}
         <div className="text-center mb-16">
@@ -212,7 +212,7 @@ export default function TestimonialsCredibility() {
                     key={index}
                     onClick={() => setCurrentTestimonial(index)}
                     className={`w-3 h-3 rounded-full transition-all ${
-                      index === currentTestimonial ? 'bg-[#00B38F]' : 'bg-gray-300'
+                      index === currentTestimonial ? 'bg-white' : 'bg-gray-400'
                     }`}
                   />
                 ))}
@@ -230,13 +230,13 @@ export default function TestimonialsCredibility() {
                     key={index}
                     onClick={() => setCurrentTestimonial(index)}
                     className={`group relative transition-all duration-300 ${
-                      index === currentTestimonial ? 'scale-110' : 'hover:scale-105 opacity-70'
+                      index === currentTestimonial ? 'scale-110' : 'hover:scale-105 opacity-85'
                     }`}
                   >
                     <div className={`w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-[#00B38F]/20 to-[#00B39F]/20 flex items-center justify-center overflow-hidden transition-all duration-300 ${
                       index === currentTestimonial 
-                        ? 'ring-4 ring-[#00B38F] shadow-lg shadow-[#00B38F]/30' 
-                        : 'ring-2 ring-gray-400 group-hover:ring-[#00B38F]/50'
+                        ? 'ring-4 ring-white shadow-lg shadow-white/30' 
+                        : 'ring-2 ring-gray-400 group-hover:ring-white/50'
                     }`}>
                       <img 
                         src={testimonial.name === "Sarah Chen" 
@@ -260,12 +260,12 @@ export default function TestimonialsCredibility() {
                     </div>
                     <div className="mt-2 text-center">
                       <p className={`text-xs font-medium transition-colors duration-300 ${
-                        index === currentTestimonial ? 'text-[#00B38F]' : 'text-gray-400'
+                        index === currentTestimonial ? 'text-white' : 'text-gray-300'
                       }`}>
                         {testimonial.name}
                       </p>
                       <p className={`text-xs transition-colors duration-300 ${
-                        index === currentTestimonial ? 'text-[#00B39F]' : 'text-gray-500'
+                        index === currentTestimonial ? 'text-white' : 'text-gray-400'
                       }`}>
                         {testimonial.result}
                       </p>

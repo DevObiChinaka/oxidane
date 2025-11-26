@@ -1,0 +1,17 @@
+[Unit]
+Description=Oxidane Django Application
+After=network.target
+
+[Service]
+User=oxidane
+Group=oxidane
+WorkingDirectory=/var/www/oxidane/backend
+Environment=PATH=/var/www/oxidane/venv/bin
+EnvironmentFile=/var/www/oxidane/.env
+ExecStart=/var/www/oxidane/venv/bin/gunicorn --workers 3 --bind 127.0.0.1:8000 oxidane.wsgi:application
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

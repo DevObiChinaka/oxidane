@@ -25,7 +25,7 @@ export default function Hero() {
   const sessionStatus = getSessionStatus();
 
   return (
-    <section className="relative min-h-screen overflow-hidden">
+    <section id="hero" className="relative min-h-screen overflow-hidden">
       {/* Professional Background */}
       <div className="absolute inset-0">
         {/* Enhanced Gradient Overlay */}
@@ -113,16 +113,10 @@ export default function Hero() {
             {/* Professional CTA */}
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
               <Link 
-                href="/courses" 
+                href="/auth" 
                 className="bg-gradient-to-r from-[#00B38F] to-[#00B39F] text-white px-8 py-4 rounded-lg text-lg font-semibold hover:from-[#00A87D] hover:to-[#00A58D] transition-all duration-300 transform hover:scale-105 shadow-xl"
               >
-                Start Professional Course
-              </Link>
-              <Link 
-                href="/market-analysis" 
-                className="border-2 border-white/30 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-white/10 backdrop-blur-xl transition-all duration-200 hover:border-white/50"
-              >
-                View Market Analysis
+                Start Trading Today
               </Link>
             </div>
 

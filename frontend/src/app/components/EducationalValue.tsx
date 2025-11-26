@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 
 const educationalContent = [
   {
@@ -116,7 +117,7 @@ export default function EducationalValue() {
   };
 
   return (
-    <section className="py-20 bg-gradient-to-br from-gray-50 to-slate-100">
+    <section id="educational-value" className="py-20 bg-gradient-to-br from-gray-50 to-slate-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center space-y-6 mb-16">
@@ -341,9 +342,9 @@ export default function EducationalValue() {
                   <span>Market Analysis Tools</span>
                 </li>
               </ul>
-              <button className="w-full bg-white text-[#000ABE] py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+              <Link href="/auth" className="block w-full bg-white text-[#000ABE] py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors text-center">
                 Access Free Course
-              </button>
+              </Link>
             </div>
           </div>
         </div>

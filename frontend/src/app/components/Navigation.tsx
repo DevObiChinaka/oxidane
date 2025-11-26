@@ -2,12 +2,29 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter, usePathname } from 'next/navigation';
 import { useUserAuth } from '../contexts/UserAuthContext';
 import Image from 'next/image';
 
 export default function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user, isAuthenticated } = useUserAuth();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // Smart navigation handler for hash links
+  const handleHashNavigation = (hash: string) => {
+    if (pathname === '/') {
+      // On landing page - smooth scroll to section
+      const element = document.getElementById(hash.replace('#', ''));
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    } else {
+      // On other pages - navigate to landing page with hash
+      router.push(`/${hash}`);
+    }
+  };
 
   return (
     <nav className="bg-[#000856]/90 backdrop-blur-2xl border-b border-white/15 sticky top-0 z-50 shadow-2xl">
@@ -35,52 +52,28 @@ export default function Navigation() {
             </Link>
           </div>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:block">
-            <div className="ml-10 flex items-baseline space-x-8">
-              <Link 
-                href="/" 
-                className="text-white/80 hover:text-white font-medium transition-colors duration-200 px-3 py-2"
-              >
-                Home
-              </Link>
-              <Link 
-                href="/courses" 
-                className="text-white/80 hover:text-white font-medium transition-colors duration-200 px-3 py-2"
-              >
-                Education
-              </Link>
-              <a 
-                href="/pricing" 
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-white/80 hover:text-white font-medium transition-colors duration-200 px-3 py-2"
-              >
-                Pricing
-              </a>
-              <Link 
-                href="/signals" 
-                className="text-white/80 hover:text-white font-medium transition-colors duration-200 px-3 py-2"
-              >
-                Signals
-              </Link>
-              <Link 
-                href="/mentorship" 
-                className="text-white/80 hover:text-white font-medium transition-colors duration-200 px-3 py-2"
-              >
-                Mentorship
-              </Link>
-              <Link 
-                href="/about" 
-                className="text-white/80 hover:text-white font-medium transition-colors duration-200 px-3 py-2"
-              >
-                About
-              </Link>
-            </div>
-          </div>
-
-          {/* Auth Buttons */}
-          <div className="hidden md:flex items-center space-x-4">
+          {/* Desktop Navigation & Auth Buttons */}
+          <div className="hidden md:flex items-center space-x-6">
+            <button 
+              onClick={() => handleHashNavigation('#services')} 
+              className="text-white/80 hover:text-white font-medium transition-colors duration-200 px-3 py-2 cursor-pointer"
+            >
+              Our Signals
+            </button>
+            <button 
+              onClick={() => handleHashNavigation('#educational-value')} 
+              className="text-white/80 hover:text-white font-medium transition-colors duration-200 px-3 py-2 cursor-pointer"
+            >
+              Trading Resources
+            </button>
+            <button 
+              onClick={() => handleHashNavigation('#testimonials')} 
+              className="text-white/80 hover:text-white font-medium transition-colors duration-200 px-3 py-2 cursor-pointer"
+            >
+              Success Stories
+            </button>
+            
+            {/* Auth Section */}
             {isAuthenticated && user ? (
               <div className="flex items-center space-x-4">
                 <Link 
@@ -88,12 +81,6 @@ export default function Navigation() {
                   className="text-white/90 hover:text-white font-medium transition-colors"
                 >
                   Dashboard
-                </Link>
-                <Link 
-                  href="/billing" 
-                  className="text-white/90 hover:text-white font-medium transition-colors"
-                >
-                  Billing
                 </Link>
                 <div className="w-10 h-10 rounded-full bg-gradient-to-r from-[#00A17C] to-[#00A88F] flex items-center justify-center">
                   <span className="text-white text-sm font-medium">
@@ -140,50 +127,33 @@ export default function Navigation() {
         {isMenuOpen && (
           <div className="md:hidden">
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-[#000856]/95 backdrop-blur-xl border-t border-white/10">
-              <Link 
-                href="/" 
-                className="block px-3 py-2 text-gray-300 hover:text-white font-medium rounded-md hover:bg-slate-700"
-                onClick={() => setIsMenuOpen(false)}
+              <button 
+                onClick={() => {
+                  handleHashNavigation('#services');
+                  setIsMenuOpen(false);
+                }}
+                className="block w-full text-left px-3 py-2 text-gray-300 hover:text-white font-medium rounded-md hover:bg-slate-700 cursor-pointer"
               >
-                Home
-              </Link>
-              <Link 
-                href="/courses" 
-                className="block px-3 py-2 text-gray-300 hover:text-white font-medium rounded-md hover:bg-slate-700"
-                onClick={() => setIsMenuOpen(false)}
+                Our Signals
+              </button>
+              <button 
+                onClick={() => {
+                  handleHashNavigation('#educational-value');
+                  setIsMenuOpen(false);
+                }}
+                className="block w-full text-left px-3 py-2 text-gray-300 hover:text-white font-medium rounded-md hover:bg-slate-700 cursor-pointer"
               >
-                Education
-              </Link>
-              <a 
-                href="/pricing" 
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block px-3 py-2 text-gray-300 hover:text-white font-medium rounded-md hover:bg-slate-700"
-                onClick={() => setIsMenuOpen(false)}
+                Trading Resources
+              </button>
+              <button 
+                onClick={() => {
+                  handleHashNavigation('#testimonials');
+                  setIsMenuOpen(false);
+                }}
+                className="block w-full text-left px-3 py-2 text-gray-300 hover:text-white font-medium rounded-md hover:bg-slate-700 cursor-pointer"
               >
-                Pricing
-              </a>
-              <Link 
-                href="/signals" 
-                className="block px-3 py-2 text-gray-300 hover:text-white font-medium rounded-md hover:bg-slate-700"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Signals
-              </Link>
-              <Link 
-                href="/mentorship" 
-                className="block px-3 py-2 text-gray-300 hover:text-white font-medium rounded-md hover:bg-slate-700"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Mentorship
-              </Link>
-              <Link 
-                href="/about" 
-                className="block px-3 py-2 text-gray-300 hover:text-white font-medium rounded-md hover:bg-slate-700"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                About
-              </Link>
+                Success Stories
+              </button>
               
               {/* Mobile Auth */}
               <div className="pt-4 pb-3 border-t border-slate-700">
@@ -195,13 +165,6 @@ export default function Navigation() {
                       onClick={() => setIsMenuOpen(false)}
                     >
                       Dashboard
-                    </Link>
-                    <Link 
-                      href="/billing" 
-                      className="block px-3 py-2 text-gray-300 hover:text-white font-medium text-center rounded-md hover:bg-slate-700 border border-gray-600"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      Billing & Subscriptions
                     </Link>
                   </div>
                 ) : (
