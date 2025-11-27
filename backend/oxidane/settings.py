@@ -31,12 +31,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-tf%ns9(k(%&8@b69zyb^@9si24^m%mh$cp%l)$yfw&y3u4vpbl'
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-tf%ns9(k(%&8@b69zyb^@9si24^m%mh$cp%l)$yfw&y3u4vpbl')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 
 
@@ -247,14 +247,18 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 # CORS settings for frontend communication
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "https://oxiworldforexacademy.com",
-    "https://www.oxiworldforexacademy.com",
-]
+CORS_ALLOWED_ORIGINS = os.getenv(
+    'CORS_ALLOWED_ORIGINS',
+    'http://localhost:3000,http://127.0.0.1:3000,https://oxiworldforexacademy.com,https://www.oxiworldforexacademy.com'
+).split(',')
 
 CORS_ALLOW_CREDENTIALS = True
+
+# CSRF trusted origins for cross-domain requests
+CSRF_TRUSTED_ORIGINS = os.getenv(
+    'CSRF_TRUSTED_ORIGINS',
+    'https://oxiworldforexacademy.com,https://www.oxiworldforexacademy.com'
+).split(',')
 
 # Allow specific headers for OAuth
 CORS_ALLOW_HEADERS = [
@@ -268,9 +272,6 @@ CORS_ALLOW_HEADERS = [
     'x-csrftoken',
     'x-requested-with',
 ]
-
-# Allowed hosts for production
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', 'oxiworldforexacademy.com', 'www.oxiworldforexacademy.com']
 
 # Frontend URL for email links
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'https://oxiworldforexacademy.com')
