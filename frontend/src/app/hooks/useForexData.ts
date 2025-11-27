@@ -72,8 +72,6 @@ export function useForexData() {
   useEffect(() => {
     if (!mounted) return;
 
-    let interval: NodeJS.Timeout;
-
     const updateRates = () => {
       setRates(prevRates => {
         const newRates = MAJOR_PAIRS.map((pair, index) => {
