@@ -84,7 +84,7 @@ export default function ChangePassword() {
     const newErrors: Record<string, string> = {};
 
     if (!formData.current_password) {
-      newErrors.current_password = &apos;Current password is required&apos;;
+      newErrors.current_password = "Current password is required";
     }
 
     if (!formData.new_password) {
@@ -164,11 +164,11 @@ export default function ChangePassword() {
       {notification.show && (
         <div className="fixed top-4 right-4 z-50 max-w-md">
           <div className={`rounded-lg shadow-lg p-4 ${
-            notification.type === &apos;success&apos; ? &apos;bg-green-50 border border-green-200&apos; : &apos;bg-red-50 border border-red-200&apos;
+            notification.type === "success" ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"
           }`}>
             <div className="flex items-start">
               <div className="flex-shrink-0">
-                {notification.type === &apos;success&apos; ? (
+                {notification.type === "success" ? (
                   <svg className="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
@@ -180,7 +180,7 @@ export default function ChangePassword() {
               </div>
               <div className="ml-3">
                 <p className={`text-sm font-medium ${
-                  notification.type === &apos;success&apos; ? &apos;text-green-800&apos; : &apos;text-red-800&apos;
+                  notification.type === "success" ? "text-green-800" : "text-red-800"
                 }`}>
                   {notification.message}
                 </p>
