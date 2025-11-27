@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('subscriptions', '0023_remove_adminactionlog_admin_user_and_more'),
+        ('subscriptions', '0023_noop'),
     ]
 
     operations = [
