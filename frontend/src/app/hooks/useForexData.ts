@@ -110,7 +110,7 @@ export function useForexData() {
     setIsLoading(false);
 
     // Update every 3 seconds (realistic for retail forex)
-    interval = setInterval(updateRates, 3000);
+    const interval = setInterval(updateRates, 3000);
 
     return () => {
       if (interval) clearInterval(interval);
