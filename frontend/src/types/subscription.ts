@@ -69,8 +69,8 @@ export interface SubscriptionChangeLog {
   id: string;
   change_type: string;
   field_name: string;
-  previous_value: any;
-  new_value: any;
+  previous_value: unknown;
+  new_value: unknown;
   reason: string;
   business_justification?: string;
   financial_impact?: number;

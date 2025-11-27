@@ -151,7 +151,7 @@ export interface PaymentVerificationResponse {
   success: boolean;
   message: string;
   payment: PaymentTransaction;
-  gateway_response?: any;
+  gateway_response?: unknown;
   actions_taken: string[];
 }
 

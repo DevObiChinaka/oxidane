@@ -103,7 +103,7 @@ export interface TelegramBulkAction {
   action: 'retry' | 'cancel' | 'priority_high' | 'priority_normal' | 'priority_low' | 'delete';
   item_ids: string[];
   reason?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface TelegramActionRequest {
@@ -113,14 +113,14 @@ export interface TelegramActionRequest {
   message?: string;
   priority?: 'low' | 'normal' | 'high' | 'urgent';
   scheduled_for?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface TelegramActionResponse {
   success: boolean;
   message: string;
   queue_item_id?: string;
-  telegram_response?: any;
+  telegram_response?: unknown;
   error?: {
     code: string;
     description: string;
