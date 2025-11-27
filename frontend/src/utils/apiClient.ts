@@ -122,21 +122,21 @@ class APIClient {
     return this.request<T>(endpoint, { method: 'GET' });
   }
 
-  async post<T>(endpoint: string, data?: any): Promise<T> {
+  async post<T>(endpoint: string, data?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'POST',
       body: data instanceof FormData ? data : JSON.stringify(data),
     });
   }
 
-  async put<T>(endpoint: string, data?: any): Promise<T> {
+  async put<T>(endpoint: string, data?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'PUT',
       body: data instanceof FormData ? data : JSON.stringify(data),
     });
   }
 
-  async patch<T>(endpoint: string, data?: any): Promise<T> {
+  async patch<T>(endpoint: string, data?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'PATCH',
       body: data instanceof FormData ? data : JSON.stringify(data),
@@ -148,7 +148,7 @@ class APIClient {
   }
 
   // File download method
-  async downloadFile(endpoint: string, data?: any): Promise<Blob> {
+  async downloadFile(endpoint: string, data?: unknown): Promise<Blob> {
     const token = localStorage.getItem('access_token');
 
     const headers: HeadersInit = {

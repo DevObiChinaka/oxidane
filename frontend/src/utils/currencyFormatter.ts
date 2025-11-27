@@ -17,7 +17,7 @@ export function formatCurrency(amount: number, currencyCode: string = 'USD'): st
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(amount);
-  } catch (error) {
+  } catch {
     // Fallback for invalid currency codes
     console.warn(`Invalid currency code: ${currencyCode}, falling back to USD`);
     return new Intl.NumberFormat('en-US', {
@@ -44,7 +44,7 @@ export function formatCurrencyCompact(amount: number, currencyCode: string = 'US
       minimumFractionDigits: 0,
       maximumFractionDigits: 1,
     }).format(amount);
-  } catch (error) {
+  } catch {
     console.warn(`Invalid currency code: ${currencyCode}, falling back to USD`);
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
