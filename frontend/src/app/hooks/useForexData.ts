@@ -113,7 +113,7 @@ export function useForexData() {
     const interval = setInterval(updateRates, 3000);
 
     return () => {
-      if (interval) clearInterval(interval);
+      clearInterval(interval);
     };
   }, [mounted]);
 
