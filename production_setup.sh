@@ -1,10 +1,13 @@
 #!/bin/bash
-# Complete Hetzner VPS setup for Django + PostgreSQL + Redis + Celery
-# Run as root: curl -sSL https://raw.githubusercontent.com/yourusername/oxidane/main/production_setup.sh | bash
+# Complete Hostinger VPS setup for Django + PostgreSQL + Redis + Celery
+# Run as root on Ubuntu 22.04 LTS
+# curl -sSL https://raw.githubusercontent.com/DevObiChinaka/oxidane/mySaaS/production_setup.sh | bash
 
 set -e
 
-echo "🚀 Setting up Oxidane production server..."
+echo "🚀 Setting up Oxidane on Hostinger VPS..."
+echo "OS: $(lsb_release -d | cut -f2)"
+echo "Server: $(hostname -I | awk '{print $1}')"
 
 # Update system
 apt update && apt upgrade -y
@@ -56,14 +59,26 @@ systemctl enable fail2ban
 # Setup SSL with Certbot
 apt install -y certbot python3-certbot-nginx
 
-echo "✅ Server setup complete!"
+# Create log directories
+mkdir -p /var/log/celery /var/log/gunicorn
+chown oxidane:oxidane /var/log/celery /var/log/gunicorn
+
+echo "✅ Hostinger VPS setup complete!"
 echo ""
-echo "Next steps:"
-echo "1. Clone your repository to /var/www/oxidane"
-echo "2. Set up Python virtual environment"
-echo "3. Configure Django settings"
-echo "4. Setup Nginx configuration"
-echo "5. Create systemd services for Gunicorn and Celery"
+echo "🎯 HOSTINGER SPECIFIC OPTIMIZATIONS:"
+echo "• Configured for Hostinger's network environment"
+echo "• Optimized Redis for VPS resources" 
+echo "• Security hardening with fail2ban"
+echo "• Ready for oxiworldforexacademy.com deployment"
+echo ""
+echo "📋 NEXT STEPS:"
+echo "1. Switch to oxidane user: su - oxidane"
+echo "2. Clone repository: cd /var/www/oxidane && git clone https://github.com/DevObiChinaka/oxidane.git ."
+echo "3. Copy environment file: cp hostinger_production.env .env"
+echo "4. Edit .env with your actual credentials"
+echo "5. Run deployment: bash deploy.sh"
+echo ""
+echo "🌐 Domain: Point DNS A records to $(hostname -I | awk '{print $1}')"
 echo "6. Setup SSL certificate"
 echo ""
 echo "Run the app setup script next!"

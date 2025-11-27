@@ -28,7 +28,7 @@ systemctl start oxidane-celery-beat
 systemctl restart nginx
 
 # Setup SSL certificate
-certbot --nginx -d oxiworld.app -d www.oxiworld.app --non-interactive --agree-tos --email your-email@example.com
+certbot --nginx -d oxiworldforexacademy.com -d www.oxiworldforexacademy.com --non-interactive --agree-tos --email your-email@example.com
 
 echo "✅ Deployment complete!"
 echo ""
@@ -41,4 +41,4 @@ echo "📊 Monitor logs:"
 echo "journalctl -fu oxidane-gunicorn"
 echo "tail -f /var/log/celery/worker.log"
 echo ""
-echo "🌐 Your site should be live at: https://oxiworld.app"
+echo "🌐 Your site should be live at: https://oxiworldforexacademy.com"

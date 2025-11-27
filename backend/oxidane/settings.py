@@ -14,7 +14,7 @@ EMAIL_USE_SSL = True  # Use SSL instead of TLS
 EMAIL_TIMEOUT = 30
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = f'OxiWorld <{EMAIL_HOST_USER}>' if EMAIL_HOST_USER else 'OxiWorld <noreply@oxiworld.com>'
+DEFAULT_FROM_EMAIL = f'OxiWorld Forex Academy <{EMAIL_HOST_USER}>' if EMAIL_HOST_USER else 'OxiWorld Forex Academy <noreply@oxiworldforexacademy.com>'
 
 # Backup: Console output for debugging
 # EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
@@ -250,6 +250,8 @@ AUTHENTICATION_BACKENDS = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "https://oxiworldforexacademy.com",
+    "https://www.oxiworldforexacademy.com",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -267,11 +269,11 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 
-# Allowed hosts for development
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
+# Allowed hosts for production
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', 'oxiworldforexacademy.com', 'www.oxiworldforexacademy.com']
 
 # Frontend URL for email links
-FRONTEND_URL = 'http://localhost:3000'
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'https://oxiworldforexacademy.com')
 
 # Email configuration for real email sending (LEGACY - TLS version)
 # EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
