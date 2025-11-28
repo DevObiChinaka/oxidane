@@ -370,6 +370,61 @@ If you have any questions, feel free to contact us at {self.support_email}.
 © {datetime.now().year} {self.company_name}. All rights reserved.
             """
         
+        elif template_type == 'password_reset':
+            otp_code = custom_vars.get('otp_code', '------')
+            subject = f"🔑 {self.company_name} - Password Reset Code"
+            
+            html_content = f"""
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>{subject}</title>
+            </head>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; text-align: center; margin-bottom: 30px;">
+                    <h1 style="color: white; margin: 0;">🔑 {self.company_name}</h1>
+                </div>
+                
+                <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                    <h2 style="color: #333;">Hi {first_name}!</h2>
+                    <p>You requested to reset your password. Use the code below to proceed:</p>
+                    
+                    <div style="background: #fff4e6; border: 2px solid #ff9800; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+                        <h1 style="color: #ff9800; font-size: 36px; margin: 0; letter-spacing: 8px; font-family: 'Courier New', monospace;">{otp_code}</h1>
+                    </div>
+                    
+                    <p>This code will expire in <strong>10 minutes</strong>.</p>
+                    
+                    <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px 16px; margin: 20px 0; border-radius: 4px;">
+                        <p style="margin: 0; color: #856404;"><strong>⚠️ Security Notice:</strong> If you didn't request this password reset, please ignore this email and ensure your account is secure.</p>
+                    </div>
+                </div>
+                
+                <div style="text-align: center; color: #666; font-size: 12px; margin-top: 30px;">
+                    <p>© {datetime.now().year} {self.company_name}. All rights reserved.</p>
+                    <p>This is an automated message, please do not reply to this email.</p>
+                </div>
+            </body>
+            </html>
+            """
+            
+            text_content = f"""
+{subject}
+
+Hi {first_name}!
+
+You requested to reset your password. Use the code below to proceed:
+
+{otp_code}
+
+This code will expire in 10 minutes.
+
+⚠️ Security Notice: If you didn't request this password reset, please ignore this email and ensure your account is secure.
+
+© {datetime.now().year} {self.company_name}. All rights reserved.
+This is an automated message, please do not reply to this email.
+            """
+        
         else:
             # Generic fallback
             subject = f"{self.company_name} - Notification"
