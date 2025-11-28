@@ -112,7 +112,7 @@ export default function ChangePassword() {
 
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch('http://localhost:8000/api/admin/change-password/', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/admin/change-password/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

@@ -88,7 +88,7 @@ export default function ProfileSettings() {
       setOtpSending(true);
       try {
         const token = localStorage.getItem('access_token');
-        const response = await fetch('http://localhost:8000/api/admin/request-email-change/', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/admin/request-email-change/`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -123,7 +123,7 @@ export default function ProfileSettings() {
     setSaving(true);
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch('http://localhost:8000/api/admin/profile/', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/admin/profile/`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -160,7 +160,7 @@ export default function ProfileSettings() {
     setOtpVerifying(true);
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch('http://localhost:8000/api/admin/verify-email-change/', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/admin/verify-email-change/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -198,7 +198,7 @@ export default function ProfileSettings() {
     setVerificationSending(true);
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch('http://localhost:8000/api/admin/request-email-verification/', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/admin/request-email-verification/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -232,7 +232,7 @@ export default function ProfileSettings() {
     setVerificationVerifying(true);
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch('http://localhost:8000/api/admin/verify-email/', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/admin/verify-email/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

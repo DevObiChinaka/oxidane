@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [pathname]);
 
   const login = async (email: string, password: string) => {
-    const response = await fetch('http://localhost:8000/api/auth/token/', {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/token/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
@@ -84,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (data.user.is_staff) {
       // Always check setup status on login
       try {
-        const setupResponse = await fetch('http://localhost:8000/api/admin/setup/status/', {
+        const setupResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/admin/setup/status/`, {
           headers: {
             'Authorization': `Bearer ${data.access}`,
             'Content-Type': 'application/json'
@@ -124,7 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const refresh = localStorage.getItem('refresh_token');
     if (!refresh) throw new Error('No refresh token');
 
-    const response = await fetch('http://localhost:8000/api/auth/token/refresh/', {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/token/refresh/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh }),

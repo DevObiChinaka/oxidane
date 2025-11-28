@@ -67,7 +67,7 @@ export default function SecureVideoPlayer({
       }
 
       const response = await fetch(
-        `http://localhost:8000/api/lessons/${lessonId}/video-embed/`,
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/lessons/${lessonId}/video-embed/`,
         {
           method: 'GET',
           headers: {

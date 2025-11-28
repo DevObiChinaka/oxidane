@@ -46,7 +46,7 @@ export default function AdminLayoutWrapper({ children }: AdminLayoutWrapperProps
       }
 
       try {
-        const response = await fetch('http://localhost:8000/api/admin/setup/status/', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/admin/setup/status/`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'

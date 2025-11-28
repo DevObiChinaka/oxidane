@@ -52,21 +52,21 @@ export default function AdminDashboard() {
         };
 
         // Fetch setup status
-        const setupResponse = await fetch('http://localhost:8000/api/admin/setup/status/', { headers });
+        const setupResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/admin/setup/status/`, { headers });
         if (setupResponse.ok) {
           const setupData = await setupResponse.json();
           setSetupStatus(setupData);
         }
 
         // Fetch subscription stats
-        const subsResponse = await fetch('http://localhost:8000/api/admin/subscriptions-management/?page=1&page_size=1', { headers });
+        const subsResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/admin/subscriptions-management/?page=1&page_size=1`, { headers });
         if (subsResponse.ok) {
           const subsData = await subsResponse.json();
           setSubscriptionStats(subsData.analytics);
         }
 
         // Fetch email stats
-        const emailResponse = await fetch('http://localhost:8000/api/admin/email-analytics/', { headers });
+        const emailResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/admin/email-analytics/`, { headers });
         if (emailResponse.ok) {
           const emailData = await emailResponse.json();
           console.log('Email analytics data:', emailData);

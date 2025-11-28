@@ -209,20 +209,20 @@ export default function AnalyticsPage() {
         'Content-Type': 'application/json'
       };
 
-      const subsResponse = await fetch('http://localhost:8000/api/admin/subscriptions-management/?page=1&page_size=1', { headers });
+      const subsResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/admin/subscriptions-management/?page=1&page_size=1`, { headers });
       if (subsResponse.ok) {
         const subsData = await subsResponse.json();
         setSubscriptionStats(subsData.analytics);
       }
 
-      const emailResponse = await fetch('http://localhost:8000/api/admin/email-analytics/', { headers });
+      const emailResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/admin/email-analytics/`, { headers });
       if (emailResponse.ok) {
         const emailData = await emailResponse.json();
         setEmailStats(emailData.analytics);
       }
 
       // Fetch revenue analytics
-      const revenueResponse = await fetch('http://localhost:8000/api/admin/revenue/analytics/', { headers });
+      const revenueResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/admin/revenue/analytics/`, { headers });
       if (revenueResponse.ok) {
         const revenueDataRes = await revenueResponse.json();
         setRevenueData(revenueDataRes.monthly_revenue || []);
