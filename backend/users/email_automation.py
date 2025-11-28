@@ -45,7 +45,8 @@ class EmailAutomationService:
             if otp_code:
                 custom_vars['verification_code'] = otp_code
                 custom_vars['otp_code'] = otp_code  # Also add as otp_code for consistency
-                custom_vars['verification_url'] = f"http://localhost:3000/verify?email={user.email}&code={otp_code}"
+                frontend_url = getattr(settings, 'FRONTEND_URL', 'https://oxiworldforexacademy.com')
+                custom_vars['verification_url'] = f"{frontend_url}/verify?email={user.email}&code={otp_code}"
             
             result = self.email_service.send_email(
                 template_type='user_login_otp',  # Use existing OTP template for registration too
@@ -70,7 +71,8 @@ class EmailAutomationService:
             custom_vars = {}
             if reset_token:
                 custom_vars['reset_token'] = reset_token
-                custom_vars['reset_url'] = f"http://localhost:3000/reset-password?token={reset_token}"
+                frontend_url = getattr(settings, 'FRONTEND_URL', 'https://oxiworldforexacademy.com')
+                custom_vars['reset_url'] = f"{frontend_url}/reset-password?token={reset_token}"
             if reset_otp:
                 custom_vars['reset_code'] = reset_otp
             
@@ -157,7 +159,7 @@ class EmailAutomationService:
                     'payment_amount': payment_details.get('amount', 0),
                     'payment_reference': payment_details.get('reference', ''),
                     'failure_reason': payment_details.get('failure_reason', 'Payment processing failed'),
-                    'retry_url': payment_details.get('retry_url', 'http://localhost:3000/subscription'),
+                    'retry_url': payment_details.get('retry_url', f"{getattr(settings, 'FRONTEND_URL', 'https://oxiworldforexacademy.com')}/subscription"),
                 })
             
             result = self.email_service.send_email(
@@ -186,7 +188,7 @@ class EmailAutomationService:
                     'subscription_plan': subscription_details.get('plan_type', 'Premium Plan'),
                     'expiry_date': subscription_details.get('subscription_end', ''),
                     'days_remaining': subscription_details.get('days_remaining', 0),
-                    'renewal_url': subscription_details.get('renewal_url', 'http://localhost:3000/subscription/renew'),
+                    'renewal_url': subscription_details.get('renewal_url', f"{getattr(settings, 'FRONTEND_URL', 'https://oxiworldforexacademy.com')}/subscription/renew"),
                     'subscription_amount': subscription_details.get('amount_paid', 0),
                 })
             

@@ -339,7 +339,7 @@ If you didn't request this code, please ignore this email.
                     <p>Your account has been successfully created and verified.</p>
                     
                     <div style="text-align: center; margin: 30px 0;">
-                        <a href="http://localhost:3000/dashboard" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+                        <a href="{getattr(settings, 'FRONTEND_URL', 'https://oxiworldforexacademy.com')}/dashboard" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
                             Get Started →
                         </a>
                     </div>
@@ -363,7 +363,7 @@ Welcome to {self.company_name}! We're excited to have you on board.
 
 Your account has been successfully created and verified.
 
-Get started: http://localhost:3000/dashboard
+Get started: {getattr(settings, 'FRONTEND_URL', 'https://oxiworldforexacademy.com')}/dashboard
 
 If you have any questions, feel free to contact us at {self.support_email}.
 

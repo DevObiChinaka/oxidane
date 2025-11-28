@@ -180,7 +180,7 @@ def send_signin_notification_email(user, signin_details=None, request=None):
                 </div>
                 
                 <div style="text-align: center; margin: 30px 0;">
-                    <a href="http://localhost:3000/dashboard" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 15px; display: inline-block;">
+                    <a href="{getattr(settings, 'FRONTEND_URL', 'https://oxiworldforexacademy.com')}/dashboard" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 15px; display: inline-block;">
                         📈 View Dashboard
                     </a>
                 </div>
@@ -213,7 +213,7 @@ Your OxiWorld Forex Academy account was successfully accessed.
 • Contact support@oxiworld.com
 • Review your account security
 
-Dashboard: http://localhost:3000/dashboard
+Dashboard: {getattr(settings, 'FRONTEND_URL', 'https://oxiworldforexacademy.com')}/dashboard
 
 © 2025 OxiWorld Forex Academy
 This is an automated security notification.
@@ -1269,14 +1269,16 @@ def google_oauth_callback(request):
             del request.session['oauth_state']
         
         # Redirect to frontend with success
-        frontend_url = f"http://localhost:3000/auth?success=true&user_id={user.id}"
+        frontend_base = getattr(settings, 'FRONTEND_URL', 'https://oxiworldforexacademy.com')
+        frontend_url = f"{frontend_base}/auth?success=true&user_id={user.id}"
         from django.shortcuts import redirect
         return redirect(frontend_url)
         
     except Exception as e:
         # Redirect to frontend with error
         error_message = urllib.parse.quote(str(e))
-        frontend_url = f"http://localhost:3000/auth?error={error_message}"
+        frontend_base = getattr(settings, 'FRONTEND_URL', 'https://oxiworldforexacademy.com')
+        frontend_url = f"{frontend_base}/auth?error={error_message}"
         from django.shortcuts import redirect
         return redirect(frontend_url)
 
