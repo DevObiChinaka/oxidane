@@ -28,9 +28,15 @@ export const API_ENDPOINTS = {
     verifyLoginOtp: `${BASE}/api/auth/verify-login-otp/`,
     resendVerificationOtp: `${BASE}/api/auth/resend-verification-otp/`,
     resendLoginOtp: `${BASE}/api/auth/resend-login-otp/`,
-    forgotPassword: `${BASE}/api/auth/forgot-password/`,
-    resetPassword: `${BASE}/api/auth/reset-password/`,
+    forgotPassword: `${BASE}/api/auth/password-reset-otp/request/`,
+    resetPassword: `${BASE}/api/auth/password-reset-otp/verify/`,
     profile: `${BASE}/api/auth/profile/`,
+  },
+
+  // Admin Authentication (2FA with OTP)
+  adminAuth: {
+    loginRequest: `${BASE}/api/admin-auth/login/`,
+    verifyOtp: `${BASE}/api/admin-auth/verify-otp/`,
   },
 
   // Admin

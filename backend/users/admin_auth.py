@@ -21,6 +21,272 @@ logger = logging.getLogger(__name__)
 # Get the custom User model
 User = get_user_model()
 
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import authenticate, get_user_model
+from django.core.mail import send_mail
+from django.conf import settings
+from django.core.cache import cache
+from django.utils import timezone
+from django.contrib.sessions.models import Session
+import random
+import string
+import hashlib
+import json
+from datetime import timedelta
+from .email_service import EmailTemplateService
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Get the custom User model
+User = get_user_model()
+
+
+# ============================================================================
+# MODERN ADMIN AUTH: OTP + JWT (Secure 2FA with JWT session management)
+# ============================================================================
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def admin_login_request_jwt(request):
+    """
+    Step 1: Validate admin credentials and send OTP (2FA)
+    Returns session token for OTP verification
+    """
+    email = request.data.get('email')
+    password = request.data.get('password')
+    
+    if not email or not password:
+        return Response({
+            'success': False,
+            'error': 'Email and password are required'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Authenticate user
+    try:
+        user_obj = User.objects.get(email=email)
+        user = authenticate(username=user_obj.username, password=password)
+    except User.DoesNotExist:
+        return Response({
+            'success': False,
+            'error': 'Invalid email or password'
+        }, status=status.HTTP_401_UNAUTHORIZED)
+    
+    if not user:
+        return Response({
+            'success': False,
+            'error': 'Invalid email or password'
+        }, status=status.HTTP_401_UNAUTHORIZED)
+    
+    # Check if user is admin/staff
+    if not (user.is_staff or user.is_superuser):
+        return Response({
+            'success': False,
+            'error': 'Access denied. Admin privileges required.'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    # Generate 6-digit OTP
+    otp = ''.join(random.choices(string.digits, k=6))
+    
+    # Create session token for OTP verification
+    session_token = hashlib.sha256(f"{user.id}{timezone.now()}".encode()).hexdigest()
+    
+    # Store OTP in cache (10 minutes expiry)
+    cache_key = f"admin_otp_jwt_{session_token}"
+    cache_data = {
+        'user_id': str(user.id),
+        'otp': otp,
+        'email': user.email,
+        'expires_at': (timezone.now() + timedelta(minutes=10)).isoformat()
+    }
+    cache.set(cache_key, json.dumps(cache_data), 600)
+    
+    # Send OTP email
+    try:
+        login_ip = request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0] or request.META.get('REMOTE_ADDR', 'Unknown')
+        login_time = timezone.now().strftime('%B %d, %Y at %I:%M %p UTC')
+        
+        email_service = EmailTemplateService()
+        
+        # Email content for OTP
+        subject = f'Admin Login OTP - {otp}'
+        html_message = f"""
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="UTF-8"></head>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background: #000856; padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+                <h1 style="color: white; margin: 0;">OxiWorld Admin Login</h1>
+                <p style="color: #e0e0e0; margin: 8px 0 0 0;">Two-Factor Authentication</p>
+            </div>
+            <div style="background: white; padding: 40px 30px; border: 1px solid #e0e0e0;">
+                <h2 style="color: #000856;">Hi {user.first_name or user.username},</h2>
+                <p>Please use this verification code to complete your admin login:</p>
+                <div style="background: #f5f5f5; border: 2px solid #00B38F; border-radius: 8px; padding: 25px; text-align: center; margin: 30px 0;">
+                    <div style="font-size: 36px; font-weight: bold; color: #000856; letter-spacing: 8px;">{otp}</div>
+                    <p style="color: #666; font-size: 13px; margin: 10px 0 0 0;">Valid for 10 minutes</p>
+                </div>
+                <p style="font-size: 14px; color: #666;">Login Time: {login_time}</p>
+                <p style="font-size: 14px; color: #666;">Login IP: {login_ip}</p>
+                <p style="font-size: 14px; color: #ff0000; font-weight: bold;">Never share this code with anyone.</p>
+            </div>
+        </body>
+        </html>
+        """
+        
+        send_mail(
+            subject=subject,
+            message=f'Your admin login OTP is: {otp}\n\nValid for 10 minutes.\nLogin Time: {login_time}\nLogin IP: {login_ip}',
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            html_message=html_message,
+            fail_silently=False,
+        )
+        
+        logger.info(f"Admin OTP sent to {user.email}")
+        
+        response_data = {
+            'success': True,
+            'session_token': session_token,
+            'message': f'OTP sent to {user.email[:3]}***@{user.email.split("@")[1]}',
+            'expires_in': 600
+        }
+        
+        # Include OTP in response for development ONLY
+        if settings.DEBUG:
+            response_data['debug_otp'] = otp
+        
+        return Response(response_data)
+        
+    except Exception as e:
+        logger.error(f"Failed to send OTP email: {str(e)}")
+        return Response({
+            'success': False,
+            'error': f'Failed to send OTP: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def admin_verify_otp_jwt(request):
+    """
+    Step 2: Verify OTP and return JWT tokens for API authentication
+    Returns standard JWT access + refresh tokens
+    """
+    session_token = request.data.get('session_token')
+    otp_input = request.data.get('otp')
+    
+    if not session_token or not otp_input:
+        return Response({
+            'success': False,
+            'error': 'Session token and OTP are required'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Get OTP data from cache
+    cache_key = f"admin_otp_jwt_{session_token}"
+    cache_data_json = cache.get(cache_key)
+    
+    if not cache_data_json:
+        return Response({
+            'success': False,
+            'error': 'Invalid or expired session'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    cache_data = json.loads(cache_data_json)
+    
+    # Verify OTP
+    if cache_data['otp'] != otp_input:
+        return Response({
+            'success': False,
+            'error': 'Invalid OTP'
+        }, status=status.HTTP_401_UNAUTHORIZED)
+    
+    # Check if OTP expired
+    expires_at = timezone.datetime.fromisoformat(cache_data['expires_at'])
+    if timezone.now() > expires_at:
+        cache.delete(cache_key)
+        return Response({
+            'success': False,
+            'error': 'OTP has expired'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # OTP valid! Get user and generate JWT tokens
+    try:
+        user = User.objects.get(id=cache_data['user_id'])
+        
+        # Generate JWT tokens using rest_framework_simplejwt
+        refresh = RefreshToken.for_user(user)
+        access_token = str(refresh.access_token)
+        refresh_token = str(refresh)
+        
+        # Clear OTP from cache
+        cache.delete(cache_key)
+        
+        # Send successful login notification
+        try:
+            login_ip = request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0] or request.META.get('REMOTE_ADDR', 'Unknown')
+            login_time = timezone.now().strftime('%B %d, %Y at %I:%M %p UTC')
+            
+            success_subject = 'Admin Login Successful'
+            success_message = f"""
+            Hello {user.first_name or user.username},
+            
+            You have successfully logged in to the OxiWorld Admin Dashboard.
+            
+            Login Time: {login_time}
+            Login IP: {login_ip}
+            
+            If this wasn't you, please change your password immediately.
+            
+            Best regards,
+            OxiWorld Forex Academy Team
+            """
+            
+            send_mail(
+                subject=success_subject,
+                message=success_message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                fail_silently=True,
+            )
+        except Exception as e:
+            logger.error(f"Failed to send login success notification: {str(e)}")
+        
+        # Return JWT tokens and user data (same format as regular login)
+        return Response({
+            'success': True,
+            'message': 'Login successful',
+            'access': access_token,
+            'refresh': refresh_token,
+            'token': access_token,  # For compatibility
+            'user': {
+                'id': str(user.id),
+                'email': user.email,
+                'username': user.username,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'is_staff': user.is_staff,
+                'is_superuser': user.is_superuser,
+                'is_active': user.is_active,
+                'avatar': user.avatar if hasattr(user, 'avatar') else None,
+            }
+        })
+        
+    except User.DoesNotExist:
+        return Response({
+            'success': False,
+            'error': 'User not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+
+
+# ============================================================================
+# OLD ADMIN AUTH: Session-based (Legacy - kept for reference)
+# ============================================================================
+
 # Admin authentication views
 @api_view(['POST'])
 @permission_classes([AllowAny])

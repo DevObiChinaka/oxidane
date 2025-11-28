@@ -3,8 +3,7 @@
 import { useState, FormEvent } from 'react';
 import Link from 'next/link';
 import { EnvelopeIcon, ArrowLeftIcon, KeyIcon } from '@heroicons/react/24/outline';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api';
+import { API_ENDPOINTS } from '@/config/api';
 
 export default function ForgotPasswordOTPPage() {
   const [step, setStep] = useState<'email' | 'verify'>('email');
@@ -22,7 +21,7 @@ export default function ForgotPasswordOTPPage() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/password-reset-otp/request/`, {
+      const response = await fetch(API_ENDPOINTS.auth.forgotPassword, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -63,7 +62,7 @@ export default function ForgotPasswordOTPPage() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/password-reset-otp/verify/`, {
+      const response = await fetch(API_ENDPOINTS.auth.resetPassword, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

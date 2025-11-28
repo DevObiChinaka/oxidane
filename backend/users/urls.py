@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from . import admin_views
+from . import admin_auth
 from . import email_admin_views
 from . import password_reset_views
 from .jwt_auth import CustomTokenObtainPairView
@@ -32,6 +33,10 @@ urlpatterns = [
     path('auth/otp/request/', password_reset_views.request_login_otp, name='request_login_otp'),
     path('auth/otp/verify/', password_reset_views.verify_login_otp, name='verify_login_otp'),
     path('auth/change-password/', password_reset_views.change_password, name='change_password_secure'),
+    
+    # Admin OTP Authentication (2FA for admin login)
+    path('admin-auth/login/', admin_auth.admin_login_request_jwt, name='admin_login_request'),
+    path('admin-auth/verify-otp/', admin_auth.admin_verify_otp_jwt, name='admin_verify_otp'),
     
     # Regular user authentication
     path('auth/check-email/', views.check_email, name='check_email'),
