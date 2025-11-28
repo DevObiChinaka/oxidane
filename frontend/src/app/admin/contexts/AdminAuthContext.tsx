@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import { API_ENDPOINTS } from '@/config/api';
 
 interface AdminUser {
   username: string;
@@ -21,7 +22,7 @@ interface AdminAuthContextType {
 
 const AdminAuthContext = createContext<AdminAuthContextType | undefined>(undefined);
 
-import { API_BASE_URL } from '../config/api';
+export { AdminAuthContext };
 
 export function useAdminAuth() {
   const context = useContext(AdminAuthContext);
@@ -47,10 +48,8 @@ export function AdminAuthProvider({ children }: AdminAuthProviderProps) {
   const requiresAuth = pathname?.startsWith('/admin') && pathname !== '/admin/login';
 
   const checkAuthStatus = async (token: string) => {
-    const url = 'http://127.0.0.1:8000/api/admin-auth/check-session/';
-    
     try {
-      const response = await fetch(url, {
+      const response = await fetch(API_ENDPOINTS.admin.setupStatus, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -103,7 +102,7 @@ export function AdminAuthProvider({ children }: AdminAuthProviderProps) {
     
     if (token) {
       try {
-        await fetch('http://127.0.0.1:8000/api/admin-auth/logout/', {
+        await fetch(API_ENDPOINTS.auth.logout, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,

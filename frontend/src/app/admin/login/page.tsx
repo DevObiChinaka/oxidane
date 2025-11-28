@@ -3,12 +3,11 @@
 import { useState, FormEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth } from '@/contexts/AuthContext';
+import { API_ENDPOINTS } from '@/config/api';
 import { LockClosedIcon, EnvelopeIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
 export default function AdminLoginPage() {
   const router = useRouter();
-  const { login, isAuthenticated, isAdmin } = useAuth();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -16,12 +15,21 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Redirect if already logged in as admin (use useEffect to avoid render-time navigation)
+  // Check if already authenticated
   useEffect(() => {
-    if (isAuthenticated && isAdmin) {
-      router.push('/admin/dashboard');
+    const token = localStorage.getItem('access_token');
+    const user = localStorage.getItem('user');
+    if (token && user) {
+      try {
+        const userData = JSON.parse(user);
+        if (userData.is_staff) {
+          router.push('/admin/dashboard');
+        }
+      } catch (e) {
+        console.error('Failed to parse user data:', e);
+      }
     }
-  }, [isAuthenticated, isAdmin, router]);
+  }, [router]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -29,8 +37,55 @@ export default function AdminLoginPage() {
     setLoading(true);
 
     try {
-      await login(email, password);
-      // Login function handles redirect based on user role
+      // Call login API
+      const response = await fetch(API_ENDPOINTS.auth.login, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Login failed');
+      }
+
+      const data = await response.json();
+
+      // Verify user is admin/staff
+      if (!data.user.is_staff) {
+        throw new Error('Access denied. Admin privileges required.');
+      }
+
+      // Store tokens and user data
+      localStorage.setItem('access_token', data.access);
+      localStorage.setItem('refresh_token', data.refresh);
+      localStorage.setItem('user', JSON.stringify(data.user));
+
+      // Check setup status
+      try {
+        const setupResponse = await fetch(API_ENDPOINTS.admin.setupStatus, {
+          headers: {
+            'Authorization': `Bearer ${data.access}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (setupResponse.ok) {
+          const setupData = await setupResponse.json();
+          
+          // If setup is not complete, redirect to setup page
+          if (!setupData.setup_complete) {
+            router.push('/admin/setup');
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('Setup status check failed:', error);
+        // Continue to dashboard if check fails
+      }
+      
+      // Redirect to admin dashboard
+      router.push('/admin/dashboard');
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);

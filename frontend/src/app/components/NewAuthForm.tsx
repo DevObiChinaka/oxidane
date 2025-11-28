@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
+import { API_ENDPOINTS } from '@/config/api';
 
 interface NewAuthFormProps {
   initialIsLogin?: boolean;
@@ -378,8 +379,7 @@ export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps)
     setSuccess('');
 
     try {
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api';
-      const response = await fetch(`${API_BASE_URL}/auth/password-reset/request/`, {
+      const response = await fetch(API_ENDPOINTS.auth.forgotPassword, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim().toLowerCase() }),
