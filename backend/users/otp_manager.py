@@ -253,7 +253,13 @@ class OTPManager:
                     custom_vars={'otp_code': otp}
                 )
                 
-                if result.get('success'):
+                # Handle both dict and boolean return types
+                if isinstance(result, dict):
+                    if result.get('success'):
+                        return True, "OTP sent successfully"
+                    else:
+                        return False, result.get('error', "Failed to send OTP email")
+                elif result:  # Boolean True
                     return True, "OTP sent successfully"
                 else:
                     return False, "Failed to send OTP email"
@@ -295,7 +301,11 @@ class OTPManager:
                     custom_vars=context
                 )
                 
-                if result and result.get('success'):
+                # Handle both dict and boolean return types
+                if isinstance(result, dict):
+                    if result.get('success'):
+                        return True, "Password reset email sent successfully"
+                elif result:  # Boolean True
                     return True, "Password reset email sent successfully"
             
             # Fallback to simple email if template doesn't exist or fails
