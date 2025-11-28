@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatCurrency } from '@/utils/currencyFormatter';
+import { API_ENDPOINTS } from '@/config/api';
 import {
   BanknotesIcon,
   CheckCircleIcon,
@@ -140,7 +141,7 @@ export default function PaymentsPage() {
 
       const token = localStorage.getItem('access_token');
       const response = await fetch(
-        `http://127.0.0.1:8000/api/admin/payments/transactions/?${params.toString()}`,
+        `${API_ENDPOINTS.admin.payments.transactions}?${params.toString()}`,
         {
           credentials: 'include',
           headers: {

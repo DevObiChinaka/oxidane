@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL } from '@/config/api';
 
 // API client with error handling
 export class AdminAPIClient {
@@ -9,8 +9,7 @@ export class AdminAPIClient {
   }
 
   async exportFile(endpoint: string, data: any): Promise<Blob> {
-    const correctBaseURL = 'http://127.0.0.1:8000/api';
-    const url = `${correctBaseURL}${endpoint}`;
+    const url = `${API_BASE_URL}${endpoint}`;
     
     const defaultHeaders: Record<string, string> = {
       'Content-Type': 'application/json'
@@ -48,15 +47,13 @@ export class AdminAPIClient {
   // Test connectivity to the backend
   async testConnection(): Promise<boolean> {
     try {
-      const correctBaseURL = 'http://127.0.0.1:8000/api';
-
       // Test health endpoint only
       const testEndpoints = [
         '/health/',
       ];
       
       for (const endpoint of testEndpoints) {
-        const fullUrl = `${correctBaseURL}${endpoint}`;
+        const fullUrl = `${API_BASE_URL}${endpoint}`;
 
         try {
           const response = await fetch(fullUrl, {
@@ -89,9 +86,7 @@ export class AdminAPIClient {
   }
 
   private async request(endpoint: string, options: RequestInit = {}) {
-    // Use correct base URL
-    const correctBaseURL = 'http://127.0.0.1:8000/api';
-    const url = `${correctBaseURL}${endpoint}`;
+    const url = `${API_BASE_URL}${endpoint}`;
 
     // Debug logging
     console.log('🌐 API Request:', {
@@ -709,7 +704,7 @@ export class AdminAPIClient {
     const endpoint = `/api/pricing/plans/public/${queryParams.toString() ? `?${queryParams}` : ''}`;
     
     // For public endpoint, make direct fetch call without auth
-    const url = `http://127.0.0.1:8000/api${endpoint}`;
+    const url = `${API_BASE_URL}${endpoint}`;
     const response = await fetch(url, {
       method: 'GET',
       headers: {

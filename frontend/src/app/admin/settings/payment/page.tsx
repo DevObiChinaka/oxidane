@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { API_ENDPOINTS } from '@/config/api';
 
 interface PaymentConfig {
   id: string;
@@ -76,7 +77,7 @@ export default function PaymentConfigPage() {
       setLoading(true);
       const token = localStorage.getItem('access_token');
       
-      const response = await fetch('http://127.0.0.1:8000/api/admin/payment/config/', {
+      const response = await fetch(API_ENDPOINTS.admin.payment.config, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -117,7 +118,7 @@ export default function PaymentConfigPage() {
       setMessage(null);
       const token = localStorage.getItem('access_token');
       
-      const response = await fetch('http://127.0.0.1:8000/api/admin/payment/config/', {
+      const response = await fetch(API_ENDPOINTS.admin.payment.config, {
         method: 'POST',  // Use POST for singleton create-or-update
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -169,7 +170,7 @@ export default function PaymentConfigPage() {
       const token = localStorage.getItem('access_token');
       
       const response = await fetch(
-        `http://127.0.0.1:8000/api/admin/payment/config/test-${provider}/`,
+        `${API_ENDPOINTS.admin.payment.config}test-${provider}/`,
         {
           method: 'POST',
           headers: {

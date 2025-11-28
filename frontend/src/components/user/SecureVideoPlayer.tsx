@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { API_ENDPOINTS } from '@/config/api';
 
 interface SecureVideoPlayerProps {
   lessonId: string;
@@ -67,7 +68,7 @@ export default function SecureVideoPlayer({
       }
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/lessons/${lessonId}/video-embed/`,
+        `${API_ENDPOINTS.user.lessonVideoEmbed}${lessonId}/video-embed/`,
         {
           method: 'GET',
           headers: {

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import TelegramIcon from './TelegramIcon';
+import { API_ENDPOINTS } from '@/config/api';
 import {
   ChatBubbleLeftRightIcon,
   CheckCircleIcon,
@@ -144,7 +145,7 @@ export default function TelegramConfigurationPage() {
       setLoading(true);
       const token = localStorage.getItem('access_token');
       
-      const response = await fetch('http://127.0.0.1:8000/api/admin/telegram/config/', {
+      const response = await fetch(API_ENDPOINTS.admin.telegram.config, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -178,7 +179,7 @@ export default function TelegramConfigurationPage() {
         payload.bot_token = newBotToken;
       }
 
-      const response = await fetch('http://127.0.0.1:8000/api/admin/telegram/config/', {
+      const response = await fetch(API_ENDPOINTS.admin.telegram.config, {
         method: 'POST',  // Use POST for singleton create-or-update
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -209,7 +210,7 @@ export default function TelegramConfigurationPage() {
       setMessage({ type: 'info', text: 'Testing bot connection...' });
       const token = localStorage.getItem('access_token');
 
-      const response = await fetch('http://127.0.0.1:8000/api/admin/telegram/config/test-connection/', {
+      const response = await fetch(API_ENDPOINTS.admin.telegram.testConnection, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -256,7 +257,7 @@ export default function TelegramConfigurationPage() {
   const loadGroups = async () => {
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch('http://127.0.0.1:8000/api/admin/telegram/groups/', {
+      const response = await fetch(API_ENDPOINTS.admin.telegram.groups, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -318,8 +319,8 @@ export default function TelegramConfigurationPage() {
       };
 
       const url = editingGroup
-        ? `http://127.0.0.1:8000/api/admin/telegram/groups/${editingGroup.id}/`
-        : 'http://127.0.0.1:8000/api/admin/telegram/groups/';
+        ? `${API_ENDPOINTS.admin.telegram.groups}${editingGroup.id}/`
+        : API_ENDPOINTS.admin.telegram.groups;
 
       const method = editingGroup ? 'PUT' : 'POST';
 
@@ -352,7 +353,7 @@ export default function TelegramConfigurationPage() {
 
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`http://127.0.0.1:8000/api/admin/telegram/groups/${groupId}/`, {
+      const response = await fetch(`${API_ENDPOINTS.admin.telegram.groups}${groupId}/`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -375,7 +376,7 @@ export default function TelegramConfigurationPage() {
       
       console.log('Syncing members for group:', groupId);
       
-      const response = await fetch(`http://127.0.0.1:8000/api/admin/telegram/groups/${groupId}/sync-members/`, {
+      const response = await fetch(`${API_ENDPOINTS.admin.telegram.groups}${groupId}/sync-members/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -447,7 +448,7 @@ export default function TelegramConfigurationPage() {
       setDiscovering(true);
       const token = localStorage.getItem('access_token');
       
-      const response = await fetch('http://127.0.0.1:8000/api/admin/telegram/groups/discover-chats/', {
+      const response = await fetch(API_ENDPOINTS.admin.telegram.discoverChats, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

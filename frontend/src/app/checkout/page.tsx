@@ -7,7 +7,8 @@ import Navigation from '../components/Navigation';
 import Footer from '../components/Footer';
 import TelegramVerification from '@/components/TelegramVerification';
 import { useCurrencyConverter } from '@/hooks/useCurrencyConverter';
-import { 
+import { API_ENDPOINTS } from '@/config/api';
+import {
   initializePayment, 
   validateCoupon, 
   checkTelegramStatus,
@@ -105,7 +106,7 @@ function CheckoutContent() {
       try {
         setLoading(true);
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/v1/subscriptions/plans/${planId}/`
+          `${API_ENDPOINTS.user.subscriptionPlans}${planId}/`
         );
 
         if (!response.ok) throw new Error('Plan not found');
@@ -131,7 +132,7 @@ function CheckoutContent() {
       
       try {
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/payment-methods/`,
+          API_ENDPOINTS.user.paymentMethods,
           {
             headers: {
               'Authorization': `Bearer ${localStorage.getItem('user_auth_token')}`
@@ -291,7 +292,7 @@ function CheckoutContent() {
 
       // Charge using saved card
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/payments/charge-saved-card/`,
+        API_ENDPOINTS.user.chargeSavedCard,
         {
           method: 'POST',
           headers: {

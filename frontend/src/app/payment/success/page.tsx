@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useUserAuth } from '../../contexts/UserAuthContext';
 import Navigation from '../../components/Navigation';
 import Footer from '../../components/Footer';
+import { API_ENDPOINTS } from '@/config/api';
 
 function SuccessContent() {
   const router = useRouter();
@@ -22,7 +23,7 @@ function SuccessContent() {
       try {
         const token = localStorage.getItem('user_auth_token');
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/subscriptions/my-subscriptions/`,
+          API_ENDPOINTS.user.mySubscriptions,
           {
             headers: {
               'Authorization': `Bearer ${token}`,

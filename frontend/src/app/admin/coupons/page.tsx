@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { API_ENDPOINTS } from '@/config/api';
 
 interface Coupon {
   id: string;
@@ -85,7 +86,7 @@ export default function CouponsPage() {
       };
 
       // Load coupons
-      let couponsUrl = 'http://127.0.0.1:8000/api/admin/coupons/';
+      let couponsUrl = API_ENDPOINTS.admin.coupons;
       if (filterActive !== 'all') {
         couponsUrl += `?is_active=${filterActive === 'active'}`;
       }
@@ -100,7 +101,7 @@ export default function CouponsPage() {
       }
 
       // Load plans for the form
-      const plansRes = await fetch('http://127.0.0.1:8000/api/admin/plans/', { headers });
+      const plansRes = await fetch(API_ENDPOINTS.admin.plans, { headers });
       if (plansRes.ok) {
         const plansData = await plansRes.json();
         setPlans(plansData.results || plansData);
@@ -169,8 +170,8 @@ export default function CouponsPage() {
       }
 
       const url = editingCoupon
-        ? `http://127.0.0.1:8000/api/admin/coupons/${editingCoupon.id}/`
-        : 'http://127.0.0.1:8000/api/admin/coupons/';
+        ? `${API_ENDPOINTS.admin.coupons}${editingCoupon.id}/`
+        : API_ENDPOINTS.admin.coupons;
 
       const method = editingCoupon ? 'PUT' : 'POST';
 
@@ -213,7 +214,7 @@ export default function CouponsPage() {
         return;
       }
 
-      const response = await fetch(`http://127.0.0.1:8000/api/admin/coupons/${couponId}/`, {
+      const response = await fetch(`${API_ENDPOINTS.admin.coupons}${couponId}/`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -235,7 +236,7 @@ export default function CouponsPage() {
       const token = localStorage.getItem('access_token');
       if (!token) return;
 
-      const response = await fetch(`http://127.0.0.1:8000/api/admin/coupons/${coupon.id}/`, {
+      const response = await fetch(`${API_ENDPOINTS.admin.coupons}${coupon.id}/`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -263,7 +264,7 @@ export default function CouponsPage() {
       if (!token) return;
 
       const endpoint = action === 'activate' ? 'bulk_activate' : 'bulk_deactivate';
-      const response = await fetch(`http://127.0.0.1:8000/api/admin/coupons/${endpoint}/`, {
+      const response = await fetch(`${API_ENDPOINTS.admin.coupons}${endpoint}/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

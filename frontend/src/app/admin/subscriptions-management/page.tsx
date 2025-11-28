@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { formatCurrency } from '@/utils/currencyFormatter';
+import { API_BASE_URL } from '@/config/api';
 
 // Types
 interface Subscription {
@@ -49,8 +50,6 @@ interface Plan {
   base_price: number;
   billing_period: string;
 }
-
-const API_BASE_URL = 'http://127.0.0.1:8000/api';
 
 export default function SubscriptionsManagementPage() {
   const { user, isAdmin } = useAuth();

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import AdminSidebar from './AdminSidebar';
+import { API_ENDPOINTS } from '@/config/api';
 
 interface AdminLayoutWrapperProps {
   children: React.ReactNode;
@@ -46,7 +47,7 @@ export default function AdminLayoutWrapper({ children }: AdminLayoutWrapperProps
       }
 
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/admin/setup/status/`, {
+        const response = await fetch(API_ENDPOINTS.admin.setupStatus, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'

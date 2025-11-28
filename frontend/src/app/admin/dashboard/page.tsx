@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useDashboardMetrics } from '../hooks/useAdminAPI';
 import { adminAPI } from '../utils/api';
 import { useRouter } from 'next/navigation';
+import { API_ENDPOINTS } from '@/config/api';
 
 interface SetupStatus {
   setup_complete: boolean;
@@ -52,21 +53,21 @@ export default function AdminDashboard() {
         };
 
         // Fetch setup status
-        const setupResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/admin/setup/status/`, { headers });
+        const setupResponse = await fetch(API_ENDPOINTS.admin.setupStatus, { headers });
         if (setupResponse.ok) {
           const setupData = await setupResponse.json();
           setSetupStatus(setupData);
         }
 
         // Fetch subscription stats
-        const subsResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/admin/subscriptions-management/?page=1&page_size=1`, { headers });
+        const subsResponse = await fetch(`${API_ENDPOINTS.admin.subscriptionsManagement}?page=1&page_size=1`, { headers });
         if (subsResponse.ok) {
           const subsData = await subsResponse.json();
           setSubscriptionStats(subsData.analytics);
         }
 
         // Fetch email stats
-        const emailResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/admin/email-analytics/`, { headers });
+        const emailResponse = await fetch(API_ENDPOINTS.admin.emailAnalytics, { headers });
         if (emailResponse.ok) {
           const emailData = await emailResponse.json();
           console.log('Email analytics data:', emailData);

@@ -3,6 +3,7 @@
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useEffect, useState, Suspense } from 'react';
 import Logo from '../components/Logo';
+import { API_ENDPOINTS } from '@/config/api';
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams();
@@ -22,7 +23,7 @@ function VerifyEmailContent() {
     // Verify the token with the backend
     const verifyEmail = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/verify-email/`, {
+        const response = await fetch(API_ENDPOINTS.auth.verifyEmail, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

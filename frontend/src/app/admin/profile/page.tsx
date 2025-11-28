@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import { API_ENDPOINTS } from '@/config/api';
 
 interface ProfileData {
   username: string;
@@ -54,7 +55,7 @@ export default function ProfileSettings() {
   const fetchProfile = async () => {
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch('http://localhost:8000/api/admin/profile/', {
+      const response = await fetch(API_ENDPOINTS.admin.profile, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -88,7 +89,7 @@ export default function ProfileSettings() {
       setOtpSending(true);
       try {
         const token = localStorage.getItem('access_token');
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/admin/request-email-change/`, {
+        const response = await fetch(API_ENDPOINTS.admin.requestEmailChange, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -123,7 +124,7 @@ export default function ProfileSettings() {
     setSaving(true);
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/admin/profile/`, {
+      const response = await fetch(API_ENDPOINTS.admin.profile, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -160,7 +161,7 @@ export default function ProfileSettings() {
     setOtpVerifying(true);
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/admin/verify-email-change/`, {
+      const response = await fetch(API_ENDPOINTS.admin.verifyEmailChange, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -198,7 +199,7 @@ export default function ProfileSettings() {
     setVerificationSending(true);
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/admin/request-email-verification/`, {
+      const response = await fetch(API_ENDPOINTS.admin.requestEmailVerification, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -232,7 +233,7 @@ export default function ProfileSettings() {
     setVerificationVerifying(true);
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/admin/verify-email/`, {
+      const response = await fetch(API_ENDPOINTS.admin.verifyEmail, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

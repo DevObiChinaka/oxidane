@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { API_ENDPOINTS } from '@/config/api';
 
 interface Feature {
   id: string;
@@ -129,7 +130,7 @@ export default function FeaturesPage() {
         return;
       }
 
-      let url = 'http://127.0.0.1:8000/api/admin/features/';
+      let url = API_ENDPOINTS.admin.features;
       if (selectedCategory !== 'all') {
         url += `?category=${selectedCategory}`;
       }
@@ -205,8 +206,8 @@ export default function FeaturesPage() {
       }
 
       const url = editingFeature
-        ? `http://127.0.0.1:8000/api/admin/features/${editingFeature.id}/`
-        : 'http://127.0.0.1:8000/api/admin/features/';
+        ? `${API_ENDPOINTS.admin.features}${editingFeature.id}/`
+        : API_ENDPOINTS.admin.features;
 
       const method = editingFeature ? 'PUT' : 'POST';
 
@@ -243,7 +244,7 @@ export default function FeaturesPage() {
         return;
       }
 
-      const response = await fetch(`http://127.0.0.1:8000/api/admin/features/${featureId}/`, {
+      const response = await fetch(`${API_ENDPOINTS.admin.features}${featureId}/`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -265,7 +266,7 @@ export default function FeaturesPage() {
       const token = localStorage.getItem('access_token');
       if (!token) return;
 
-      const response = await fetch(`http://127.0.0.1:8000/api/admin/features/${feature.id}/`, {
+      const response = await fetch(`${API_ENDPOINTS.admin.features}${feature.id}/`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -293,7 +294,7 @@ export default function FeaturesPage() {
       if (!token) return;
 
       const endpoint = action === 'activate' ? 'bulk_activate' : 'bulk_deactivate';
-      const response = await fetch(`http://127.0.0.1:8000/api/admin/features/${endpoint}/`, {
+      const response = await fetch(`${API_ENDPOINTS.admin.features}${endpoint}/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

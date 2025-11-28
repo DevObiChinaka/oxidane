@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
+import { API_ENDPOINTS } from '@/config/api';
 
 interface SetupStatus {
   setup_complete: boolean;
@@ -78,7 +79,7 @@ export default function AdminSidebar({ isMobileMenuOpen, setIsMobileMenuOpen }: 
   const fetchSetupStatus = async () => {
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch('http://127.0.0.1:8000/api/admin/setup/status/', {
+      const response = await fetch(API_ENDPOINTS.admin.setupStatus, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

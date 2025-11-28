@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import DashboardSidebar from '../components/DashboardSidebar';
 import { formatCurrency, formatCurrencyApprox, type Currency } from '@/lib/utils/currency';
 import { apiGet, apiPost } from '@/lib/api';
+import { API_ENDPOINTS } from '@/config/api';
 
 interface Subscription {
   id: string;
@@ -63,7 +64,7 @@ export default function SubscriptionsPage() {
     try {
       // Always fetch USD to NGN for showing conversions in parentheses
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/v1/currency/convert/?from=USD&to=NGN&amount=1`
+        `${API_ENDPOINTS.user.currencyConvert}?from=USD&to=NGN&amount=1`
       );
       
       console.log('Currency conversion response status:', response.status);

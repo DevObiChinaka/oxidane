@@ -10,6 +10,7 @@ import {
   PaymentVerificationRequest,
   TelegramActionRequest 
 } from '../../types/subscription';
+import { API_BASE_URL } from '@/config/api';
 
 interface APIResponse<T = any> {
   success: boolean;
@@ -23,8 +24,7 @@ class AdminAPIClient {
   private authToken: string | null = null;
 
   constructor() {
-    // Use environment variable or default to localhost
-    this.baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+    this.baseURL = API_BASE_URL;
   }
 
   // Authentication methods

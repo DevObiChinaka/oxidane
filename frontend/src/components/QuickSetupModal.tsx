@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import TelegramVerification from '@/components/TelegramVerification';
+import { API_ENDPOINTS } from '@/config/api';
 
 interface QuickSetupModalProps {
   isOpen: boolean;
@@ -51,7 +52,7 @@ export default function QuickSetupModal({
 
       // Update user profile
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/profile/`, {
+      const response = await fetch(API_ENDPOINTS.auth.profile, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useUsers, useUsersAnalytics, useUserActions, useUserDetail, useBulkUserActions, useDeleteUser, useUserAuditLog } from '../hooks/useAdminAPI';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatCurrency } from '@/utils/currencyFormatter';
+import { API_BASE_URL } from '@/config/api';
 
 // Types
 interface User {
@@ -678,7 +679,6 @@ export default function UsersPage() {
     const fetchPlans = async () => {
       try {
         const token = localStorage.getItem('access_token');
-        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
         const response = await fetch(`${API_BASE_URL}/admin/subscription-plans/`, {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -728,7 +728,6 @@ export default function UsersPage() {
       if (subscriptionFilter) params.append('subscription', subscriptionFilter);
       
       const token = localStorage.getItem('access_token');
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
       const response = await fetch(`${API_BASE_URL}/admin/users/export/?${params.toString()}`, {
         headers: {
           'Authorization': `Bearer ${token}`,

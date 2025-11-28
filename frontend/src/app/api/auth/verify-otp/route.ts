@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { API_ENDPOINTS } from '@/config/api';
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,7 +23,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Call Django backend to verify OTP
-    const backendResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/auth/verify-email-otp/`, {
+    const backendResponse = await fetch(API_ENDPOINTS.auth.verifyEmailOtp, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

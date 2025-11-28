@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { formatCurrency, type Currency } from '@/lib/utils/currency';
 import { useCurrencyConverter } from '@/hooks/useCurrencyConverter';
 import { checkSubscriptionConflict, type CheckConflictResponse } from '@/lib/api/payment';
+import { API_ENDPOINTS } from '@/config/api';
 
 interface Feature {
   id: string;
@@ -73,9 +74,7 @@ export default function PricingCards({
         setError(null);
         
         // Fetch plans in USD (base currency)
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/v1/subscriptions/plans/`
-        );
+        const response = await fetch(API_ENDPOINTS.user.subscriptionPlans);
         
         if (!response.ok) {
           throw new Error('Failed to fetch pricing plans');

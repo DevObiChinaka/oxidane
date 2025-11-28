@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { API_ENDPOINTS } from '@/config/api';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,7 +15,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Call Django backend - NEW OTP endpoint with better error handling
-    const backendResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/auth/login-with-otp/`, {
+    const backendResponse = await fetch(API_ENDPOINTS.auth.loginWithOtp, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

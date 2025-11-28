@@ -3,7 +3,7 @@
  * Handles all API requests with proper authentication
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+import { API_BASE_URL } from '@/config/api';
 
 class APIClient {
   private baseURL: string;

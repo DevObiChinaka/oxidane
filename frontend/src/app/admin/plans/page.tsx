@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import * as HeroIcons from '@heroicons/react/24/outline';
+import { API_ENDPOINTS } from '@/config/api';
 
 interface Feature {
   id: string;
@@ -141,28 +142,28 @@ export default function PlansPage() {
       };
 
       // Load plans
-      const plansRes = await fetch('http://127.0.0.1:8000/api/admin/plans/', { headers });
+      const plansRes = await fetch(API_ENDPOINTS.admin.plans, { headers });
       if (plansRes.ok) {
         const plansData = await plansRes.json();
         setPlans(plansData.results || plansData);
       }
 
       // Load features
-      const featuresRes = await fetch('http://127.0.0.1:8000/api/admin/features/', { headers });
+      const featuresRes = await fetch(API_ENDPOINTS.admin.features, { headers });
       if (featuresRes.ok) {
         const featuresData = await featuresRes.json();
         setFeatures(featuresData.results || featuresData);
       }
 
       // Load Telegram groups
-      const groupsRes = await fetch('http://127.0.0.1:8000/api/admin/telegram/groups/', { headers });
+      const groupsRes = await fetch(API_ENDPOINTS.admin.telegram.groups, { headers });
       if (groupsRes.ok) {
         const groupsData = await groupsRes.json();
         setTelegramGroups(groupsData.results || groupsData);
       }
 
       // Load exchange rates for currency conversion
-      const ratesRes = await fetch('http://127.0.0.1:8000/api/v1/currency/rates/?base=USD');
+      const ratesRes = await fetch(API_ENDPOINTS.user.currencyRates);
       if (ratesRes.ok) {
         const ratesData = await ratesRes.json();
         if (ratesData.success && ratesData.rates) {
@@ -256,8 +257,8 @@ export default function PlansPage() {
       };
 
       const url = editingPlan
-        ? `http://127.0.0.1:8000/api/admin/plans/${editingPlan.id}/`
-        : 'http://127.0.0.1:8000/api/admin/plans/';
+        ? `${API_ENDPOINTS.admin.plans}${editingPlan.id}/`
+        : API_ENDPOINTS.admin.plans;
 
       const method = editingPlan ? 'PUT' : 'POST';
 
@@ -320,7 +321,7 @@ export default function PlansPage() {
         return;
       }
 
-      const response = await fetch(`http://127.0.0.1:8000/api/admin/plans/${planToDelete.id}/`, {
+      const response = await fetch(`${API_ENDPOINTS.admin.plans}${planToDelete.id}/`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -347,7 +348,7 @@ export default function PlansPage() {
       if (!token) return;
 
       const action = plan.is_active ? 'deactivate' : 'activate';
-      const response = await fetch(`http://127.0.0.1:8000/api/admin/plans/${plan.id}/${action}/`, {
+      const response = await fetch(`${API_ENDPOINTS.admin.plans}${plan.id}/${action}/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -374,7 +375,7 @@ export default function PlansPage() {
       const token = localStorage.getItem('access_token');
       if (!token) return;
 
-      const response = await fetch(`http://127.0.0.1:8000/api/admin/plans/${plan.id}/clone/`, {
+      const response = await fetch(`${API_ENDPOINTS.admin.plans}${plan.id}/clone/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

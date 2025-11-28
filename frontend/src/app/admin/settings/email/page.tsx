@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { API_ENDPOINTS } from '@/config/api';
 import {
   EnvelopeIcon,
   CheckCircleIcon,
@@ -71,7 +72,7 @@ export default function EmailConfigPage() {
     }
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/admin/email/config/', {
+      const response = await fetch(API_ENDPOINTS.admin.email.config, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -121,7 +122,7 @@ export default function EmailConfigPage() {
     const token = localStorage.getItem('access_token');
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/admin/email/config/', {
+      const response = await fetch(API_ENDPOINTS.admin.email.config, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -171,7 +172,7 @@ export default function EmailConfigPage() {
     const token = localStorage.getItem('access_token');
 
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/admin/email/config/${config.id}/test-connection/`, {
+      const response = await fetch(`${API_ENDPOINTS.admin.email.config}${config.id}/test-connection/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -215,7 +216,7 @@ export default function EmailConfigPage() {
     const token = localStorage.getItem('access_token');
 
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/admin/email/config/${config.id}/send-test/`, {
+      const response = await fetch(`${API_ENDPOINTS.admin.email.config}${config.id}/send-test/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
