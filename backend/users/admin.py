@@ -49,8 +49,8 @@ class UserAdmin(BaseUserAdmin):
                 'subscription_start_date',
                 'subscription_end_date',
                 'trial_end_date',
-                'subscription_tier',
-                'usage_limits',
+                'trial_used',
+                'usage_stats',
             ),
             'classes': ('collapse',),
             'description': 'User subscription and access information'

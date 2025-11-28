@@ -589,6 +589,7 @@ def login(request):
                 'message': 'Login successful',
                 'success': True,
                 'token': access_token,
+                'access': access_token,  # Add for compatibility
                 'refresh': str(refresh),
                 'user': {
                     'id': str(user.id),
@@ -600,6 +601,8 @@ def login(request):
                     'avatar': user.avatar,
                     'is_email_verified': user.is_email_verified,
                     'is_active': user.is_active,
+                    'is_staff': user.is_staff,  # CRITICAL: Include admin flag
+                    'is_superuser': user.is_superuser,  # CRITICAL: Include superuser flag
                 }
             })
         else:
