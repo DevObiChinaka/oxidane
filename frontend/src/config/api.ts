@@ -67,6 +67,40 @@ export const API_ENDPOINTS = {
     // Plans
     plans: `${BASE}/api/admin/plans/`,
     planDetail: (id: string) => `${BASE}/api/admin/plans/${id}/`,
+    
+    // Features
+    features: `${BASE}/api/admin/features/`,
+    featureDetail: (id: string) => `${BASE}/api/admin/features/${id}/`,
+    
+    // Coupons
+    coupons: `${BASE}/api/admin/coupons/`,
+    couponDetail: (id: string) => `${BASE}/api/admin/coupons/${id}/`,
+    
+    // Telegram Settings
+    telegram: {
+      config: `${BASE}/api/admin/telegram/config/`,
+      testConnection: `${BASE}/api/admin/telegram/test-connection/`,
+      groups: `${BASE}/api/admin/telegram/groups/`,
+      groupDetail: (id: string) => `${BASE}/api/admin/telegram/groups/${id}/`,
+      discoverChats: `${BASE}/api/admin/telegram/discover-chats/`,
+    },
+    
+    // Email Settings
+    email: {
+      config: `${BASE}/api/admin/email/config/`,
+      configDetail: (id: string) => `${BASE}/api/admin/email/config/${id}/`,
+    },
+    
+    // Payment Settings
+    payment: {
+      config: `${BASE}/api/admin/payment/config/`,
+    },
+    
+    // Payments/Transactions
+    payments: {
+      transactions: `${BASE}/api/admin/payments/transactions/`,
+      transactionDetail: (id: string) => `${BASE}/api/admin/payments/transactions/${id}/`,
+    },
   },
 
   // User/Public
