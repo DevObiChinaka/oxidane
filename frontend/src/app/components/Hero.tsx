@@ -113,7 +113,7 @@ export default function Hero() {
             {/* Professional CTA */}
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
               <Link 
-                href="/auth" 
+                href="/auth?mode=signup" 
                 className="bg-gradient-to-r from-[#00B38F] to-[#00B39F] text-white px-8 py-4 rounded-lg text-lg font-semibold hover:from-[#00A87D] hover:to-[#00A58D] transition-all duration-300 transform hover:scale-105 shadow-xl"
               >
                 Start Trading Today

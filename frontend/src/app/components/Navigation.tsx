@@ -91,13 +91,13 @@ export default function Navigation() {
             ) : (
               <div className="flex items-center space-x-6">
                 <Link 
-                  href="/auth" 
+                  href="/auth?mode=login" 
                   className="text-white/80 hover:text-white font-medium transition-colors duration-200 px-4 py-2"
                 >
                   Sign In
                 </Link>
                 <Link 
-                  href="/auth" 
+                  href="/auth?mode=signup" 
                   className="bg-gradient-to-r from-[#00A17C] to-[#00A88F] text-white px-6 py-2.5 rounded-lg font-medium hover:from-[#009370] hover:to-[#009682] transition-all duration-200 shadow-lg hover:shadow-xl"
                 >
                   Get Started
@@ -170,14 +170,14 @@ export default function Navigation() {
                 ) : (
                   <div className="space-y-2">
                     <Link 
-                      href="/auth" 
+                      href="/auth?mode=login" 
                       className="block px-3 py-2 text-gray-300 hover:text-white font-medium text-center rounded-md hover:bg-slate-700"
                       onClick={() => setIsMenuOpen(false)}
                     >
                       Sign In
                     </Link>
                     <Link 
-                      href="/auth" 
+                      href="/auth?mode=signup" 
                       className="block px-3 py-2 bg-gradient-to-r from-[#00A17C] to-[#00A88F] text-white rounded-lg font-medium text-center"
                       onClick={() => setIsMenuOpen(false)}
                     >

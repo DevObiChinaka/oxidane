@@ -104,7 +104,7 @@ export default function Footer() {
             <h4 className="text-lg font-semibold">Company</h4>
             <ul className="space-y-2 text-sm">
               <li><a href="#testimonials" className="text-gray-400 hover:text-white transition-colors cursor-pointer">Our Results</a></li>
-              <li><Link href="/auth" className="text-gray-400 hover:text-white transition-colors">Get Started</Link></li>
+              <li><Link href="/auth?mode=signup" className="text-gray-400 hover:text-white transition-colors">Get Started</Link></li>
               <li><Link href="/privacy" className="text-gray-400 hover:text-white transition-colors">Privacy Policy</Link></li>
               <li><a href="#hero" className="text-gray-400 hover:text-white transition-colors cursor-pointer">Professional Trading</a></li>
               <li><a href="#services" className="text-gray-400 hover:text-white transition-colors cursor-pointer">Why Choose Us</a></li>

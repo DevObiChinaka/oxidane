@@ -11,7 +11,9 @@ interface NewAuthFormProps {
 
 export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps) {
   const searchParams = useSearchParams();
-  const [isLogin, setIsLogin] = useState(initialIsLogin);
+  // Check URL parameter for mode (signup/login)
+  const urlMode = searchParams.get('mode');
+  const [isLogin, setIsLogin] = useState(urlMode === 'signup' ? false : initialIsLogin);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [firstName, setFirstName] = useState('');
