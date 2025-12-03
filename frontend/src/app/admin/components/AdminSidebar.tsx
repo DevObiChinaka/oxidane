@@ -105,7 +105,7 @@ export default function AdminSidebar({ isMobileMenuOpen, setIsMobileMenuOpen }: 
   const navigationItems = [
     {
       section: 'Overview',
-      requiresSetup: false, // TEMP: Disabled for development
+      requiresSetup: true,
       items: [
         { name: 'Dashboard', href: '/admin', icon: 'dashboard' },
         { name: 'Analytics', href: '/admin/analytics', icon: 'analytics' },
@@ -113,7 +113,7 @@ export default function AdminSidebar({ isMobileMenuOpen, setIsMobileMenuOpen }: 
     },
     {
       section: 'Content Management',
-      requiresSetup: false, // TEMP: Disabled for development
+      requiresSetup: true,
       items: [
         { name: 'Courses', href: '/admin/courses', icon: 'courses' },
         { name: 'Lessons', href: '/admin/lessons', icon: 'lessons' },
@@ -121,7 +121,7 @@ export default function AdminSidebar({ isMobileMenuOpen, setIsMobileMenuOpen }: 
     },
     {
       section: 'User Management',
-      requiresSetup: false, // TEMP: Disabled for development
+      requiresSetup: true,
       items: [
         { name: 'Users', href: '/admin/users', icon: 'users' },
         { name: 'Subscriptions', href: '/admin/subscriptions-management', icon: 'subscriptions' },
@@ -129,7 +129,7 @@ export default function AdminSidebar({ isMobileMenuOpen, setIsMobileMenuOpen }: 
     },
     {
       section: 'Financial',
-      requiresSetup: false, // TEMP: Disabled for development
+      requiresSetup: false, // Plans and features are needed for setup
       items: [
         { name: 'Subscription Plans', href: '/admin/plans', icon: 'plans' },
         { name: 'Features', href: '/admin/features', icon: 'features' },

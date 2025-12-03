@@ -515,8 +515,8 @@ export default function TelegramConfigurationPage() {
           </div>
 
           {/* Tabs */}
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8">
+          <div className="border-b border-gray-200 overflow-x-auto">
+            <nav className="-mb-px flex space-x-4 md:space-x-8 min-w-max md:min-w-0">
               <button
                 onClick={() => setActiveTab('bot')}
                 className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
@@ -720,7 +720,7 @@ export default function TelegramConfigurationPage() {
             </label>
             {config?.masked_token && config.masked_token !== '(not set)' ? (
               <div className="space-y-2">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                   <input
                     type="text"
                     value={config.masked_token}
@@ -729,7 +729,7 @@ export default function TelegramConfigurationPage() {
                   />
                   <button
                     onClick={() => setNewBotToken('')}
-                    className="px-4 py-2 text-sm text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50"
+                    className="px-4 py-2 text-sm text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 whitespace-nowrap"
                   >
                     Change Token
                   </button>
@@ -770,11 +770,11 @@ export default function TelegramConfigurationPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3 pt-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
             <button
               onClick={handleTestConnection}
               disabled={testing || !(config?.masked_token !== '(not set)' || newBotToken) || hasChanges()}
-              className="px-6 py-2 bg-brand-teal text-white rounded-lg hover:bg-brand-teal/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              className="px-6 py-2 bg-brand-teal text-white rounded-lg hover:bg-brand-teal/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
             >
               {testing ? (
                 <>
@@ -789,9 +789,9 @@ export default function TelegramConfigurationPage() {
               )}
             </button>
             {hasChanges() && (
-              <p className="text-sm text-yellow-600 flex items-center gap-1">
+              <p className="text-xs sm:text-sm text-yellow-600 flex items-center gap-1">
                 <ExclamationTriangleIcon className="w-4 h-4" strokeWidth={2} />
-                Save changes first before testing
+                <span className="break-words">Save changes first before testing</span>
               </p>
             )}
           </div>
@@ -1012,38 +1012,40 @@ export default function TelegramConfigurationPage() {
 
       {/* Actions */}
       <div className="sticky bottom-0 z-10 bg-white border-t-2 border-gray-200 shadow-2xl rounded-t-xl">
-        <div className="max-w-6xl mx-auto px-8 py-5 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 md:px-8 py-4 md:py-5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             {hasChanges() && (
-              <div className="flex items-center gap-2 text-amber-600 bg-amber-50 px-4 py-2 rounded-lg border border-amber-200">
-                <ExclamationTriangleIcon className="w-5 h-5" strokeWidth={2} />
-                <span className="text-sm font-semibold">Unsaved Changes</span>
+              <div className="flex items-center gap-2 text-amber-600 bg-amber-50 px-3 md:px-4 py-2 rounded-lg border border-amber-200">
+                <ExclamationTriangleIcon className="w-4 md:w-5 h-4 md:h-5" strokeWidth={2} />
+                <span className="text-xs md:text-sm font-semibold">Unsaved Changes</span>
               </div>
             )}
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 md:gap-3">
             <button
               onClick={handleReset}
               disabled={!hasChanges() || saving}
-              className="px-6 py-2.5 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-semibold text-sm hover:border-gray-400"
+              className="flex-1 sm:flex-none px-4 md:px-6 py-2.5 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-semibold text-xs md:text-sm hover:border-gray-400 whitespace-nowrap"
             >
-              Reset Changes
+              Reset
             </button>
             <button
               onClick={handleSave}
               disabled={!hasChanges() || saving}
-              className="px-8 py-2.5 bg-brand-teal text-white rounded-xl hover:bg-brand-teal/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-semibold text-sm shadow-lg hover:shadow-xl flex items-center gap-2"
+              className="flex-1 sm:flex-none px-4 md:px-8 py-2.5 bg-brand-teal text-white rounded-xl hover:bg-brand-teal/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-semibold text-xs md:text-sm shadow-lg hover:shadow-xl flex items-center justify-center gap-2 whitespace-nowrap"
             >
               {saving ? (
                 <>
-                  <ArrowPathIcon className="w-5 h-5 animate-spin" strokeWidth={2} />
-                  <span>Saving Configuration...</span>
+                  <ArrowPathIcon className="w-4 md:w-5 h-4 md:h-5 animate-spin" strokeWidth={2} />
+                  <span className="hidden sm:inline">Saving Configuration...</span>
+                  <span className="sm:hidden">Saving...</span>
                 </>
               ) : (
                 <>
-                  <CheckCircleIcon className="w-5 h-5" strokeWidth={2} />
-                  <span>Save Configuration</span>
+                  <CheckCircleIcon className="w-4 md:w-5 h-4 md:h-5" strokeWidth={2} />
+                  <span className="hidden sm:inline">Save Configuration</span>
+                  <span className="sm:hidden">Save</span>
                 </>
               )}
             </button>
