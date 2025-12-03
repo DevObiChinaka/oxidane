@@ -173,8 +173,20 @@ export default function TelegramConfigurationPage() {
       setMessage(null);
       const token = localStorage.getItem('access_token');
 
-      // Prepare payload - include new bot token if it was changed
-      const payload = { ...editedConfig };
+      // Prepare payload - only include writable fields
+      const payload: any = {
+        bot_username: editedConfig.bot_username || '',
+        is_enabled: editedConfig.is_enabled ?? true,
+        auto_add_enabled: editedConfig.auto_add_enabled ?? true,
+        auto_remove_enabled: editedConfig.auto_remove_enabled ?? true,
+        welcome_message: editedConfig.welcome_message || '',
+        removal_message: editedConfig.removal_message || '',
+        max_retries: editedConfig.max_retries ?? 3,
+        retry_delay_seconds: editedConfig.retry_delay_seconds ?? 300,
+        rate_limit_per_minute: editedConfig.rate_limit_per_minute ?? 30,
+      };
+      
+      // Include new bot token if it was changed
       if (newBotToken) {
         payload.bot_token = newBotToken;
       }
@@ -188,7 +200,11 @@ export default function TelegramConfigurationPage() {
         body: JSON.stringify(payload)
       });
 
-      if (!response.ok) throw new Error('Failed to save configuration');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        console.error('Save failed:', errorData);
+        throw new Error(errorData?.detail || errorData?.error || 'Failed to save configuration');
+      }
 
       const data = await response.json();
       // POST returns single object (not a list)
@@ -196,9 +212,9 @@ export default function TelegramConfigurationPage() {
       setEditedConfig(data);
       setNewBotToken('');  // Clear the new token input after save
       setMessage({ type: 'success', text: 'Telegram configuration saved successfully' });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save configuration:', error);
-      setMessage({ type: 'error', text: 'Failed to save configuration' });
+      setMessage({ type: 'error', text: error.message || 'Failed to save configuration' });
     } finally {
       setSaving(false);
     }
