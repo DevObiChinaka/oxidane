@@ -1098,6 +1098,128 @@ class TelegramConfigurationViewSet(viewsets.ViewSet):
                 'success': False,
                 'message': error_message
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @action(detail=False, methods=['post'], url_path='discover-chats')
+    def discover_chats(self, request):
+        """
+        Discover available groups/channels the bot has access to.
+        
+        Fetches recent bot updates to find all groups, supergroups, and channels
+        the bot is a member of. This helps users find the correct chat ID when
+        adding a new group.
+        
+        Returns:
+            200: Success with list of discovered chats
+            400: Bot token not configured or API error
+            408: Connection timeout
+            500: Unexpected error
+        """
+        config = TelegramConfiguration.get_instance()
+        
+        # Validation
+        if not config.bot_token:
+            return Response({
+                'success': False,
+                'message': 'Bot token not configured. Please configure the Telegram bot first.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            import requests
+            
+            # Get decrypted bot token
+            bot_token = config.decrypt_field('bot_token')
+            
+            # Get recent updates from bot
+            url = f"https://api.telegram.org/bot{bot_token}/getUpdates"
+            response = requests.get(url, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get('ok'):
+                    updates = data.get('result', [])
+                    
+                    # Extract unique chats
+                    chats_dict = {}
+                    for update in updates:
+                        # Check different message types
+                        for msg_type in ['message', 'edited_message', 'channel_post', 'my_chat_member']:
+                            if msg_type in update:
+                                msg = update[msg_type]
+                                if 'chat' in msg:
+                                    chat = msg['chat']
+                                    chat_id = chat.get('id')
+                                    
+                                    # Only include groups, supergroups, and channels (negative IDs)
+                                    if chat_id and chat_id < 0:
+                                        chat_key = str(chat_id)
+                                        if chat_key not in chats_dict:
+                                            chats_dict[chat_key] = {
+                                                'chat_id': str(chat_id),
+                                                'title': chat.get('title', 'Unknown'),
+                                                'type': chat.get('type', 'unknown'),
+                                                'username': chat.get('username', ''),
+                                                'member_count': None  # Will be filled if possible
+                                            }
+                    
+                    # Try to get member counts for each chat
+                    for chat_key, chat_info in chats_dict.items():
+                        try:
+                            count_url = f"https://api.telegram.org/bot{bot_token}/getChatMemberCount"
+                            count_response = requests.post(
+                                count_url,
+                                json={'chat_id': chat_info['chat_id']},
+                                timeout=5
+                            )
+                            if count_response.status_code == 200:
+                                count_data = count_response.json()
+                                if count_data.get('ok'):
+                                    chat_info['member_count'] = count_data['result']
+                        except:
+                            pass  # Skip if we can't get member count
+                    
+                    chats_list = sorted(
+                        chats_dict.values(), 
+                        key=lambda x: (x['type'], x['title'])
+                    )
+                    
+                    return Response({
+                        'success': True,
+                        'message': f'Found {len(chats_list)} groups/channels',
+                        'chats': chats_list,
+                        'hint': 'Send a message in your group to make it appear here if it\'s missing.'
+                    }, status=status.HTTP_200_OK)
+                else:
+                    error_msg = data.get('description', 'Unknown error')
+                    return Response({
+                        'success': False,
+                        'message': f'Telegram API error: {error_msg}'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            elif response.status_code == 401:
+                return Response({
+                    'success': False,
+                    'message': 'Unauthorized: Invalid bot token'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                return Response({
+                    'success': False,
+                    'message': f'Failed to get updates: HTTP {response.status_code}'
+                }, status=status.HTTP_400_BAD_REQUEST)
+                
+        except requests.exceptions.Timeout:
+            return Response({
+                'success': False,
+                'message': 'Connection timeout. Please try again.'
+            }, status=status.HTTP_408_REQUEST_TIMEOUT)
+        except requests.exceptions.RequestException as e:
+            return Response({
+                'success': False,
+                'message': f'Network error: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                'success': False,
+                'message': f'Unexpected error: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class TelegramGroupViewSet(viewsets.ModelViewSet):
@@ -1353,128 +1475,6 @@ class TelegramGroupViewSet(viewsets.ModelViewSet):
             return Response({
                 'success': False,
                 'message': 'Connection timeout. Please check your internet connection and try again.'
-            }, status=status.HTTP_408_REQUEST_TIMEOUT)
-        except requests.exceptions.RequestException as e:
-            return Response({
-                'success': False,
-                'message': f'Network error: {str(e)}'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            return Response({
-                'success': False,
-                'message': f'Unexpected error: {str(e)}'
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
-    @action(detail=False, methods=['post'], url_path='discover-chats')
-    def discover_chats(self, request):
-        """
-        Discover available groups/channels the bot has access to.
-        
-        Fetches recent bot updates to find all groups, supergroups, and channels
-        the bot is a member of. This helps users find the correct chat ID when
-        adding a new group.
-        
-        Returns:
-            200: Success with list of discovered chats
-            400: Bot token not configured or API error
-            408: Connection timeout
-            500: Unexpected error
-        """
-        config = TelegramConfiguration.get_instance()
-        
-        # Validation
-        if not config.bot_token:
-            return Response({
-                'success': False,
-                'message': 'Bot token not configured. Please configure the Telegram bot first.'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        try:
-            import requests
-            
-            # Get decrypted bot token
-            bot_token = config.decrypt_field('bot_token')
-            
-            # Get recent updates from bot
-            url = f"https://api.telegram.org/bot{bot_token}/getUpdates"
-            response = requests.get(url, timeout=10)
-            
-            if response.status_code == 200:
-                data = response.json()
-                if data.get('ok'):
-                    updates = data.get('result', [])
-                    
-                    # Extract unique chats
-                    chats_dict = {}
-                    for update in updates:
-                        # Check different message types
-                        for msg_type in ['message', 'edited_message', 'channel_post', 'my_chat_member']:
-                            if msg_type in update:
-                                msg = update[msg_type]
-                                if 'chat' in msg:
-                                    chat = msg['chat']
-                                    chat_id = chat.get('id')
-                                    
-                                    # Only include groups, supergroups, and channels (negative IDs)
-                                    if chat_id and chat_id < 0:
-                                        chat_key = str(chat_id)
-                                        if chat_key not in chats_dict:
-                                            chats_dict[chat_key] = {
-                                                'chat_id': str(chat_id),
-                                                'title': chat.get('title', 'Unknown'),
-                                                'type': chat.get('type', 'unknown'),
-                                                'username': chat.get('username', ''),
-                                                'member_count': None  # Will be filled if possible
-                                            }
-                    
-                    # Try to get member counts for each chat
-                    for chat_key, chat_info in chats_dict.items():
-                        try:
-                            count_url = f"https://api.telegram.org/bot{bot_token}/getChatMemberCount"
-                            count_response = requests.post(
-                                count_url,
-                                json={'chat_id': chat_info['chat_id']},
-                                timeout=5
-                            )
-                            if count_response.status_code == 200:
-                                count_data = count_response.json()
-                                if count_data.get('ok'):
-                                    chat_info['member_count'] = count_data['result']
-                        except:
-                            pass  # Skip if we can't get member count
-                    
-                    chats_list = sorted(
-                        chats_dict.values(), 
-                        key=lambda x: (x['type'], x['title'])
-                    )
-                    
-                    return Response({
-                        'success': True,
-                        'message': f'Found {len(chats_list)} groups/channels',
-                        'chats': chats_list,
-                        'hint': 'Send a message in your group to make it appear here if it\'s missing.'
-                    }, status=status.HTTP_200_OK)
-                else:
-                    error_msg = data.get('description', 'Unknown error')
-                    return Response({
-                        'success': False,
-                        'message': f'Telegram API error: {error_msg}'
-                    }, status=status.HTTP_400_BAD_REQUEST)
-            elif response.status_code == 401:
-                return Response({
-                    'success': False,
-                    'message': 'Unauthorized: Invalid bot token'
-                }, status=status.HTTP_400_BAD_REQUEST)
-            else:
-                return Response({
-                    'success': False,
-                    'message': f'Failed to get updates: HTTP {response.status_code}'
-                }, status=status.HTTP_400_BAD_REQUEST)
-                
-        except requests.exceptions.Timeout:
-            return Response({
-                'success': False,
-                'message': 'Connection timeout. Please try again.'
             }, status=status.HTTP_408_REQUEST_TIMEOUT)
         except requests.exceptions.RequestException as e:
             return Response({
