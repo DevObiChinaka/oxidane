@@ -1194,6 +1194,32 @@ class TelegramConfigurationViewSet(viewsets.ViewSet):
                         'success': False,
                         'message': f'Telegram API error: {error_msg}'
                     }, status=status.HTTP_400_BAD_REQUEST)
+            elif response.status_code == 409:
+                # Webhook is active - can't use getUpdates
+                # Return existing groups from database instead
+                from subscriptions.models import TelegramGroup
+                existing_groups = TelegramGroup.objects.all().values(
+                    'id', 'chat_id', 'name', 'group_type', 'member_count'
+                )
+                
+                chats_list = [
+                    {
+                        'chat_id': str(group['chat_id']),
+                        'title': group['name'],
+                        'type': group['group_type'],
+                        'username': '',
+                        'member_count': group['member_count']
+                    }
+                    for group in existing_groups if group['chat_id']
+                ]
+                
+                return Response({
+                    'success': True,
+                    'message': f'Webhook is active. Showing {len(chats_list)} configured groups',
+                    'chats': chats_list,
+                    'hint': 'Add groups manually using the chat ID. To discover new groups, temporarily disable the webhook.',
+                    'webhook_active': True
+                }, status=status.HTTP_200_OK)
             elif response.status_code == 401:
                 return Response({
                     'success': False,
