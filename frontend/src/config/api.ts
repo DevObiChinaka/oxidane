@@ -83,7 +83,7 @@ export const API_ENDPOINTS = {
     // Telegram Settings
     telegram: {
       config: `${API_BASE_URL}/admin/telegram/config/`,
-      testConnection: `${API_BASE_URL}/admin/telegram/test-connection/`,
+      testConnection: `${API_BASE_URL}/admin/telegram/config/test-connection/`,
       groups: `${API_BASE_URL}/admin/telegram/groups/`,
       groupDetail: (id: string) => `${API_BASE_URL}/admin/telegram/groups/${id}/`,
       discoverChats: `${API_BASE_URL}/admin/telegram/discover-chats/`,
