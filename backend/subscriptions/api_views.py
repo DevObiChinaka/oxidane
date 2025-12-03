@@ -1199,14 +1199,14 @@ class TelegramConfigurationViewSet(viewsets.ViewSet):
                 # Return existing groups from database instead
                 from subscriptions.models import TelegramGroup
                 existing_groups = TelegramGroup.objects.all().values(
-                    'id', 'chat_id', 'name', 'group_type', 'member_count'
+                    'id', 'chat_id', 'name', 'member_count'
                 )
                 
                 chats_list = [
                     {
                         'chat_id': str(group['chat_id']),
                         'title': group['name'],
-                        'type': group['group_type'],
+                        'type': 'group',  # Default type since we don't store it
                         'username': '',
                         'member_count': group['member_count']
                     }
