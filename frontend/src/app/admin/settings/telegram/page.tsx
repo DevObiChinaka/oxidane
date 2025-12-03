@@ -101,6 +101,7 @@ export default function TelegramConfigurationPage() {
   const [config, setConfig] = useState<TelegramConfig | null>(null);
   const [editedConfig, setEditedConfig] = useState<Partial<TelegramConfig>>({});
   const [newBotToken, setNewBotToken] = useState<string>('');  // Track new token input
+  const [isEditingToken, setIsEditingToken] = useState(false);  // Track if user wants to change token
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -211,6 +212,7 @@ export default function TelegramConfigurationPage() {
       setConfig(data);
       setEditedConfig(data);
       setNewBotToken('');  // Clear the new token input after save
+      setIsEditingToken(false);  // Exit token editing mode
       setMessage({ type: 'success', text: 'Telegram configuration saved successfully' });
     } catch (error: any) {
       console.error('Failed to save configuration:', error);
@@ -734,7 +736,7 @@ export default function TelegramConfigurationPage() {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Bot Token <span className="text-red-500">*</span>
             </label>
-            {config?.masked_token && config.masked_token !== '(not set)' ? (
+            {config?.masked_token && config.masked_token !== '(not set)' && !isEditingToken ? (
               <div className="space-y-2">
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                   <input
@@ -744,7 +746,10 @@ export default function TelegramConfigurationPage() {
                     className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
                   />
                   <button
-                    onClick={() => setNewBotToken('')}
+                    onClick={() => {
+                      setIsEditingToken(true);
+                      setNewBotToken('');
+                    }}
                     className="px-4 py-2 text-sm text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 whitespace-nowrap"
                   >
                     Change Token
@@ -755,7 +760,7 @@ export default function TelegramConfigurationPage() {
                 </p>
               </div>
             ) : (
-              <div>
+              <div className="space-y-2">
                 <input
                   type="password"
                   value={newBotToken}
@@ -763,9 +768,22 @@ export default function TelegramConfigurationPage() {
                   placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-400"
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Get this from @BotFather when you create your bot
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-gray-500">
+                    Get this from @BotFather when you create your bot
+                  </p>
+                  {isEditingToken && (
+                    <button
+                      onClick={() => {
+                        setIsEditingToken(false);
+                        setNewBotToken('');
+                      }}
+                      className="text-xs text-gray-600 hover:text-gray-800 underline"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
               </div>
             )}
           </div>
