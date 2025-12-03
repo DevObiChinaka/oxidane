@@ -404,7 +404,8 @@ CACHES = {
 # ENCRYPTION CONFIGURATION
 # ========================================
 # Fernet encryption key for sensitive data (tokens, API keys, passwords)
-ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY', '')
+# MUST be loaded from environment variable - see below for validation
+# ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY')  # Set in .env file
 
 # ========================================
 # MONITORING & LOGGING
@@ -450,10 +451,14 @@ LOGGING = {
 # ENCRYPTION CONFIGURATION (Phase 0.5.12)
 # ============================================================================
 # Key for encrypting sensitive data (API keys, tokens, passwords)
-# In production, load from environment variable:
-# ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY')
+# MUST be loaded from environment variable for security
+# Generate a new key with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 # ============================================================================
-ENCRYPTION_KEY = '4ji0ZN6vG1VLvQR5cxb6hCPRzlbHwuVG-Q1NiTrq2c8='
+if not os.getenv('ENCRYPTION_KEY'):
+    raise ImproperlyConfigured(
+        "ENCRYPTION_KEY environment variable is required. "
+        "Generate one with: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
+    )
 
 # ============================================================================
 # CELERY EAGER MODE FOR DEVELOPMENT
