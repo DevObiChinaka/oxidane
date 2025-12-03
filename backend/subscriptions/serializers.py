@@ -998,13 +998,17 @@ class TelegramConfigurationSerializer(serializers.ModelSerializer):
             instance.bot_token = bot_token
             instance.is_connected = False
             instance.connection_error = ''
-            # Save first to persist other fields
-            instance.save()
-            # Then encrypt the bot token (this will save again with only bot_token field)
+            # Encrypt and save (encrypt_field will save the model)
             instance.encrypt_field('bot_token')
-        else:
-            # No bot token update, just save other fields
-            instance.save()
+        
+        # Save other fields (or all fields if no token update)
+        # Use update_fields to avoid overwriting the encrypted token
+        update_fields = [k for k in validated_data.keys()]
+        if bot_token is not None and bot_token.strip():
+            # Also update connection status fields
+            update_fields.extend(['is_connected', 'connection_error'])
+        if update_fields:
+            instance.save(update_fields=update_fields)
         
         return instance
     
@@ -1022,13 +1026,17 @@ class TelegramConfigurationSerializer(serializers.ModelSerializer):
             instance.bot_token = bot_token
             instance.is_connected = False
             instance.connection_error = ''
-            # Save first to persist other fields
-            instance.save()
-            # Then encrypt the bot token (this will save again with only bot_token field)
+            # Encrypt and save (encrypt_field will save the model)
             instance.encrypt_field('bot_token')
-        else:
-            # No bot token update, just save other fields
-            instance.save()
+        
+        # Save other fields (or all fields if no token update)
+        # Use update_fields to avoid overwriting the encrypted token
+        update_fields = [k for k in validated_data.keys()]
+        if bot_token is not None and bot_token.strip():
+            # Also update connection status fields
+            update_fields.extend(['is_connected', 'connection_error'])
+        if update_fields:
+            instance.save(update_fields=update_fields)
         
         return instance
 
