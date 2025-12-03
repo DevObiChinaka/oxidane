@@ -998,13 +998,6 @@ class TelegramConfigurationViewSet(viewsets.ViewSet):
                 'message': 'Bot token is not configured. Please set a bot token first.'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        # Check if token has valid format
-        if not instance.has_valid_token():
-            return Response({
-                'success': False,
-                'message': 'Bot token has invalid format. Expected: numbers:characters'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
         # Test connection to Telegram API
         try:
             import requests
@@ -1017,6 +1010,20 @@ class TelegramConfigurationViewSet(viewsets.ViewSet):
                     'success': False,
                     'message': f'Failed to decrypt bot token: {str(e)}'
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            # Validate decrypted token format
+            if not decrypted_token or ':' not in decrypted_token:
+                return Response({
+                    'success': False,
+                    'message': 'Bot token has invalid format. Expected: numbers:characters'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            parts = decrypted_token.split(':')
+            if len(parts) != 2 or not parts[0].isdigit() or len(parts[1]) < 30:
+                return Response({
+                    'success': False,
+                    'message': 'Bot token has invalid format. Expected: numbers:characters'
+                }, status=status.HTTP_400_BAD_REQUEST)
             
             # Call Telegram getMe API
             api_url = f'https://api.telegram.org/bot{decrypted_token}/getMe'
