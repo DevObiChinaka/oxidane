@@ -1004,8 +1004,21 @@ class TelegramConfigurationViewSet(viewsets.ViewSet):
             
             # Decrypt bot token before using
             try:
+                raw_token = instance.bot_token
                 decrypted_token = instance.decrypt_field('bot_token')
+                
+                # Debug logging
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.info(f"Raw token (first 20 chars): {raw_token[:20] if raw_token else 'None'}")
+                logger.info(f"Raw token starts with gAAAAA: {raw_token.startswith('gAAAAA') if raw_token else False}")
+                logger.info(f"Decrypted token (first 20 chars): {decrypted_token[:20] if decrypted_token else 'None'}")
+                logger.info(f"Decrypted token contains colon: {':' in decrypted_token if decrypted_token else False}")
+                
             except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Decryption error: {str(e)}")
                 return Response({
                     'success': False,
                     'message': f'Failed to decrypt bot token: {str(e)}'
@@ -1015,7 +1028,7 @@ class TelegramConfigurationViewSet(viewsets.ViewSet):
             if not decrypted_token or ':' not in decrypted_token:
                 return Response({
                     'success': False,
-                    'message': 'Bot token has invalid format. Expected: numbers:characters'
+                    'message': f'Bot token has invalid format. Expected: numbers:characters (got: {decrypted_token[:30] if decrypted_token else "empty"}...)'
                 }, status=status.HTTP_400_BAD_REQUEST)
             
             parts = decrypted_token.split(':')
