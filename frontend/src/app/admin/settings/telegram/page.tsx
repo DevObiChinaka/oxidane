@@ -176,7 +176,6 @@ export default function TelegramConfigurationPage() {
 
       // Prepare payload - only include writable fields
       const payload: any = {
-        bot_username: editedConfig.bot_username || '',
         is_enabled: editedConfig.is_enabled ?? true,
         auto_add_enabled: editedConfig.auto_add_enabled ?? true,
         auto_remove_enabled: editedConfig.auto_remove_enabled ?? true,
@@ -185,6 +184,7 @@ export default function TelegramConfigurationPage() {
         max_retries: editedConfig.max_retries ?? 3,
         retry_delay_seconds: editedConfig.retry_delay_seconds ?? 300,
         rate_limit_per_minute: editedConfig.rate_limit_per_minute ?? 30,
+        bot_username: editedConfig.bot_username?.trim() || '',  // Send empty string if not set
       };
       
       // Include new bot token if it was changed
@@ -204,7 +204,29 @@ export default function TelegramConfigurationPage() {
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
         console.error('Save failed:', errorData);
-        throw new Error(errorData?.detail || errorData?.error || 'Failed to save configuration');
+        
+        // Extract validation errors if present
+        let errorMessage = 'Failed to save configuration';
+        if (errorData) {
+          if (errorData.detail) {
+            errorMessage = errorData.detail;
+          } else if (errorData.error) {
+            errorMessage = errorData.error;
+          } else if (typeof errorData === 'object') {
+            // Handle field-specific validation errors
+            const fieldErrors = Object.entries(errorData)
+              .map(([field, errors]) => {
+                const errorList = Array.isArray(errors) ? errors : [errors];
+                return `${field}: ${errorList.join(', ')}`;
+              })
+              .join('; ');
+            if (fieldErrors) {
+              errorMessage = fieldErrors;
+            }
+          }
+        }
+        
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();

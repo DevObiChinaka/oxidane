@@ -918,8 +918,13 @@ class TelegramConfigurationSerializer(serializers.ModelSerializer):
         return obj.has_valid_token()
     
     def validate_bot_username(self, value):
-        """Validate bot username format"""
-        if value and not value.startswith('@'):
+        """Validate bot username format (optional field, auto-detected on test)"""
+        # Allow empty/None values - username will be auto-detected on connection test
+        if not value or value.strip() == '':
+            return value
+        
+        # If provided, must start with @
+        if not value.startswith('@'):
             raise serializers.ValidationError(
                 'Bot username must start with @ (e.g., @OxidaneBot)'
             )
