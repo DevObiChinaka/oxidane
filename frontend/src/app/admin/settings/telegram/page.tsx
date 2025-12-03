@@ -258,6 +258,25 @@ export default function TelegramConfigurationPage() {
         }
       });
 
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        console.error('Test connection failed:', errorData);
+        
+        let errorMessage = 'Connection test failed';
+        if (errorData) {
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData.error) {
+            errorMessage = errorData.error;
+          } else if (errorData.detail) {
+            errorMessage = errorData.detail;
+          }
+        }
+        
+        setMessage({ type: 'error', text: errorMessage });
+        return;
+      }
+
       const data = await response.json();
 
       if (data.success) {
@@ -269,11 +288,11 @@ export default function TelegramConfigurationPage() {
         // Reload config to get updated connection status
         await loadConfiguration();
       } else {
-        setMessage({ type: 'error', text: data.error || 'Connection test failed' });
+        setMessage({ type: 'error', text: data.message || data.error || 'Connection test failed' });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Connection test failed:', error);
-      setMessage({ type: 'error', text: 'Failed to test connection' });
+      setMessage({ type: 'error', text: error.message || 'Failed to test connection' });
     } finally {
       setTesting(false);
     }
