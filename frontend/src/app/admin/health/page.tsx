@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { API_ENDPOINTS } from '@/config/api';
 
 interface HealthMetrics {
   status: 'ok' | 'error';
@@ -93,7 +94,7 @@ export default function SystemHealthPage() {
       }
 
       // Fetch basic health check
-      const healthRes = await fetch('http://127.0.0.1:8000/api/health/', {
+      const healthRes = await fetch(API_ENDPOINTS.auth.login.replace('/auth/login/', '/health/'), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -103,7 +104,7 @@ export default function SystemHealthPage() {
       }
 
       // Fetch setup status
-      const setupRes = await fetch('http://127.0.0.1:8000/api/admin/setup/status/', {
+      const setupRes = await fetch(API_ENDPOINTS.admin.setupStatus, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 

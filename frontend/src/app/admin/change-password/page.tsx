@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { API_ENDPOINTS } from '@/config/api';
 
 interface PasswordStrength {
   score: number; // 0-4
@@ -112,7 +113,7 @@ export default function ChangePassword() {
 
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/admin/change-password/`, {
+      const response = await fetch(API_ENDPOINTS.admin.changePassword, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

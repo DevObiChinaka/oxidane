@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { API_ENDPOINTS } from '@/config/api';
 import TelegramIcon from './TelegramIcon';
 import {
   CreditCardIcon,
@@ -133,7 +134,7 @@ export default function SetupDashboardPage() {
         return;
       }
 
-      const response = await fetch('http://127.0.0.1:8000/api/admin/setup/status/', {
+      const response = await fetch(API_ENDPOINTS.admin.setupStatus, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -384,11 +385,7 @@ export default function SetupDashboardPage() {
                   w-11 h-11 rounded-lg flex items-center justify-center mb-4 transition-colors
                   ${isComplete ? 'bg-teal-50 text-brand-teal' : 'bg-gray-50 text-gray-500 group-hover:bg-teal-50/50 group-hover:text-brand-teal'}
                 `}>
-                  {step.id === 'telegram' ? (
-                    <IconComponent className="w-5 h-5" color={isComplete ? '#14b8a6' : '#6b7280'} />
-                  ) : (
-                    <IconComponent className="w-5 h-5" strokeWidth={2} />
-                  )}
+                  <IconComponent className="w-5 h-5" />
                 </div>
 
                 {/* Content */}
