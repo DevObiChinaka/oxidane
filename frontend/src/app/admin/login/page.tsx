@@ -196,9 +196,9 @@ export default function AdminLoginPage() {
                     id="email"
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => setEmail(e.target.value.trim())}
                     className="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-[#00B38F] focus:border-transparent transition-all duration-200 text-gray-900 bg-white"
-                    placeholder="Enter your email"
+                    placeholder="admin@example.com"
                     disabled={loading}
                     required
                     autoComplete="email"
