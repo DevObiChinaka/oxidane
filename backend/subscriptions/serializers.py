@@ -994,14 +994,17 @@ class TelegramConfigurationSerializer(serializers.ModelSerializer):
             setattr(instance, key, value)
         
         # Set bot token if provided (marks as disconnected)
-        if bot_token is not None:
+        if bot_token is not None and bot_token.strip():
             instance.bot_token = bot_token
-            # Encrypt the bot token before saving
-            instance.encrypt_field('bot_token')
             instance.is_connected = False
             instance.connection_error = ''
-        
-        instance.save()
+            # Save first to persist other fields
+            instance.save()
+            # Then encrypt the bot token (this will save again with only bot_token field)
+            instance.encrypt_field('bot_token')
+        else:
+            # No bot token update, just save other fields
+            instance.save()
         
         return instance
     
@@ -1015,14 +1018,17 @@ class TelegramConfigurationSerializer(serializers.ModelSerializer):
             setattr(instance, key, value)
         
         # Set bot token if provided (marks as disconnected)
-        if bot_token is not None:
+        if bot_token is not None and bot_token.strip():
             instance.bot_token = bot_token
-            # Encrypt the bot token before saving
-            instance.encrypt_field('bot_token')
             instance.is_connected = False
             instance.connection_error = ''
-        
-        instance.save()
+            # Save first to persist other fields
+            instance.save()
+            # Then encrypt the bot token (this will save again with only bot_token field)
+            instance.encrypt_field('bot_token')
+        else:
+            # No bot token update, just save other fields
+            instance.save()
         
         return instance
 
