@@ -129,7 +129,7 @@ export default function FeaturesPage() {
         router.push('/admin/login');
         return;
       }
-
+5
       let url = API_ENDPOINTS.admin.features;
       if (selectedCategory !== 'all') {
         url += `?category=${selectedCategory}`;

@@ -1,7 +1,45 @@
 import { API_BASE_URL } from '@/config/api';
 
-// API client with error handling
+// API client with error handling and token refresh
 export class AdminAPIClient {
+  private refreshing: boolean = false;
+  private refreshPromise: Promise<void> | null = null;
+
+  private async refreshToken(): Promise<void> {
+    // Prevent multiple simultaneous refresh attempts
+    if (this.refreshing && this.refreshPromise) {
+      return this.refreshPromise;
+    }
+
+    this.refreshing = true;
+    this.refreshPromise = (async () => {
+      try {
+        const refresh = localStorage.getItem('refresh_token');
+        if (!refresh) throw new Error('No refresh token');
+
+        const response = await fetch(`${API_BASE_URL}/auth/token/refresh/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refresh }),
+        });
+
+        if (!response.ok) throw new Error('Token refresh failed');
+
+        const data = await response.json();
+        localStorage.setItem('access_token', data.access);
+        
+        if (data.refresh) {
+          localStorage.setItem('refresh_token', data.refresh);
+        }
+      } finally {
+        this.refreshing = false;
+        this.refreshPromise = null;
+      }
+    })();
+
+    return this.refreshPromise;
+  }
+
   async get<T>(endpoint: string): Promise<T> {
     return this.request(endpoint, {
       method: 'GET',
@@ -121,14 +159,41 @@ export class AdminAPIClient {
     };
 
     try {
-      const response = await fetch(url, config);
+      let response = await fetch(url, config);
+      
+      // Handle token refresh on 401
+      if (response.status === 401 && typeof window !== 'undefined') {
+        try {
+          // Try to refresh the token
+          await this.refreshToken();
+          
+          // Retry the request with new token
+          const newToken = localStorage.getItem('access_token');
+          if (newToken && config.headers) {
+            (config.headers as Record<string, string>)['Authorization'] = `Bearer ${newToken}`;
+          }
+          response = await fetch(url, config);
+        } catch (refreshError) {
+          // Refresh failed - clear tokens and redirect to login
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          localStorage.removeItem('admin_token');
+          localStorage.removeItem('admin_user');
+          localStorage.removeItem('user');
+          window.location.href = '/admin/login';
+          throw new Error('Session expired. Please login again.');
+        }
+      }
       
       if (!response.ok) {
         if (response.status === 401) {
-          // Token expired or invalid - redirect to login
+          // Still 401 after refresh attempt - redirect to login
           if (typeof window !== 'undefined') {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
             localStorage.removeItem('admin_token');
             localStorage.removeItem('admin_user');
+            localStorage.removeItem('user');
             window.location.href = '/admin/login';
           }
         }
