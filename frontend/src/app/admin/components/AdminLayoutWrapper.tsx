@@ -26,12 +26,18 @@ export default function AdminLayoutWrapper({ children }: AdminLayoutWrapperProps
   
   // Don't redirect if already on setup page
   const isSetupPage = pathname.startsWith('/admin/setup');
+  
+  // Allow access to configuration pages even during setup
+  // These pages are needed to complete the setup process
+  const isConfigPage = pathname.startsWith('/admin/settings') || 
+                       pathname.startsWith('/admin/plans') || 
+                       pathname.startsWith('/admin/features');
 
   // Check platform setup status on every page load (except setup page itself)
   useEffect(() => {
     const checkSetupStatus = async () => {
-      // Skip check for public pages or if already on setup page
-      if (isPublicPage || isSetupPage) {
+      // Skip check for public pages, setup page, or configuration pages
+      if (isPublicPage || isSetupPage || isConfigPage) {
         setSetupChecked(true);
         setSetupComplete(true);
         setCheckingSetup(false);
@@ -80,7 +86,7 @@ export default function AdminLayoutWrapper({ children }: AdminLayoutWrapperProps
     };
 
     checkSetupStatus();
-  }, [pathname, router, isPublicPage, isSetupPage]);
+  }, [pathname, router, isPublicPage, isSetupPage, isConfigPage]);
   
   
   // Render public pages without protection or layout
