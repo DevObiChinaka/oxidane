@@ -648,22 +648,28 @@ function CheckoutContent() {
                 </label>
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    { id: 'paystack', name: 'Paystack', recommended: currency === 'NGN' },
-                    { id: 'stripe', name: 'Stripe', recommended: currency === 'USD' }
+                    { id: 'paystack', name: 'Paystack', recommended: currency === 'NGN', available: true },
+                    { id: 'stripe', name: 'Stripe', recommended: currency === 'USD', available: false }
                   ].map((gw) => (
                     <button
                       key={gw.id}
                       onClick={() => setGateway(gw.id as 'paystack' | 'stripe')}
-                      disabled={!gw.recommended}
                       className={`p-3 rounded-lg border-2 transition-all relative ${
                         gateway === gw.id
                           ? 'border-[#00B38F] bg-[#00B38F]/10'
                           : 'border-white/20 bg-white/5 hover:border-white/40'
-                      } ${!gw.recommended ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      }`}
                     >
                       <div className="text-left">
-                        <div className="font-semibold text-white">{gw.name}</div>
-                        {gw.recommended && (
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-white">{gw.name}</span>
+                          {!gw.available && (
+                            <span className="text-xs px-2 py-0.5 bg-amber-500/20 text-amber-300 rounded-full border border-amber-500/30">
+                              Coming Soon
+                            </span>
+                          )}
+                        </div>
+                        {gw.recommended && gw.available && (
                           <div className="text-xs text-[#00B38F]">Recommended</div>
                         )}
                       </div>
@@ -671,6 +677,34 @@ function CheckoutContent() {
                   ))}
                 </div>
               </div>
+
+              {/* Stripe Unavailability Warning */}
+              {gateway === 'stripe' && (
+                <div className="bg-amber-500/10 border-2 border-amber-500/50 rounded-xl p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-10 h-10 bg-amber-500/20 rounded-full flex items-center justify-center mt-0.5">
+                      <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-amber-300 font-semibold mb-1">Stripe Not Available Yet</h4>
+                      <p className="text-sm text-amber-200/90 mb-2">
+                        We're still setting up Stripe integration. Please use Paystack for now, or check back soon!
+                      </p>
+                      <button
+                        onClick={() => setGateway('paystack')}
+                        className="text-sm text-[#00B38F] hover:text-[#00A87D] font-medium flex items-center gap-1"
+                      >
+                        <span>Switch to Paystack</span>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Coupon Code */}
               <div>
@@ -743,7 +777,7 @@ function CheckoutContent() {
             {/* Payment Button */}
             <button
               onClick={handleProceedToPayment}
-              disabled={processing || !agreedToTerms || !telegramVerified || (conflict?.conflict === true)}
+              disabled={processing || !agreedToTerms || !telegramVerified || (conflict?.conflict === true) || gateway === 'stripe'}
               className="w-full py-4 px-6 bg-gradient-to-r from-[#00B38F] to-[#00B39F] text-white rounded-xl font-semibold text-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
             >
               {processing ? (
@@ -751,6 +785,8 @@ function CheckoutContent() {
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
                   Processing...
                 </span>
+              ) : gateway === 'stripe' ? (
+                'Stripe Coming Soon - Please Select Paystack'
               ) : (
                 `Proceed to Payment - ${formatCurrency(totalAmount)}`
               )}
