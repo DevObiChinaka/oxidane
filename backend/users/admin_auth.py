@@ -547,13 +547,12 @@ def admin_verify_otp(request):
                 'admin_dashboard_url': f"{settings.FRONTEND_URL}/admin" if hasattr(settings, 'FRONTEND_URL') else "#",
             }
             
-            # Send success notification email (use success-specific template)
+            # Send success notification email using signin_notification template
             success_result = email_service.send_email(
                 template_type='signin_notification',
                 recipient_email=user.email,
                 user=user,
-                custom_vars=success_vars,
-                template_name='Admin Login Success - Welcome Back'
+                custom_vars=success_vars
             )
             
             if success_result['success']:

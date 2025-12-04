@@ -117,16 +117,18 @@ def send_signin_notification_email(user, signin_details=None, request=None):
             ip_address = request.META.get('REMOTE_ADDR', 'Unknown')
             location = f"IP: {ip_address}"
         
-        # Use signin_notification template
+        # Use user_signin_notification template (not admin signin_notification)
         context = {
             'signin_datetime': current_time,
             'signin_method': signin_method,
             'device': device,
             'location': location,
+            'login_time': current_time,
+            'login_ip': location,
         }
         
         result = email_service.send_email(
-            template_type='signin_notification',
+            template_type='user_signin_notification',
             recipient_email=user.email,
             user=user,
             custom_vars=context

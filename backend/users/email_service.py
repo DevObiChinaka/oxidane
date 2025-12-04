@@ -9,6 +9,10 @@ from django.conf import settings
 from django.utils import timezone
 from .models import EmailTemplate, EmailLog, User
 import logging
+import smtplib
+import ssl
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 logger = logging.getLogger(__name__)
 
@@ -20,21 +24,28 @@ class EmailTemplateService:
         # Try to get email configuration from database (singleton)
         try:
             from subscriptions.models import EmailConfiguration
-            email_config = EmailConfiguration.get_instance()
+            self.email_config = EmailConfiguration.get_instance()
             
-            if email_config.is_enabled and email_config.from_email:
+            if self.email_config.is_enabled and self.email_config.from_email:
                 # Use database configuration
-                self.default_from_email = email_config.from_email
-                self.company_name = email_config.from_name or 'OxiWorld'
+                self.default_from_email = self.email_config.from_email
+                self.company_name = self.email_config.from_name or 'OxiWorld'
+                self.use_admin_smtp = True
+                logger.info(f"Using admin-configured email: {self.default_from_email}")
             else:
                 # Fallback to settings.py
-                self.default_from_email = getattr(settings, 'EMAIL_HOST_USER', 'noreply@oxiworld.com')
+                self.default_from_email = getattr(settings, 'EMAIL_HOST_USER', 'oxiworldforexacademy@gmail.com')
                 self.company_name = getattr(settings, 'COMPANY_NAME', 'OxiWorld')
+                self.email_config = None
+                self.use_admin_smtp = False
+                logger.info("Admin email not configured, using settings.py")
         except Exception as e:
             # If EmailConfiguration doesn't exist or fails, use settings.py
             logger.warning(f"Could not load EmailConfiguration, using settings.py: {e}")
-            self.default_from_email = getattr(settings, 'EMAIL_HOST_USER', 'noreply@oxiworld.com')
+            self.default_from_email = getattr(settings, 'EMAIL_HOST_USER', 'oxiworldforexacademy@gmail.com')
             self.company_name = getattr(settings, 'COMPANY_NAME', 'OxiWorld')
+            self.email_config = None
+            self.use_admin_smtp = False
         
         self.support_email = getattr(settings, 'SUPPORT_EMAIL', 'support@oxiworld.com')
     
@@ -56,6 +67,59 @@ class EmailTemplateService:
                          (f" with name: {template_name}" if template_name else ""))
             return None
         return template
+    
+    def send_email_with_smtp(self, from_email, recipient_email, subject, html_content, text_content=None):
+        """
+        Send email using admin-configured SMTP settings.
+        This bypasses Django's EMAIL_BACKEND and uses EmailConfiguration directly.
+        
+        Returns:
+            bool: True if sent successfully, False otherwise
+        """
+        if not self.email_config or not self.use_admin_smtp:
+            logger.error("Cannot use admin SMTP: EmailConfiguration not available")
+            return False
+        
+        try:
+            # Decrypt password using EmailConfiguration's method
+            decrypted_password = self.email_config.decrypt_field('smtp_password')
+            
+            # Create message
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = subject
+            msg['From'] = from_email
+            msg['To'] = recipient_email
+            
+            # Attach text and HTML parts
+            if text_content:
+                part1 = MIMEText(text_content, 'plain')
+                msg.attach(part1)
+            
+            part2 = MIMEText(html_content, 'html')
+            msg.attach(part2)
+            
+            # Send email using configured SMTP
+            if self.email_config.use_ssl:
+                # SSL connection (port 465)
+                context = ssl.create_default_context()
+                with smtplib.SMTP_SSL(self.email_config.smtp_host, self.email_config.smtp_port, 
+                                     context=context, timeout=30) as server:
+                    server.login(self.email_config.smtp_username, decrypted_password)
+                    server.send_message(msg)
+            else:
+                # TLS connection (port 587)
+                with smtplib.SMTP(self.email_config.smtp_host, self.email_config.smtp_port, timeout=30) as server:
+                    if self.email_config.use_tls:
+                        server.starttls()
+                    server.login(self.email_config.smtp_username, decrypted_password)
+                    server.send_message(msg)
+            
+            logger.info(f"Email sent via admin SMTP ({self.email_config.smtp_host}) to {recipient_email}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to send email via admin SMTP: {str(e)}")
+            return False
     
     def prepare_variables(self, user=None, subscription=None, payment=None, custom_vars=None):
         """Prepare variables for template substitution"""
@@ -195,14 +259,24 @@ class EmailTemplateService:
             
             # Send email (skip in test mode)
             if not test_mode:
-                success = send_mail(
-                    subject=subject,
-                    message=text_content or self.html_to_text(html_content),
-                    from_email=from_email,
-                    recipient_list=[recipient_email],
-                    html_message=html_content,
-                    fail_silently=False
-                )
+                # Use admin-configured SMTP if available, otherwise fallback to Django's send_mail
+                if self.use_admin_smtp:
+                    success = self.send_email_with_smtp(
+                        from_email=from_email,
+                        recipient_email=recipient_email,
+                        subject=subject,
+                        html_content=html_content,
+                        text_content=text_content or self.html_to_text(html_content)
+                    )
+                else:
+                    success = send_mail(
+                        subject=subject,
+                        message=text_content or self.html_to_text(html_content),
+                        from_email=from_email,
+                        recipient_list=[recipient_email],
+                        html_message=html_content,
+                        fail_silently=False
+                    )
                 
                 if success and email_log:
                     email_log.status = 'sent'
@@ -443,16 +517,31 @@ This is an automated message, please do not reply to this email.
                     # Just an email address, add company name
                     from_email = f"{self.company_name} <{self.default_from_email}>"
                 
-                send_mail(
-                    subject=subject,
-                    message=text_content,
-                    from_email=from_email,
-                    recipient_list=[recipient_email],
-                    html_message=html_content,
-                    fail_silently=False
-                )
-                logger.info(f"Fallback email sent successfully to {recipient_email}")
-                return True
+                # Use admin SMTP if available, otherwise use Django's send_mail
+                if self.use_admin_smtp:
+                    success = self.send_email_with_smtp(
+                        from_email=from_email,
+                        recipient_email=recipient_email,
+                        subject=subject,
+                        html_content=html_content,
+                        text_content=text_content
+                    )
+                else:
+                    success = send_mail(
+                        subject=subject,
+                        message=text_content,
+                        from_email=from_email,
+                        recipient_list=[recipient_email],
+                        html_message=html_content,
+                        fail_silently=False
+                    )
+                
+                if success:
+                    logger.info(f"Fallback email sent successfully to {recipient_email}")
+                    return True
+                else:
+                    logger.error(f"Failed to send fallback email")
+                    return False
             except Exception as e:
                 logger.error(f"Failed to send fallback email: {str(e)}")
                 return False

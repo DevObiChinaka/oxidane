@@ -12,9 +12,9 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 465  # SSL port (working)
 EMAIL_USE_SSL = True  # Use SSL instead of TLS
 EMAIL_TIMEOUT = 30
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = f'OxiWorld Forex Academy <{EMAIL_HOST_USER}>' if EMAIL_HOST_USER else 'OxiWorld Forex Academy <noreply@oxiworldforexacademy.com>'
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'oxiworldforexacademy@gmail.com')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', 'alhe mqzv yjra hqej')
+DEFAULT_FROM_EMAIL = f'OxiWorld Forex Academy <{EMAIL_HOST_USER}>' if EMAIL_HOST_USER else 'OxiWorld Forex Academy <oxiworldforexacademy@gmail.com>'
 
 # Backup: Console output for debugging
 # EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
