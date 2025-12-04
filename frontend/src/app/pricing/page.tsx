@@ -74,31 +74,31 @@ export default function PricingPage() {
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#000ABE]/5 rounded-full blur-3xl"></div>
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+      <div className="relative z-10 max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-12 sm:py-16 lg:py-20">
         {/* Header */}
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center px-4 py-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-full text-sm font-medium text-white/90 mb-6">
-            <div className="w-2 h-2 bg-[#00B38F] rounded-full mr-2 animate-pulse"></div>
+        <div className="text-center mb-8 sm:mb-12 lg:mb-16">
+          <div className="inline-flex items-center px-3 sm:px-4 py-1.5 sm:py-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-full text-xs sm:text-sm font-medium text-white/90 mb-4 sm:mb-6">
+            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-[#00B38F] rounded-full mr-2 animate-pulse"></div>
             Simple, Transparent Pricing
           </div>
           
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white mb-4 sm:mb-6 px-2">
             Choose Your
-            <span className="block bg-gradient-to-r from-[#00B38F] to-[#00B39F] bg-clip-text text-transparent mt-2">
+            <span className="block bg-gradient-to-r from-[#00B38F] to-[#00B39F] bg-clip-text text-transparent mt-1 sm:mt-2">
               Trading Plan
             </span>
           </h1>
           
-          <p className="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto mb-8">
+          <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-300 max-w-2xl mx-auto mb-6 sm:mb-8 px-4">
             Professional forex education and signals. All plans include full access to our platform. Cancel anytime.
           </p>
 
           {/* Currency Selector */}
-          <div className="flex justify-center mb-8">
-            <div className="inline-flex items-center gap-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg p-1">
+          <div className="flex justify-center mb-6 sm:mb-8">
+            <div className="inline-flex items-center gap-2 sm:gap-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg p-1">
               <button
                 onClick={() => setCurrency('USD')}
-                className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${
+                className={`px-4 sm:px-6 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
                   currency === 'USD'
                     ? 'bg-[#00B38F] text-white shadow-md'
                     : 'text-gray-300 hover:text-white'
@@ -108,7 +108,7 @@ export default function PricingPage() {
               </button>
               <button
                 onClick={() => setCurrency('NGN')}
-                className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${
+                className={`px-4 sm:px-6 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
                   currency === 'NGN'
                     ? 'bg-[#00B38F] text-white shadow-md'
                     : 'text-gray-300 hover:text-white'
@@ -120,21 +120,21 @@ export default function PricingPage() {
           </div>
 
           {/* Trust Badges */}
-          <div className="flex flex-wrap justify-center items-center gap-6 text-sm text-gray-400">
-            <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-[#00B38F]" fill="currentColor" viewBox="0 0 20 20">
+          <div className="flex flex-wrap justify-center items-center gap-3 sm:gap-4 lg:gap-6 text-xs sm:text-sm text-gray-400 px-4">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-[#00B38F] flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
               <span>Instant Access</span>
             </div>
-            <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-[#00B38F]" fill="currentColor" viewBox="0 0 20 20">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-[#00B38F] flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
               <span>Cancel Anytime</span>
             </div>
-            <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-[#00B38F]" fill="currentColor" viewBox="0 0 20 20">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-[#00B38F] flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
               <span>24/7 Support</span>
@@ -143,7 +143,7 @@ export default function PricingPage() {
         </div>
 
         {/* Pricing Cards */}
-        <div className="mb-20">
+        <div className="mb-12 sm:mb-16 lg:mb-20">
           <PricingCards 
             onPlanSelect={handlePlanSelect}
             selectedPlanId={selectedPlan?.id}
@@ -153,17 +153,17 @@ export default function PricingPage() {
         </div>
 
         {/* Features Grid */}
-        <div className="mt-24 pt-16 border-t border-white/10">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+        <div className="mt-16 sm:mt-20 lg:mt-24 pt-12 sm:pt-14 lg:pt-16 border-t border-white/10">
+          <div className="text-center mb-8 sm:mb-10 lg:mb-12 px-4">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-3 sm:mb-4">
               Everything You Need to Succeed
             </h2>
-            <p className="text-lg text-gray-300">
+            <p className="text-base sm:text-lg text-gray-300">
               All plans include access to our complete platform
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
             {[
               {
                 icon: (
@@ -222,16 +222,16 @@ export default function PricingPage() {
             ].map((feature, index) => (
               <div 
                 key={index} 
-                className="flex items-start gap-4 p-6 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 hover:bg-white/10 transition-all duration-300"
+                className="flex items-start gap-3 sm:gap-4 p-4 sm:p-5 lg:p-6 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 hover:bg-white/10 transition-all duration-300"
               >
-                <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-gradient-to-br from-[#00B38F] to-[#00B39F] flex items-center justify-center text-white">
+                <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-br from-[#00B38F] to-[#00B39F] flex items-center justify-center text-white">
                   {feature.icon}
                 </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-1">
+                <div className="min-w-0">
+                  <h3 className="text-base sm:text-lg font-semibold text-white mb-1">
                     {feature.title}
                   </h3>
-                  <p className="text-sm text-gray-400">
+                  <p className="text-xs sm:text-sm text-gray-400">
                     {feature.description}
                   </p>
                 </div>
@@ -241,14 +241,14 @@ export default function PricingPage() {
         </div>
 
         {/* FAQ Section */}
-        <div className="mt-24 pt-16 border-t border-white/10">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+        <div className="mt-16 sm:mt-20 lg:mt-24 pt-12 sm:pt-14 lg:pt-16 border-t border-white/10">
+          <div className="text-center mb-8 sm:mb-10 lg:mb-12 px-4">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-3 sm:mb-4">
               Common Questions
             </h2>
           </div>
 
-          <div className="max-w-3xl mx-auto space-y-4">
+          <div className="max-w-3xl mx-auto space-y-3 sm:space-y-4 px-4">
             {[
               {
                 q: 'How quickly do I get access?',
@@ -269,10 +269,10 @@ export default function PricingPage() {
             ].map((faq, index) => (
               <div 
                 key={index}
-                className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-6 hover:bg-white/10 transition-all duration-300"
+                className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-4 sm:p-5 lg:p-6 hover:bg-white/10 transition-all duration-300"
               >
-                <h3 className="text-lg font-semibold text-white mb-2">{faq.q}</h3>
-                <p className="text-gray-300">{faq.a}</p>
+                <h3 className="text-base sm:text-lg font-semibold text-white mb-2">{faq.q}</h3>
+                <p className="text-sm sm:text-base text-gray-300">{faq.a}</p>
               </div>
             ))}
           </div>

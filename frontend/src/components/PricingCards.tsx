@@ -193,11 +193,11 @@ export default function PricingCards({
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6 max-w-6xl mx-auto">
       {/* Conflict Error Banner */}
       {conflictError && (
-        <div className="col-span-full mb-4 p-3 bg-yellow-50/10 border border-yellow-400/30 rounded-lg">
-          <p className="text-sm text-yellow-200 text-center">
+        <div className="col-span-full mb-3 sm:mb-4 p-2.5 sm:p-3 bg-yellow-50/10 border border-yellow-400/30 rounded-lg">
+          <p className="text-xs sm:text-sm text-yellow-200 text-center">
             ⚠️ {conflictError}. You can still browse plans.
           </p>
         </div>
@@ -205,8 +205,8 @@ export default function PricingCards({
       
       {/* Rate Error Banner */}
       {rateError && currency !== 'USD' && (
-        <div className="col-span-full mb-4 p-3 bg-yellow-50/10 border border-yellow-400/30 rounded-lg">
-          <p className="text-sm text-yellow-200 text-center">
+        <div className="col-span-full mb-3 sm:mb-4 p-2.5 sm:p-3 bg-yellow-50/10 border border-yellow-400/30 rounded-lg">
+          <p className="text-xs sm:text-sm text-yellow-200 text-center">
             ⚠️ Currency conversion temporarily unavailable. Showing USD prices.
           </p>
         </div>
@@ -214,8 +214,8 @@ export default function PricingCards({
       
       {/* Rate Info Banner */}
       {rate && currency !== 'USD' && !rateLoading && !rateError && (
-        <div className="col-span-full mb-4 p-3 bg-white/5 border border-white/10 rounded-lg">
-          <p className="text-sm text-gray-300 text-center">
+        <div className="col-span-full mb-3 sm:mb-4 p-2.5 sm:p-3 bg-white/5 border border-white/10 rounded-lg">
+          <p className="text-xs sm:text-sm text-gray-300 text-center break-words">
             Exchange rate: 1 USD = {rate.toFixed(2)} {currency}
             {cached && <span className="text-gray-400 ml-2">(updates hourly)</span>}
           </p>
@@ -251,41 +251,41 @@ export default function PricingCards({
         >
           {/* Current Plan Badge */}
           {isCurrentPlan && (
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-[#00B38F] to-[#00B39F] text-white text-xs font-semibold rounded-full shadow-md z-10">
+            <div className="absolute -top-2.5 sm:-top-3 left-1/2 -translate-x-1/2 px-3 sm:px-4 py-0.5 sm:py-1 bg-gradient-to-r from-[#00B38F] to-[#00B39F] text-white text-xs font-semibold rounded-full shadow-md z-10">
               ✓ Current Plan
             </div>
           )}
           
           {/* Conflict Warning Banner - Only for recurring plans */}
           {hasRecurringConflict && !isCurrentPlan && conflict?.existing_subscription && (
-            <div className="absolute top-0 left-0 right-0 bg-yellow-50/95 backdrop-blur-sm border-b border-yellow-200 rounded-t-xl p-3 z-10">
-              <p className="text-xs text-yellow-900 leading-tight">
+            <div className="absolute top-0 left-0 right-0 bg-yellow-50/95 backdrop-blur-sm border-b border-yellow-200 rounded-t-xl p-2.5 sm:p-3 z-10">
+              <p className="text-xs leading-tight text-yellow-900">
                 ⚠️ You have an active {conflict.existing_subscription.billing_period_display.toLowerCase()} subscription ({conflict.existing_subscription.plan_name}).
                 Please wait until it expires before purchasing another recurring plan.
                 {conflict.existing_subscription.end_date && (
-                  <span className="font-medium"> Expires: {new Date(conflict.existing_subscription.end_date).toLocaleDateString()}</span>
+                  <span className="font-medium block sm:inline sm:ml-1 mt-1 sm:mt-0">Expires: {new Date(conflict.existing_subscription.end_date).toLocaleDateString()}</span>
                 )}
               </p>
             </div>
           )}
           
-          <div className={`p-6 ${hasRecurringConflict && !isCurrentPlan ? 'pt-16' : ''}`}>
+          <div className={`p-4 sm:p-5 lg:p-6 ${hasRecurringConflict && !isCurrentPlan ? 'pt-14 sm:pt-16' : ''}`}>
             {/* Plan Name */}
-            <h3 className="text-lg font-bold text-white mb-1">{plan.name}</h3>
-            <p className="text-sm text-gray-300 mb-6 min-h-[40px]">{plan.description}</p>
+            <h3 className="text-base sm:text-lg font-bold text-white mb-1">{plan.name}</h3>
+            <p className="text-xs sm:text-sm text-gray-300 mb-4 sm:mb-6 min-h-[32px] sm:min-h-[40px] line-clamp-2">{plan.description}</p>
 
             {/* Price */}
-            <div className="mb-6">
+            <div className="mb-4 sm:mb-6">
               {rateLoading && currency !== 'USD' ? (
-                <div className="h-12 bg-white/10 animate-pulse rounded"></div>
+                <div className="h-10 sm:h-12 bg-white/10 animate-pulse rounded"></div>
               ) : (
                 <>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-bold text-white">
+                    <span className="text-2xl sm:text-3xl font-bold text-white">
                       {formatCurrency(displayPrice, currency).split('.')[0]}
                     </span>
                     {plan.billing_period !== 'lifetime' && (
-                      <span className="text-sm text-gray-400">
+                      <span className="text-xs sm:text-sm text-gray-400">
                       /{plan.billing_period.replace('ly', '')}
                     </span>
                   )}
@@ -299,13 +299,13 @@ export default function PricingCards({
             <div className="space-y-2">
               <button
                 disabled
-                className="w-full py-2.5 px-4 rounded-lg font-semibold text-sm bg-gray-100 text-gray-700 cursor-not-allowed"
+                className="w-full py-2 sm:py-2.5 px-3 sm:px-4 rounded-lg font-semibold text-xs sm:text-sm bg-gray-100 text-gray-700 cursor-not-allowed"
               >
                 Active Plan
               </button>
               <a
                 href="/subscriptions"
-                className="block w-full py-2 text-center text-[#00B38F] hover:text-[#00A87D] text-sm font-medium transition-colors"
+                className="block w-full py-1.5 sm:py-2 text-center text-[#00B38F] hover:text-[#00A87D] text-xs sm:text-sm font-medium transition-colors"
               >
                 Manage Subscription →
               </a>
@@ -314,7 +314,7 @@ export default function PricingCards({
             <div className="relative group">
               <button
                 disabled
-                className="w-full py-2.5 px-4 rounded-lg font-semibold text-sm bg-gray-200 text-gray-500 cursor-not-allowed opacity-60"
+                className="w-full py-2 sm:py-2.5 px-3 sm:px-4 rounded-lg font-semibold text-xs sm:text-sm bg-gray-200 text-gray-500 cursor-not-allowed opacity-60"
               >
                 Not Available
               </button>
@@ -330,15 +330,15 @@ export default function PricingCards({
             <>
               <button
                 onClick={() => onPlanSelect?.(plan)}
-                className="w-full py-2.5 px-4 rounded-lg font-semibold text-sm transition-all duration-200 bg-gradient-to-r from-[#00B38F] to-[#00B39F] text-white hover:from-[#00A87D] hover:to-[#00A58D] shadow-sm"
+                className="w-full py-2 sm:py-2.5 px-3 sm:px-4 rounded-lg font-semibold text-xs sm:text-sm transition-all duration-200 bg-gradient-to-r from-[#00B38F] to-[#00B39F] text-white hover:from-[#00A87D] hover:to-[#00A58D] shadow-sm"
               >
                 {plan.billing_period === 'lifetime' ? 'Get Lifetime Access' : 'Get Started'}
               </button>
               
               {/* Lifetime Plan Info when user has recurring subscription */}
               {plan.billing_period === 'lifetime' && conflict?.existing_subscription && !hasRecurringConflict && (
-                <div className="mt-3 bg-blue-50/10 border border-blue-400/30 rounded-lg p-2">
-                  <p className="text-xs text-blue-200 leading-tight">
+                <div className="mt-2.5 sm:mt-3 bg-blue-50/10 border border-blue-400/30 rounded-lg p-2">
+                  <p className="text-xs leading-tight text-blue-200">
                     💡 Lifetime access works alongside your {conflict.existing_subscription.billing_period_display.toLowerCase()} subscription
                   </p>
                 </div>
@@ -347,19 +347,19 @@ export default function PricingCards({
           )}
           
             {/* Features */}
-            <div className="mt-6 pt-6 border-t border-white/10">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-4">
+            <div className="mt-4 sm:mt-5 lg:mt-6 pt-4 sm:pt-5 lg:pt-6 border-t border-white/10">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3 sm:mb-4">
                 What's included
               </p>
-              <div className="space-y-3">
+              <div className="space-y-2.5 sm:space-y-3">
                 {plan.features && plan.features.length > 0 ? (
                   plan.features
                     .sort((a, b) => a.sort_order - b.sort_order)
                     .slice(0, 6)
                     .map((feature) => (
-                      <div key={feature.id} className="flex items-start gap-2.5">
+                      <div key={feature.id} className="flex items-start gap-2">
                         <svg 
-                          className="w-5 h-5 text-[#00B38F] flex-shrink-0 mt-0.5" 
+                          className="w-4 h-4 sm:w-5 sm:h-5 text-[#00B38F] flex-shrink-0 mt-0.5" 
                           fill="currentColor" 
                           viewBox="0 0 20 20"
                         >
@@ -369,18 +369,18 @@ export default function PricingCards({
                             clipRule="evenodd" 
                           />
                         </svg>
-                        <span className="text-sm text-gray-200 leading-tight">
+                        <span className="text-xs sm:text-sm text-gray-200 leading-tight">
                           {feature.name}
                         </span>
                       </div>
                     ))
                 ) : (
-                  <div className="text-center text-gray-400 text-sm py-2">
+                  <div className="text-center text-gray-400 text-xs sm:text-sm py-2">
                     Contact for details
                   </div>
                 )}
                 {plan.features && plan.features.length > 6 && (
-                  <p className="text-xs text-gray-400 pl-7">
+                  <p className="text-xs text-gray-400 pl-6">
                     + {plan.features.length - 6} more features
                   </p>
                 )}
