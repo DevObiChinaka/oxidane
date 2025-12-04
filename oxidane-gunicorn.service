@@ -1,17 +1,16 @@
 [Unit]
-Description=Oxidane Django Application
+Description=Oxidane Gunicorn (C1 Optimized)
 After=network.target
 
 [Service]
 User=oxidane
 Group=oxidane
 WorkingDirectory=/var/www/oxidane/backend
-Environment=PATH=/var/www/oxidane/venv/bin
-EnvironmentFile=/var/www/oxidane/.env
-ExecStart=/var/www/oxidane/venv/bin/gunicorn --workers 3 --bind 127.0.0.1:8000 oxidane.wsgi:application
-ExecReload=/bin/kill -s HUP $MAINPID
-Restart=on-failure
-RestartSec=10
+Environment="PATH=/var/www/oxidane/venv/bin"
+Environment="ENCRYPTION_KEY=hLwK0race8TsEQFV8WySAOX7aWvCOqMgl8Nw5TopAFE="
+EnvironmentFile=/var/www/oxidane/backend/.env
+ExecStart=/var/www/oxidane/venv/bin/gunicorn --workers 2 --threads 2 --timeout 30 --bind 127.0.0.1:8000 --access-logfile /var/log/oxidane/gunicorn-access.log --error-logfile /var/log/oxidane/gunicorn-error.log oxidane.wsgi:application
+Restart=always
 
 [Install]
 WantedBy=multi-user.target

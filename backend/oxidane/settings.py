@@ -248,18 +248,22 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 # CORS settings for frontend communication
-CORS_ALLOWED_ORIGINS = os.getenv(
-    'CORS_ALLOWED_ORIGINS',
-    'http://localhost:3000,http://127.0.0.1:3000,https://oxiworldforexacademy.com,https://www.oxiworldforexacademy.com'
-).split(',')
+CORS_ALLOWED_ORIGINS = [
+    origin.strip() for origin in os.getenv(
+        'CORS_ALLOWED_ORIGINS',
+        'http://localhost:3000,http://127.0.0.1:3000,https://oxiworldforexacademy.com,https://www.oxiworldforexacademy.com'
+    ).split(',')
+]
 
 CORS_ALLOW_CREDENTIALS = True
 
 # CSRF trusted origins for cross-domain requests
-CSRF_TRUSTED_ORIGINS = os.getenv(
-    'CSRF_TRUSTED_ORIGINS',
-    'https://oxiworldforexacademy.com,https://www.oxiworldforexacademy.com'
-).split(',')
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip() for origin in os.getenv(
+        'CSRF_TRUSTED_ORIGINS',
+        'https://oxiworldforexacademy.com,https://www.oxiworldforexacademy.com'
+    ).split(',')
+]
 
 # Allow specific headers for OAuth
 CORS_ALLOW_HEADERS = [
