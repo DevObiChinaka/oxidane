@@ -251,9 +251,10 @@ def admin_verify_otp_jwt(request):
                 'location': login_ip,
             }
             
-            # Use admin signin notification template
+            # Use admin signin notification template - specifically the success template, not OTP
             result = email_service.send_email(
                 template_type='signin_notification',
+                template_name='Admin Login Success - Welcome Back',  # Specify exact template name
                 recipient_email=user.email,
                 user=user,
                 custom_vars=context
