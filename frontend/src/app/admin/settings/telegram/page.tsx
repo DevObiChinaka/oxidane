@@ -1246,73 +1246,81 @@ export default function TelegramConfigurationPage() {
           <div className="space-y-4">
             {groups.map(group => (
               <div key={group.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900">{group.name}</h3>
-                      <span className={`text-xs font-semibold ${
-                        group.is_active ? 'text-green-700' : 'text-gray-500'
+                {/* Mobile & Desktop Layout */}
+                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    {/* Header */}
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-900 break-words">{group.name}</h3>
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded ${
+                        group.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
                       }`}>
                         {group.is_active ? 'Active' : 'Inactive'}
                       </span>
                       {group.is_private && (
-                        <span className="text-xs font-semibold text-blue-700">
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded bg-blue-100 text-blue-700">
                           Private
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-gray-600 mb-3">{group.description || 'No description'}</p>
-                    <div className="grid grid-cols-3 gap-4 text-sm">
-                      <div>
-                        <p className="text-gray-500">Chat ID</p>
-                        <p className="font-mono text-gray-900">{group.chat_id}</p>
+                    
+                    {/* Description */}
+                    <p className="text-sm text-gray-600 mb-3 break-words">{group.description || 'No description'}</p>
+                    
+                    {/* Stats Grid - Responsive */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
+                      <div className="bg-gray-50 p-2 rounded">
+                        <p className="text-gray-500 text-xs mb-0.5">Chat ID</p>
+                        <p className="font-mono text-gray-900 text-xs sm:text-sm truncate">{group.chat_id}</p>
                       </div>
-                      <div>
-                        <p className="text-gray-500">Members</p>
+                      <div className="bg-gray-50 p-2 rounded">
+                        <p className="text-gray-500 text-xs mb-0.5">Members</p>
                         <p className="font-semibold text-gray-900">
                           {group.member_count}{group.max_members ? ` / ${group.max_members}` : ''}
                         </p>
                       </div>
-                      <div>
-                        <p className="text-gray-500">Last Sync</p>
-                        <p className="text-gray-900">
+                      <div className="bg-gray-50 p-2 rounded">
+                        <p className="text-gray-500 text-xs mb-0.5">Last Sync</p>
+                        <p className="text-gray-900 text-xs sm:text-sm">
                           {group.last_sync_at ? new Date(group.last_sync_at).toLocaleDateString() : 'Never'}
                         </p>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 ml-4">
+                  
+                  {/* Action Buttons - Mobile Stack, Desktop Row */}
+                  <div className="flex flex-col sm:flex-row lg:flex-col gap-2 sm:gap-2 lg:gap-2 lg:ml-4">
                     <button
                       onClick={() => handleSyncMembers(group.id)}
                       disabled={syncingGroupId === group.id}
-                      className="px-3 py-1.5 text-sm text-brand-teal border border-brand-teal/30 rounded-lg hover:bg-brand-teal/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      className="w-full sm:flex-1 lg:w-auto px-3 py-2 text-sm text-brand-teal border border-brand-teal/30 rounded-lg hover:bg-brand-teal/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 whitespace-nowrap"
                       title="Sync member count from Telegram"
                     >
                       {syncingGroupId === group.id ? (
                         <>
-                          <ArrowPathIcon className="w-4 h-4 animate-spin" strokeWidth={2} />
+                          <ArrowPathIcon className="w-4 h-4 animate-spin flex-shrink-0" strokeWidth={2} />
                           <span>Syncing...</span>
                         </>
                       ) : (
                         <>
-                          <ArrowPathIcon className="w-4 h-4" strokeWidth={2} />
+                          <ArrowPathIcon className="w-4 h-4 flex-shrink-0" strokeWidth={2} />
                           <span>Sync</span>
                         </>
                       )}
                     </button>
                     <button
                       onClick={() => handleOpenGroupModal(group)}
-                      className="px-3 py-1.5 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
+                      className="w-full sm:flex-1 lg:w-auto px-3 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
                     >
-                      <PencilIcon className="w-4 h-4" strokeWidth={2} />
-                      Edit
+                      <PencilIcon className="w-4 h-4 flex-shrink-0" strokeWidth={2} />
+                      <span>Edit</span>
                     </button>
                     <button
                       onClick={() => handleDeleteGroup(group.id)}
-                      className="px-3 py-1.5 text-sm text-red-700 border border-red-300 rounded-lg hover:bg-red-50 transition-colors flex items-center gap-2"
+                      className="w-full sm:flex-1 lg:w-auto px-3 py-2 text-sm text-red-700 border border-red-300 rounded-lg hover:bg-red-50 transition-colors flex items-center justify-center gap-2"
                     >
-                      <TrashIcon className="w-4 h-4" strokeWidth={2} />
-                      Delete
+                      <TrashIcon className="w-4 h-4 flex-shrink-0" strokeWidth={2} />
+                      <span>Delete</span>
                     </button>
                   </div>
                 </div>

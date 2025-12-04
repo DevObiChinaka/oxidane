@@ -115,46 +115,46 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gray-50 p-3 sm:p-6">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600 mt-1">Monitor platform performance and metrics</p>
+        <div className="px-2 sm:px-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-1">Monitor platform performance and metrics</p>
         </div>
 
         {/* Platform Health Status */}
         {setupStatus && (
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+          <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
                   setupStatus.setup_complete 
                     ? 'bg-teal-50' 
                     : 'bg-gray-100'
                 }`}>
                   {setupStatus.setup_complete ? (
-                    <svg className="w-6 h-6 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   ) : (
-                    <svg className="w-6 h-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
                   )}
                 </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900">
                     Platform Setup {setupStatus.setup_complete ? 'Complete' : 'In Progress'}
                   </h3>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-xs sm:text-sm text-gray-600">
                     {setupStatus.summary.completed_checks} of {setupStatus.summary.total_checks} components configured
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-6">
+              <div className="flex items-center justify-between sm:justify-end gap-4 sm:gap-6">
                 <div className="text-right">
-                  <div className="text-3xl font-bold text-gray-900">
+                  <div className="text-2xl sm:text-3xl font-bold text-gray-900">
                     {setupStatus.completion_percentage}%
                   </div>
                   <div className="text-xs text-gray-600">
@@ -164,7 +164,7 @@ export default function AdminDashboard() {
                 {!setupStatus.setup_complete && (
                   <button
                     onClick={() => router.push('/admin/setup')}
-                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium transition-colors"
+                    className="px-3 sm:px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm rounded-lg font-medium transition-colors whitespace-nowrap"
                   >
                     Complete Setup
                   </button>
@@ -175,7 +175,7 @@ export default function AdminDashboard() {
         )}
 
         {/* Key Metrics Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {/* Total Users */}
           <MetricCard
             title="Total Users"
@@ -230,59 +230,59 @@ export default function AdminDashboard() {
         </div>
 
         {/* Revenue & Engagement Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-6">
           {/* Revenue Overview */}
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-900">Revenue Overview</h3>
+          <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900">Revenue Overview</h3>
               <button
                 onClick={() => router.push('/admin/subscriptions-management')}
-                className="text-sm text-[#00B38F] hover:text-[#00A87D] font-medium"
+                className="text-xs sm:text-sm text-[#00B38F] hover:text-[#00A87D] font-medium whitespace-nowrap"
               >
                 View All →
               </button>
             </div>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center">
-                    <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="space-y-3 sm:space-y-4">
+              <div className="flex items-center justify-between py-2 sm:py-3 border-b border-gray-100">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
-                  <div>
-                    <div className="text-sm text-gray-600">Total Revenue</div>
-                    <div className="text-xl font-semibold text-gray-900">
+                  <div className="min-w-0">
+                    <div className="text-xs sm:text-sm text-gray-600">Total Revenue</div>
+                    <div className="text-base sm:text-xl font-semibold text-gray-900 truncate">
                       ${(subscriptionStats?.total_revenue_usd || 0).toFixed(2)}
                     </div>
                   </div>
                 </div>
               </div>
-              <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center">
-                    <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="flex items-center justify-between py-2 sm:py-3 border-b border-gray-100">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
                   </div>
-                  <div>
-                    <div className="text-sm text-gray-600">This Month</div>
-                    <div className="text-xl font-semibold text-gray-900">
+                  <div className="min-w-0">
+                    <div className="text-xs sm:text-sm text-gray-600">This Month</div>
+                    <div className="text-base sm:text-xl font-semibold text-gray-900 truncate">
                       ${(subscriptionStats?.recent_revenue_30d || 0).toFixed(2)}
                     </div>
                   </div>
                 </div>
               </div>
-              <div className="flex items-center justify-between py-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center">
-                    <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="flex items-center justify-between py-2 sm:py-3">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                     </svg>
                   </div>
-                  <div>
-                    <div className="text-sm text-gray-600">Active Subscribers</div>
-                    <div className="text-xl font-semibold text-gray-900">
+                  <div className="min-w-0">
+                    <div className="text-xs sm:text-sm text-gray-600">Active Subscribers</div>
+                    <div className="text-base sm:text-xl font-semibold text-gray-900 truncate">
                       {subscriptionStats?.active_count || 0}
                     </div>
                   </div>
@@ -292,38 +292,38 @@ export default function AdminDashboard() {
           </div>
 
           {/* Learning Engagement */}
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-900">Learning Engagement</h3>
+          <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900">Learning Engagement</h3>
               <button
                 onClick={() => router.push('/admin/courses')}
-                className="text-sm text-[#00B38F] hover:text-[#00A87D] font-medium"
+                className="text-xs sm:text-sm text-[#00B38F] hover:text-[#00A87D] font-medium whitespace-nowrap"
               >
                 View Courses →
               </button>
             </div>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                <span className="text-gray-600">Total Enrollments</span>
-                <span className="font-semibold text-gray-900">
+            <div className="space-y-3 sm:space-y-4">
+              <div className="flex items-center justify-between py-2 sm:py-3 border-b border-gray-100">
+                <span className="text-xs sm:text-sm text-gray-600 min-w-0 truncate pr-2">Total Enrollments</span>
+                <span className="text-sm sm:text-base font-semibold text-gray-900 flex-shrink-0">
                   {dashboardMetrics?.engagement?.total_enrollments || 0}
                 </span>
               </div>
-              <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                <span className="text-gray-600">Active Learners</span>
-                <span className="font-semibold text-gray-900">
+              <div className="flex items-center justify-between py-2 sm:py-3 border-b border-gray-100">
+                <span className="text-xs sm:text-sm text-gray-600 min-w-0 truncate pr-2">Active Learners</span>
+                <span className="text-sm sm:text-base font-semibold text-gray-900 flex-shrink-0">
                   {dashboardMetrics?.engagement?.active_learners || 0}
                 </span>
               </div>
-              <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                <span className="text-gray-600">Completed Courses</span>
-                <span className="font-semibold text-gray-900">
+              <div className="flex items-center justify-between py-2 sm:py-3 border-b border-gray-100">
+                <span className="text-xs sm:text-sm text-gray-600 min-w-0 truncate pr-2">Completed Courses</span>
+                <span className="text-sm sm:text-base font-semibold text-gray-900 flex-shrink-0">
                   {dashboardMetrics?.engagement?.completed_courses || 0}
                 </span>
               </div>
-              <div className="flex items-center justify-between py-3">
-                <span className="text-gray-600">Avg. Completion Rate</span>
-                <span className="font-semibold text-gray-900">
+              <div className="flex items-center justify-between py-2 sm:py-3">
+                <span className="text-xs sm:text-sm text-gray-600 min-w-0 truncate pr-2">Avg. Completion Rate</span>
+                <span className="text-sm sm:text-base font-semibold text-gray-900 flex-shrink-0">
                   {dashboardMetrics?.engagement?.avg_completion_rate || 0}%
                 </span>
               </div>
@@ -332,9 +332,9 @@ export default function AdminDashboard() {
         </div>
 
         {/* Quick Actions */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Quick Actions</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             <QuickActionButton
               label="Manage Users"
               icon={
@@ -394,19 +394,19 @@ function MetricCard({
   trend?: string;
 }) {
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-5">
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <p className="text-sm font-medium text-gray-600">{title}</p>
-          <p className="text-2xl font-bold text-gray-900 mt-2">{value.toLocaleString()}</p>
+    <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">{title}</p>
+          <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1 sm:mt-2">{value.toLocaleString()}</p>
           {subtitle && (
-            <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1 truncate">{subtitle}</p>
           )}
           {trend && (
-            <p className="text-xs text-[#00B38F] mt-2">{trend}</p>
+            <p className="text-xs text-[#00B38F] mt-1 sm:mt-2 truncate">{trend}</p>
           )}
         </div>
-        <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center flex-shrink-0">
+        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-50 rounded-lg flex items-center justify-center flex-shrink-0">
           {icon}
         </div>
       </div>
@@ -427,14 +427,14 @@ function QuickActionButton({
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center justify-center p-4 rounded-lg border border-gray-200 hover:border-[#00B38F] hover:bg-gray-50 transition-all group"
+      className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-lg border border-gray-200 hover:border-[#00B38F] hover:bg-gray-50 transition-all group"
     >
-      <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mb-2 group-hover:bg-[#00B38F] transition-colors">
+      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-100 rounded-lg flex items-center justify-center mb-2 group-hover:bg-[#00B38F] transition-colors">
         <div className="text-gray-600 group-hover:text-white transition-colors">
           {icon}
         </div>
       </div>
-      <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">
+      <span className="text-xs sm:text-sm font-medium text-gray-700 group-hover:text-gray-900 text-center">
         {label}
       </span>
     </button>
