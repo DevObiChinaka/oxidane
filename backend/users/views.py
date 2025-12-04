@@ -101,7 +101,7 @@ def send_signin_notification_email(user, signin_details=None, request=None):
         
         # Extract device and location info if request is available
         device = 'Unknown Device'
-        location = 'Unknown Location'
+        ip_address = 'Unknown'
         
         if request:
             user_agent = request.META.get('HTTP_USER_AGENT', '')
@@ -113,18 +113,17 @@ def send_signin_notification_email(user, signin_details=None, request=None):
             else:
                 device = 'Desktop/Laptop'
                 
-            # Get IP for location (basic)
-            ip_address = request.META.get('REMOTE_ADDR', 'Unknown')
-            location = f"IP: {ip_address}"
+            # Get IP address (check X-Forwarded-For first for proxied requests)
+            ip_address = request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip() or request.META.get('REMOTE_ADDR', 'Unknown')
         
         # Use user_signin_notification template (not admin signin_notification)
         context = {
             'signin_datetime': current_time,
             'signin_method': signin_method,
             'device': device,
-            'location': location,
+            'location': ip_address,  # Use IP as location
             'login_time': current_time,
-            'login_ip': location,
+            'login_ip': ip_address,  # Actual IP address, not "Unknown Location"
         }
         
         result = email_service.send_email(

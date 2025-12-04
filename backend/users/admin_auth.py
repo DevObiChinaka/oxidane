@@ -226,33 +226,48 @@ def admin_verify_otp_jwt(request):
         # Clear OTP from cache
         cache.delete(cache_key)
         
-        # Send successful login notification
+        # Send successful login notification using EmailTemplateService
         try:
+            from .email_service import EmailTemplateService
+            email_service = EmailTemplateService()
+            
             login_ip = request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0] or request.META.get('REMOTE_ADDR', 'Unknown')
-            login_time = timezone.now().strftime('%B %d, %Y at %I:%M %p UTC')
+            login_time = timezone.now().strftime('%B %d, %Y at %I:%M %p')
             
-            success_subject = 'Admin Login Successful'
-            success_message = f"""
-            Hello {user.first_name or user.username},
+            # Get device info
+            user_agent = request.META.get('HTTP_USER_AGENT', '')
+            if 'Mobile' in user_agent:
+                device = 'Mobile Device'
+            elif 'Tablet' in user_agent:
+                device = 'Tablet'
+            else:
+                device = 'Desktop/Laptop'
             
-            You have successfully logged in to the OxiWorld Admin Dashboard.
+            context = {
+                'login_time': login_time,
+                'login_ip': login_ip,
+                'signin_datetime': login_time,
+                'device': device,
+                'location': login_ip,
+            }
             
-            Login Time: {login_time}
-            Login IP: {login_ip}
-            
-            If this wasn't you, please change your password immediately.
-            
-            Best regards,
-            OxiWorld Forex Academy Team
-            """
-            
-            send_mail(
-                subject=success_subject,
-                message=success_message,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[user.email],
-                fail_silently=True,
+            # Use admin signin notification template
+            result = email_service.send_email(
+                template_type='signin_notification',
+                recipient_email=user.email,
+                user=user,
+                custom_vars=context
             )
+            
+            if not result or not result.get('success'):
+                # Fallback to plain email if template fails
+                send_mail(
+                    subject='Admin Login Successful',
+                    message=f"Hello {user.first_name or user.username},\n\nYou have successfully logged in.\n\nLogin Time: {login_time}\nLogin IP: {login_ip}",
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[user.email],
+                    fail_silently=True,
+                )
         except Exception as e:
             logger.error(f"Failed to send login success notification: {str(e)}")
         
