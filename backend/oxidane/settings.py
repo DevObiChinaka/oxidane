@@ -409,7 +409,7 @@ CACHES = {
 # ========================================
 # Fernet encryption key for sensitive data (tokens, API keys, passwords)
 # MUST be loaded from environment variable - see below for validation
-# ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY')  # Set in .env file
+ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY')  # Set in .env file
 
 # ========================================
 # MONITORING & LOGGING
