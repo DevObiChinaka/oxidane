@@ -1213,13 +1213,34 @@ class TelegramConfigurationViewSet(viewsets.ViewSet):
                     for group in existing_groups if group['chat_id']
                 ]
                 
-                return Response({
-                    'success': True,
-                    'message': f'Webhook is active. Showing {len(chats_list)} configured groups',
-                    'chats': chats_list,
-                    'hint': 'Add groups manually using the chat ID. To discover new groups, temporarily disable the webhook.',
-                    'webhook_active': True
-                }, status=status.HTTP_200_OK)
+                if len(chats_list) == 0:
+                    # No groups found - provide helpful instructions
+                    return Response({
+                        'success': False,
+                        'message': 'Webhook is active - automatic discovery unavailable',
+                        'chats': [],
+                        'webhook_active': True,
+                        'instructions': {
+                            'title': 'Add Groups Manually',
+                            'steps': [
+                                '1. Add your bot to the Telegram group',
+                                '2. Send any message in the group',
+                                '3. Visit: https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates',
+                                '4. Find the "chat" object and copy the "id" (negative number)',
+                                '5. Go to Telegram Groups page and click "Add Group"',
+                                '6. Enter the Chat ID and group details'
+                            ],
+                            'note': 'The webhook is configured for real-time updates. To use auto-discovery, you would need to temporarily disable the webhook.'
+                        }
+                    }, status=status.HTTP_200_OK)
+                else:
+                    return Response({
+                        'success': True,
+                        'message': f'Webhook is active. Showing {len(chats_list)} configured groups',
+                        'chats': chats_list,
+                        'hint': 'Add more groups manually using the chat ID. Auto-discovery requires webhook to be disabled.',
+                        'webhook_active': True
+                    }, status=status.HTTP_200_OK)
             elif response.status_code == 401:
                 return Response({
                     'success': False,

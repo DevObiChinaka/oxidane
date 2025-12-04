@@ -135,6 +135,8 @@ export default function TelegramConfigurationPage() {
   const [discoveredChats, setDiscoveredChats] = useState<DiscoveredChat[]>([]);
   const [discovering, setDiscovering] = useState(false);
   const [copiedChatId, setCopiedChatId] = useState<string | null>(null);
+  const [webhookActive, setWebhookActive] = useState(false);
+  const [webhookInstructions, setWebhookInstructions] = useState<any>(null);
 
   useEffect(() => {
     loadConfiguration();
@@ -517,13 +519,24 @@ export default function TelegramConfigurationPage() {
 
       const data = await response.json();
       
-      if (data.success) {
-        setDiscoveredChats(data.chats);
+      // Handle both success and webhook-active scenarios
+      if (data.success || data.webhook_active) {
+        setDiscoveredChats(data.chats || []);
+        setWebhookActive(data.webhook_active || false);
+        setWebhookInstructions(data.instructions || null);
         setShowDiscoverModal(true);
-        setMessage({
-          type: 'success',
-          text: `✅ ${data.message}. ${data.hint || ''}`
-        });
+        
+        if (data.success) {
+          setMessage({
+            type: 'success',
+            text: `✅ ${data.message}. ${data.hint || ''}`
+          });
+        } else if (data.webhook_active) {
+          setMessage({
+            type: 'warning',
+            text: `⚠️ ${data.message}`
+          });
+        }
       } else {
         setMessage({
           type: 'error',
@@ -1492,17 +1505,72 @@ export default function TelegramConfigurationPage() {
             
             <div className="flex-1 overflow-y-auto p-6">
               {discoveredChats.length === 0 ? (
-                <div className="text-center py-16">
-                  <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">No Groups Found</h3>
-                  <p className="text-gray-600 max-w-md mx-auto">
-                    No groups or channels were discovered. Make sure your bot is added to a group and 
-                    send a test message in that group, then try discovering again.
-                  </p>
+                <div className="text-center py-8">
+                  {webhookActive && webhookInstructions ? (
+                    <div className="max-w-3xl mx-auto">
+                      <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg className="w-10 h-10 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <h3 className="text-2xl font-bold text-gray-900 mb-3">{webhookInstructions.title}</h3>
+                      <p className="text-gray-600 mb-6">
+                        Webhook is active for real-time updates. Automatic discovery is unavailable.
+                      </p>
+                      
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-left mb-6">
+                        <h4 className="font-semibold text-blue-900 mb-4 flex items-center gap-2">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                          </svg>
+                          Follow these steps:
+                        </h4>
+                        <ol className="space-y-3">
+                          {webhookInstructions.steps.map((step: string, index: number) => (
+                            <li key={index} className="flex items-start gap-3">
+                              <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                                {index + 1}
+                              </span>
+                              <span className="text-gray-700 pt-0.5">{step.replace(/^\d+\.\s*/, '')}</span>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                      
+                      {webhookInstructions.note && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                          <p className="text-sm text-amber-800">
+                            <strong>Note:</strong> {webhookInstructions.note}
+                          </p>
+                        </div>
+                      )}
+                      
+                      <div className="mt-6">
+                        <button
+                          onClick={() => setShowDiscoverModal(false)}
+                          className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-md hover:shadow-lg"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                          </svg>
+                          Got it, close
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-900 mb-2">No Groups Found</h3>
+                      <p className="text-gray-600 max-w-md mx-auto">
+                        No groups or channels were discovered. Make sure your bot is added to a group and 
+                        send a test message in that group, then try discovering again.
+                      </p>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="overflow-x-auto">
