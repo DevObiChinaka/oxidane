@@ -8,13 +8,13 @@ load_dotenv()
 
 # Email configuration - Real SMTP (Gmail SSL)
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 465  # SSL port (working)
-EMAIL_USE_SSL = True  # Use SSL instead of TLS
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', '465'))  # SSL port (working)
+EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'True') == 'True'
 EMAIL_TIMEOUT = 30
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'oxiworldforexacademy@gmail.com')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', 'alhe mqzv yjra hqej')
-DEFAULT_FROM_EMAIL = f'OxiWorld Forex Academy <{EMAIL_HOST_USER}>' if EMAIL_HOST_USER else 'OxiWorld Forex Academy <oxiworldforexacademy@gmail.com>'
+DEFAULT_FROM_EMAIL = f'OxiWorld Forex Academy <{EMAIL_HOST_USER}>'
 
 # Backup: Console output for debugging
 # EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
