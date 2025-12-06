@@ -126,6 +126,7 @@ export const API_ENDPOINTS = {
     
     // Currency
     currencyConvert: `${API_BASE_URL}/v1/currency/convert/`,
+    currencyRates: `${API_BASE_URL}/v1/currency/rates/`,
   },
 
   // Checkout
