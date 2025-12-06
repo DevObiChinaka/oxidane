@@ -433,6 +433,7 @@ class EmailTemplate(models.Model):
         ('telegram_removed', 'Telegram Group Removed'),
         ('signin_notification', 'Sign-in Notification'),
         ('password_reset', 'Password Reset'),
+        ('password_changed', 'Password Changed Notification'),
         ('email_verification', 'Email Verification'),
         ('custom', 'Custom Template'),
     ]

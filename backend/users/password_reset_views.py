@@ -9,8 +9,12 @@ from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from django.conf import settings
+from django.utils import timezone
 from .otp_manager import OTPManager, PasswordResetManager
+import logging
 
+logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
@@ -315,6 +319,42 @@ def change_password(request):
     # Set new password
     user.set_password(new_password)
     user.save()
+    
+    # Send password change notification email
+    try:
+        from .email_service import EmailTemplateService
+        email_service = EmailTemplateService()
+        
+        # Get request details
+        change_ip = request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip() or request.META.get('REMOTE_ADDR', 'Unknown')
+        change_time = timezone.now().strftime('%B %d, %Y at %I:%M %p')
+        
+        # Get device info
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
+        if 'Mobile' in user_agent:
+            device = 'Mobile Device'
+        elif 'Tablet' in user_agent:
+            device = 'Tablet'
+        else:
+            device = 'Desktop/Laptop'
+        
+        context = {
+            'change_time': change_time,
+            'change_ip': change_ip,
+            'device': device,
+            'dashboard_url': f"{settings.FRONTEND_URL}/dashboard",
+            'support_email': 'support@oxiworldforexacademy.com',
+        }
+        
+        # Send notification
+        email_service.send_email(
+            template_type='password_changed',
+            recipient_email=user.email,
+            user=user,
+            custom_vars=context
+        )
+    except Exception as e:
+        logger.error(f"Failed to send password change notification: {str(e)}")
     
     return Response({
         'success': True,
