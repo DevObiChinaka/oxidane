@@ -37,8 +37,8 @@ export default function Navigation() {
                 <Image
                   src="/logo_bright.png"
                   alt="OxiWorld Forex Academy Logo"
-                  width={64}
-                  height={64}
+                  width={80}
+                  height={80}
                   className="object-contain transition-all duration-200 group-hover:scale-105"
                   priority
                 />
