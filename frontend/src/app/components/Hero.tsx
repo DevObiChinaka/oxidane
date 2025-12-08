@@ -142,37 +142,51 @@ export default function Hero() {
           <div className="space-y-6 w-full max-w-full overflow-hidden">
             {/* TradingView Widget with Vertical Pair Selection */}
             <div className="bg-white/8 backdrop-blur-2xl border border-white/15 rounded-2xl p-4 sm:p-5 md:p-6 shadow-2xl">
-              <div className="flex items-center justify-between mb-4 sm:mb-6">
-                <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-white">Live Market Rates</h3>
-                <div className="flex items-center space-x-2 text-xs sm:text-sm text-gray-200 bg-white/5 px-3 py-1 rounded-full backdrop-blur-md border border-white/10">
-                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                  <span>Live • TradingView</span>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-3 sm:gap-0">
+                <div>
+                  <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-white mb-1">Live Market Rates</h3>
+                  <p className="text-xs sm:text-sm text-gray-400 hidden lg:block">Real-time institutional pricing across major pairs</p>
+                </div>
+                <div className="flex items-center space-x-2 text-xs sm:text-sm text-gray-200 bg-white/10 px-4 py-2 rounded-full backdrop-blur-md border border-white/20 shadow-lg">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
+                  <span className="font-semibold">Live • TradingView</span>
                 </div>
               </div>
               
-              <div className="flex flex-col lg:grid lg:grid-cols-3 gap-3 md:gap-4">
+              <div className="flex flex-col lg:grid lg:grid-cols-3 gap-4 lg:gap-6">
                 {/* Pair List */}
-                <div className="lg:col-span-1 grid grid-cols-3 lg:grid-cols-1 gap-2">
+                <div className="lg:col-span-1 grid grid-cols-3 lg:grid-cols-1 gap-2 lg:gap-3">
                   {[
-                    { symbol: 'EURUSD', name: 'EUR/USD', category: 'FX' },
-                    { symbol: 'GBPUSD', name: 'GBP/USD', category: 'FX' },
-                    { symbol: 'USDJPY', name: 'USD/JPY', category: 'FX' },
-                    { symbol: 'USDCAD', name: 'USD/CAD', category: 'FX' },
-                    { symbol: 'AUDUSD', name: 'AUD/USD', category: 'FX' },
-                    { symbol: 'NZDUSD', name: 'NZD/USD', category: 'FX' }
+                    { symbol: 'EURUSD', name: 'EUR/USD', category: 'Major', flag: '🇪🇺/🇺🇸' },
+                    { symbol: 'GBPUSD', name: 'GBP/USD', category: 'Major', flag: '🇬🇧/🇺🇸' },
+                    { symbol: 'USDJPY', name: 'USD/JPY', category: 'Major', flag: '🇺🇸/🇯🇵' },
+                    { symbol: 'USDCAD', name: 'USD/CAD', category: 'Major', flag: '🇺🇸/🇨🇦' },
+                    { symbol: 'AUDUSD', name: 'AUD/USD', category: 'Major', flag: '🇦🇺/🇺🇸' },
+                    { symbol: 'NZDUSD', name: 'NZD/USD', category: 'Major', flag: '🇳🇿/🇺🇸' }
                   ].map((pair) => (
                     <button
                       key={pair.symbol}
                       onClick={() => setSelectedPair(pair.symbol)}
-                      className={`w-full text-center lg:text-left px-2 sm:px-3 md:px-4 py-2 md:py-3 rounded-lg transition-all duration-200 ${
+                      className={`group relative w-full text-center lg:text-left px-3 py-3 lg:py-4 rounded-xl transition-all duration-300 ${
                         selectedPair === pair.symbol
-                          ? 'bg-gradient-to-r from-[#00B38F] to-[#00B39F] text-white shadow-lg ring-2 ring-white/20'
-                          : 'bg-white/5 text-gray-300 hover:bg-white/10 border border-white/10'
+                          ? 'bg-gradient-to-r from-[#00B38F] to-[#00B39F] text-white shadow-xl shadow-[#00B38F]/30 ring-2 ring-white/30 scale-105 lg:scale-100'
+                          : 'bg-white/5 text-gray-300 hover:bg-white/10 border border-white/10 hover:border-white/20 hover:scale-105'
                       }`}
                     >
-                      <div className="font-bold text-xs sm:text-sm">{pair.name}</div>
+                      <div className="flex items-center justify-center lg:justify-start gap-2">
+                        <span className="text-base lg:text-lg hidden lg:inline">{pair.flag}</span>
+                        <div>
+                          <div className="font-bold text-xs sm:text-sm lg:text-base">{pair.name}</div>
+                          {selectedPair === pair.symbol && (
+                            <div className="text-xs opacity-90 mt-0.5 hidden lg:block font-normal">Live Chart</div>
+                          )}
+                          {selectedPair !== pair.symbol && (
+                            <div className="text-[10px] opacity-70 mt-0.5 hidden lg:block">{pair.category}</div>
+                          )}
+                        </div>
+                      </div>
                       {selectedPair === pair.symbol && (
-                        <div className="text-xs opacity-90 mt-1 hidden lg:block">Live Chart</div>
+                        <div className="absolute inset-0 bg-gradient-to-r from-[#00B38F]/20 to-[#00B39F]/20 rounded-xl blur-xl -z-10"></div>
                       )}
                     </button>
                   ))}
@@ -180,11 +194,24 @@ export default function Hero() {
 
                 {/* Selected Pair Widget */}
                 <div className="lg:col-span-2">
-                  <div className="bg-white/5 rounded-lg overflow-hidden border border-white/10">
+                  <div className="relative bg-gradient-to-br from-white/10 to-white/5 rounded-2xl overflow-hidden border-2 border-white/20 shadow-2xl">
+                    {/* Chart Header */}
+                    <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/40 to-transparent p-4 z-10">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                          <span className="text-white font-bold text-sm lg:text-base">
+                            {[{ symbol: 'EURUSD', name: 'EUR/USD' }, { symbol: 'GBPUSD', name: 'GBP/USD' }, { symbol: 'USDJPY', name: 'USD/JPY' }, { symbol: 'USDCAD', name: 'USD/CAD' }, { symbol: 'AUDUSD', name: 'AUD/USD' }, { symbol: 'NZDUSD', name: 'NZD/USD' }].find(p => p.symbol === selectedPair)?.name}
+                          </span>
+                        </div>
+                        <span className="text-xs text-gray-300 bg-black/30 px-3 py-1 rounded-full backdrop-blur-sm">1D Chart</span>
+                      </div>
+                    </div>
+                    
                     <iframe 
                       key={selectedPair}
-                      src={`https://www.tradingview-widget.com/embed-widget/mini-symbol-overview/?locale=en#%7B%22symbol%22%3A%22FX:${selectedPair}%22%2C%22width%22%3A%22100%25%22%2C%22height%22%3A%22350%22%2C%22dateRange%22%3A%221D%22%2C%22colorTheme%22%3A%22dark%22%2C%22trendLineColor%22%3A%22rgba(0%2C%20179%2C%20143%2C%201)%22%2C%22underLineColor%22%3A%22rgba(0%2C%20179%2C%20159%2C%200.3)%22%2C%22isTransparent%22%3Atrue%2C%22autosize%22%3Afalse%2C%22largeChartUrl%22%3A%22%22%2C%22utm_source%22%3A%22oxidane.com%22%2C%22utm_medium%22%3A%22widget%22%2C%22utm_campaign%22%3A%22mini-symbol-overview%22%7D`}
-                      className="w-full h-[250px] sm:h-[300px] md:h-[350px] border-0"
+                      src={`https://www.tradingview-widget.com/embed-widget/mini-symbol-overview/?locale=en#%7B%22symbol%22%3A%22FX:${selectedPair}%22%2C%22width%22%3A%22100%25%22%2C%22height%22%3A%22400%22%2C%22dateRange%22%3A%221D%22%2C%22colorTheme%22%3A%22dark%22%2C%22trendLineColor%22%3A%22rgba(0%2C%20179%2C%20143%2C%201)%22%2C%22underLineColor%22%3A%22rgba(0%2C%20179%2C%20159%2C%200.3)%22%2C%22isTransparent%22%3Atrue%2C%22autosize%22%3Afalse%2C%22largeChartUrl%22%3A%22%22%2C%22utm_source%22%3A%22oxidane.com%22%2C%22utm_medium%22%3A%22widget%22%2C%22utm_campaign%22%3A%22mini-symbol-overview%22%7D`}
+                      className="w-full h-[250px] sm:h-[300px] lg:h-[400px] border-0"
                       style={{ background: 'transparent' }}
                       title={`${selectedPair} Chart`}
                     ></iframe>
@@ -192,10 +219,18 @@ export default function Hero() {
                 </div>
               </div>
               
-              <div className="mt-4 pt-4 border-t border-white/10">
-                <p className="text-xs text-gray-300 text-center bg-white/3 px-3 py-2 rounded-lg backdrop-blur-md">
-                  Live data powered by TradingView • Real-time institutional pricing
-                </p>
+              <div className="mt-4 lg:mt-6 pt-4 lg:pt-5 border-t border-white/10">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <p className="text-xs text-gray-300 bg-white/5 px-4 py-2 rounded-lg backdrop-blur-sm border border-white/10">
+                    <span className="font-semibold text-white">TradingView</span> • Real-time institutional pricing
+                  </p>
+                  <div className="flex items-center gap-2 text-xs text-gray-400">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Updated every second</span>
+                  </div>
+                </div>
               </div>
             </div>
 
