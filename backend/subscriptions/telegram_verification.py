@@ -82,7 +82,7 @@ def verify_telegram_username(request):
                 'code': 'BOT_NOT_CONFIGURED'
             }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         
-        bot_token = telegram_config.bot_token
+        bot_token = telegram_config.decrypt_field('bot_token')
         
         # Try to get user info from Telegram API
         chat_response = requests.get(

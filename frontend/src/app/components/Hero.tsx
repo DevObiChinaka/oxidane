@@ -60,14 +60,14 @@ export default function Hero() {
         </div>
 
         {/* Subtle Glow Effects */}
-        <div className="absolute inset-0">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#00B38F]/5 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#000ABE]/5 rounded-full blur-3xl"></div>
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute top-1/4 left-1/4 w-64 h-64 md:w-96 md:h-96 bg-[#00B38F]/5 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-64 h-64 md:w-96 md:h-96 bg-[#000ABE]/5 rounded-full blur-3xl"></div>
         </div>
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 md:pt-20 pb-8 md:pb-16">
-        <div className="grid lg:grid-cols-2 gap-8 md:gap-12 items-center min-h-screen">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 md:pt-20 pb-8 md:pb-16 w-full">
+        <div className="grid lg:grid-cols-2 gap-8 md:gap-12 items-center min-h-screen w-full">
           {/* Left Column - Main Content */}
           <div className="space-y-6 md:space-y-8 text-white">
             {/* Professional Badge */}
@@ -139,7 +139,7 @@ export default function Hero() {
           </div>
 
           {/* Right Column - Live Market Data */}
-          <div className="space-y-6 w-full overflow-hidden">
+          <div className="space-y-6 w-full max-w-full overflow-hidden">
             {/* TradingView Widget with Vertical Pair Selection */}
             <div className="bg-white/8 backdrop-blur-2xl border border-white/15 rounded-2xl p-3 sm:p-4 md:p-6 shadow-2xl">
               <div className="flex items-center justify-between mb-6">

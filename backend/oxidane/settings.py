@@ -356,7 +356,8 @@ if REDIS_URL.startswith('rediss://'):
 # Connection Settings (Reduced for Redis Free Tier - 30 max connections)
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_BROKER_CONNECTION_MAX_RETRIES = 10
-CELERY_BROKER_POOL_LIMIT = 2  # Reduced from 10 to 2 (saves connections)
+CELERY_BROKER_POOL_LIMIT = 1  # Reduced to 1 per worker to save connections
+CELERY_REDIS_MAX_CONNECTIONS = 2  # Maximum connections per worker
 
 # Task Serialization
 CELERY_ACCEPT_CONTENT = ['json']
@@ -393,9 +394,9 @@ CACHES = {
             'SOCKET_CONNECT_TIMEOUT': 5,
             'SOCKET_TIMEOUT': 5,
             'RETRY_ON_TIMEOUT': True,
-            'MAX_CONNECTIONS': 5,  # Reduced from 50 to 5 for free tier
+            'MAX_CONNECTIONS': 3,  # Further reduced to 3 for free tier
             'CONNECTION_POOL_KWARGS': {
-                'max_connections': 5,  # Reduced from 50 to 5
+                'max_connections': 3,
             },
             'IGNORE_EXCEPTIONS': False,  # Show Redis errors to debug
         },

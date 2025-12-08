@@ -119,7 +119,7 @@ export default function TestimonialsCredibility() {
   }, []);
 
   return (
-    <section id="testimonials" className="py-12 md:py-20 bg-white">
+    <section id="testimonials" className="py-12 md:py-20 bg-white overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Real Results */}
         <div className="text-center mb-12 md:mb-16">

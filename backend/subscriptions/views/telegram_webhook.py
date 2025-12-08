@@ -88,7 +88,7 @@ def telegram_webhook(request):
                 config = TelegramConfiguration.get_instance()
                 if config.has_valid_token():
                     import requests as req
-                    bot_token = config.bot_token
+                    bot_token = config.decrypt_field('bot_token')
                     send_url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
                     
                     if response_data.get('success'):
@@ -171,7 +171,7 @@ def set_telegram_webhook(request):
                 'error': 'Telegram bot token not configured'
             }, status=400)
         
-        bot_token = config.bot_token
+        bot_token = config.decrypt_field('bot_token')
         
         # Set webhook
         import requests as req
@@ -219,7 +219,7 @@ def get_webhook_info(request):
                 'error': 'Telegram bot token not configured'
             }, status=400)
         
-        bot_token = config.bot_token
+        bot_token = config.decrypt_field('bot_token')
         
         # Get webhook info
         import requests as req

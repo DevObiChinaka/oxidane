@@ -117,7 +117,7 @@ export default function EducationalValue() {
   };
 
   return (
-    <section id="educational-value" className="py-12 md:py-20 bg-gradient-to-br from-gray-50 to-slate-100">
+    <section id="educational-value" className="py-12 md:py-20 bg-gradient-to-br from-gray-50 to-slate-100 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center space-y-4 md:space-y-6 mb-12 md:mb-16">

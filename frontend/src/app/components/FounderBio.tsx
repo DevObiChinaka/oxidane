@@ -2,12 +2,12 @@
 
 export default function FounderBio() {
   return (
-    <section id="about" className="py-12 md:py-20 bg-gradient-to-br from-gray-50 to-slate-100">
+    <section id="about" className="py-12 md:py-20 bg-gradient-to-br from-gray-50 to-slate-100 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-8 md:gap-12 items-center">
           {/* Left Column - Founder Image */}
-          <div className="relative order-1 lg:order-1">
-            <div className="relative z-10">
+          <div className="relative order-1 lg:order-1 overflow-hidden">
+            <div className="relative z-10 px-2 sm:px-0">
               {/* Profile Image */}
               <div className="aspect-square rounded-2xl bg-gradient-to-br from-[#00B38F] to-[#00B39F] p-1 shadow-2xl overflow-hidden">
                 <div className="w-full h-full rounded-2xl overflow-hidden bg-gray-900">

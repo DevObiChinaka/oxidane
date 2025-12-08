@@ -215,10 +215,17 @@ def activate_subscription(self, payment_id):
             # Mark activation as completed
             payment.mark_activation_completed()
             
-            # Queue email receipt task after successful activation
+            # Queue tasks after successful activation
             transaction.on_commit(
                 lambda: send_payment_receipt_email.delay(payment_id)
             )
+            
+            # Add user to Telegram groups if they have Telegram linked
+            if payment.billing_profile.telegram_user_id:
+                transaction.on_commit(
+                    lambda: add_user_to_telegram_groups.delay(user.id, plan.id)
+                )
+                logger.info(f"[Payment {payment_id}] Queued Telegram group add for user {user.id}")
         
         action = 'Created' if created else 'Updated'
         logger.info(f"[Payment {payment_id}] ✅ {action} subscription {subscription.id} for user {user.id} with plan {plan.name}")
@@ -302,7 +309,7 @@ def add_user_to_telegram_groups(self, user_id, plan_id):
                 logger.warning("Telegram bot token not configured or invalid")
                 return {'success': False, 'error': 'Telegram not configured'}
             
-            bot_token = telegram_config.bot_token
+            bot_token = telegram_config.decrypt_field('bot_token')
             
         except Exception as e:
             logger.error(f"Error getting Telegram configuration: {str(e)}")
@@ -550,7 +557,7 @@ def remove_user_from_telegram_groups(self, user_id, plan_id):
                 logger.warning("Telegram bot token not configured or invalid")
                 return {'success': False, 'error': 'Telegram not configured'}
             
-            bot_token = telegram_config.bot_token
+            bot_token = telegram_config.decrypt_field('bot_token')
             
         except Exception as e:
             logger.error(f"Error getting Telegram configuration: {str(e)}")
@@ -953,7 +960,7 @@ def approve_telegram_join_request(self, chat_id, user_id):
                 logger.error("Telegram bot token not configured")
                 return {'success': False, 'error': 'Telegram not configured'}
             
-            bot_token = telegram_config.bot_token
+            bot_token = telegram_config.decrypt_field('bot_token')
             
         except Exception as e:
             logger.error(f"Error getting Telegram config: {str(e)}")
@@ -1150,9 +1157,13 @@ def process_telegram_updates(self):
                     processed_count += 1
                     continue
         
-        # Save new offset to cache
-        if new_offset > last_offset:
+        # Always save the new offset to prevent reprocessing
+        # If we processed updates, new_offset will be the highest update_id
+        # If no updates, new_offset equals last_offset (no change, but we still save it)
+        if new_offset >= last_offset:
             cache.set(offset_key, new_offset, timeout=None)  # Never expire
+            if new_offset > last_offset:
+                logger.info(f"Updated offset from {last_offset} to {new_offset}")
         
         logger.info(f"Processed {processed_count} Telegram updates")
         return {'success': True, 'processed': processed_count}
