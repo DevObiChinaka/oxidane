@@ -66,10 +66,10 @@ export default function Hero() {
         </div>
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
-        <div className="grid lg:grid-cols-2 gap-12 items-center min-h-screen">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 md:pt-20 pb-8 md:pb-16">
+        <div className="grid lg:grid-cols-2 gap-8 md:gap-12 items-center min-h-screen">
           {/* Left Column - Main Content */}
-          <div className="space-y-8 text-white">
+          <div className="space-y-6 md:space-y-8 text-white">
             {/* Professional Badge */}
             <div className="inline-flex items-center px-4 py-2 bg-white/15 backdrop-blur-xl border border-white/20 rounded-full text-sm font-medium shadow-xl">
               <div className={`w-2 h-2 ${sessionStatus.color} rounded-full mr-2 animate-pulse`}></div>
@@ -77,27 +77,27 @@ export default function Hero() {
             </div>
 
             {/* Main Heading */}
-            <div className="space-y-6">
-              <h1 className="text-5xl lg:text-7xl font-bold leading-relaxed pb-6">
+            <div className="space-y-4 md:space-y-6">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold leading-tight md:leading-relaxed pb-4 md:pb-6">
                 Master Forex Trading
-                <span className="block bg-gradient-to-r from-[#00B38F] to-[#00B39F] bg-clip-text text-transparent pb-3">
+                <span className="block bg-gradient-to-r from-[#00B38F] to-[#00B39F] bg-clip-text text-transparent pb-2 md:pb-3">
                   with OxiWorld Forex Academy
                 </span>
               </h1>
-              <p className="text-xl lg:text-2xl text-gray-300 leading-relaxed max-w-2xl">
+              <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-300 leading-relaxed max-w-2xl">
                 Learn proven trading strategies from a professional forex trader. Join thousands of students mastering SMC, ALGO, and advanced techniques to become consistently profitable traders.
               </p>
             </div>
 
             {/* Professional Statistics */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 py-8">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 py-6 md:py-8">
               <div className="text-center">
-                <div className="text-3xl font-bold text-[#00B39F]">$2.5B+</div>
-                <div className="text-sm text-gray-300">Volume Traded</div>
+                <div className="text-2xl md:text-3xl font-bold text-[#00B39F]">$2.5B+</div>
+                <div className="text-xs md:text-sm text-gray-300">Volume Traded</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-[#00B38F]">78%</div>
-                <div className="text-sm text-gray-300">Success Rate</div>
+                <div className="text-2xl md:text-3xl font-bold text-[#00B38F]">78%</div>
+                <div className="text-xs md:text-sm text-gray-300">Success Rate</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold text-white">5,247</div>
@@ -150,43 +150,41 @@ export default function Hero() {
                 </div>
               </div>
               
-              <div className="grid grid-cols-3 gap-4">
-                {/* Left Side - Pair List */}
-                <div className="col-span-1 space-y-2">
+              <div className="flex flex-col lg:grid lg:grid-cols-3 gap-4">
+                {/* Pair List */}
+                <div className="lg:col-span-1 flex lg:flex-col overflow-x-auto lg:overflow-x-visible space-x-2 lg:space-x-0 lg:space-y-2 pb-2 lg:pb-0">
                   {[
                     { symbol: 'EURUSD', name: 'EUR/USD', category: 'FX' },
                     { symbol: 'GBPUSD', name: 'GBP/USD', category: 'FX' },
                     { symbol: 'USDJPY', name: 'USD/JPY', category: 'FX' },
-                    { symbol: 'XAUUSD', name: 'XAU/USD', category: 'FX' },
-                    { symbol: 'BTCUSD', name: 'BTC/USD', category: 'CRYPTO:BINANCE' },
-                    { symbol: 'AUDUSD', name: 'AUD/USD', category: 'FX' }
+                    { symbol: 'USDCAD', name: 'USD/CAD', category: 'FX' },
+                    { symbol: 'AUDUSD', name: 'AUD/USD', category: 'FX' },
+                    { symbol: 'NZDUSD', name: 'NZD/USD', category: 'FX' }
                   ].map((pair) => (
                     <button
                       key={pair.symbol}
                       onClick={() => setSelectedPair(pair.symbol)}
-                      className={`w-full text-left px-4 py-3 rounded-lg transition-all duration-200 ${
+                      className={`flex-shrink-0 lg:flex-shrink lg:w-full text-left px-3 md:px-4 py-2 md:py-3 rounded-lg transition-all duration-200 whitespace-nowrap ${
                         selectedPair === pair.symbol
                           ? 'bg-gradient-to-r from-[#00B38F] to-[#00B39F] text-white shadow-lg ring-2 ring-white/20'
                           : 'bg-white/5 text-gray-300 hover:bg-white/10 border border-white/10'
                       }`}
                     >
-                      <div className="font-bold text-sm">{pair.name}</div>
+                      <div className="font-bold text-xs md:text-sm">{pair.name}</div>
                       {selectedPair === pair.symbol && (
-                        <div className="text-xs opacity-90 mt-1">Live Chart</div>
+                        <div className="text-xs opacity-90 mt-1 hidden lg:block">Live Chart</div>
                       )}
                     </button>
                   ))}
                 </div>
 
-                {/* Right Side - Selected Pair Widget */}
-                <div className="col-span-2">
+                {/* Selected Pair Widget */}
+                <div className="lg:col-span-2">
                   <div className="bg-white/5 rounded-lg overflow-hidden border border-white/10">
                     <iframe 
                       key={selectedPair}
-                      src={`https://www.tradingview-widget.com/embed-widget/mini-symbol-overview/?locale=en#%7B%22symbol%22%3A%22${
-                        selectedPair === 'BTCUSD' ? 'CRYPTO:BINANCE:BTCUSD' : `FX:${selectedPair}`
-                      }%22%2C%22width%22%3A%22100%25%22%2C%22height%22%3A%22400%22%2C%22dateRange%22%3A%221D%22%2C%22colorTheme%22%3A%22dark%22%2C%22trendLineColor%22%3A%22rgba(0%2C%20179%2C%20143%2C%201)%22%2C%22underLineColor%22%3A%22rgba(0%2C%20179%2C%20159%2C%200.3)%22%2C%22isTransparent%22%3Atrue%2C%22autosize%22%3Afalse%2C%22largeChartUrl%22%3A%22%22%2C%22utm_source%22%3A%22oxidane.com%22%2C%22utm_medium%22%3A%22widget%22%2C%22utm_campaign%22%3A%22mini-symbol-overview%22%7D`}
-                      className="w-full h-[400px] border-0"
+                      src={`https://www.tradingview-widget.com/embed-widget/mini-symbol-overview/?locale=en#%7B%22symbol%22%3A%22FX:${selectedPair}%22%2C%22width%22%3A%22100%25%22%2C%22height%22%3A%22400%22%2C%22dateRange%22%3A%221D%22%2C%22colorTheme%22%3A%22dark%22%2C%22trendLineColor%22%3A%22rgba(0%2C%20179%2C%20143%2C%201)%22%2C%22underLineColor%22%3A%22rgba(0%2C%20179%2C%20159%2C%200.3)%22%2C%22isTransparent%22%3Atrue%2C%22autosize%22%3Afalse%2C%22largeChartUrl%22%3A%22%22%2C%22utm_source%22%3A%22oxidane.com%22%2C%22utm_medium%22%3A%22widget%22%2C%22utm_campaign%22%3A%22mini-symbol-overview%22%7D`}
+                      className="w-full h-[300px] md:h-[400px] border-0"
                       style={{ background: 'transparent' }}
                       title={`${selectedPair} Chart`}
                     ></iframe>

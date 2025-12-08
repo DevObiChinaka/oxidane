@@ -2,53 +2,57 @@
 
 export default function FounderBio() {
   return (
-    <section id="about" className="py-20 bg-gradient-to-br from-gray-50 to-slate-100">
+    <section id="about" className="py-12 md:py-20 bg-gradient-to-br from-gray-50 to-slate-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+        <div className="grid lg:grid-cols-2 gap-8 md:gap-12 items-center">
           {/* Left Column - Founder Image */}
-          <div className="relative">
+          <div className="relative order-2 lg:order-1">
             <div className="relative z-10">
-              {/* Profile Image Placeholder */}
-              <div className="aspect-square rounded-2xl bg-gradient-to-br from-[#00B38F] to-[#00B39F] p-1 shadow-2xl">
-                <div className="w-full h-full rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
-                  <div className="text-center text-white">
-                    <div className="text-6xl font-bold mb-4">OxiWorld</div>
-                    <div className="text-2xl opacity-75">Founder & Lead Instructor</div>
-                  </div>
+              {/* Profile Image */}
+              <div className="aspect-square rounded-2xl bg-gradient-to-br from-[#00B38F] to-[#00B39F] p-1 shadow-2xl overflow-hidden">
+                <div className="w-full h-full rounded-2xl overflow-hidden bg-gray-900">
+                  <img 
+                    src="/images/founder.jpg" 
+                    alt="OxiWorld Founder - Professional Forex Trader"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect fill='%23001529' width='400' height='400'/%3E%3Ctext x='50%25' y='50%25' font-size='60' fill='white' text-anchor='middle' dy='.3em' font-family='Arial'%3EOxiWorld%3C/text%3E%3C/svg%3E";
+                    }}
+                  />
                 </div>
               </div>
               
               {/* Floating Achievement Cards */}
-              <div className="absolute -right-4 top-8 bg-white rounded-xl p-4 shadow-xl border border-gray-200 max-w-[200px]">
-                <div className="text-3xl font-bold text-[#00B38F]">1M+</div>
-                <div className="text-sm text-gray-600">Social Media Views</div>
+              <div className="absolute -right-2 md:-right-4 top-4 md:top-8 bg-white rounded-xl p-3 md:p-4 shadow-xl border border-gray-200 max-w-[140px] md:max-w-[200px]">
+                <div className="text-2xl md:text-3xl font-bold text-[#00B38F]">1M+</div>
+                <div className="text-xs md:text-sm text-gray-600">Social Media Views</div>
               </div>
               
-              <div className="absolute -left-4 bottom-8 bg-white rounded-xl p-4 shadow-xl border border-gray-200 max-w-[200px]">
-                <div className="text-3xl font-bold text-[#000ABE]">500+</div>
-                <div className="text-sm text-gray-600">Students Trained</div>
+              <div className="absolute -left-2 md:-left-4 bottom-4 md:bottom-8 bg-white rounded-xl p-3 md:p-4 shadow-xl border border-gray-200 max-w-[140px] md:max-w-[200px]">
+                <div className="text-2xl md:text-3xl font-bold text-[#000ABE]">500+</div>
+                <div className="text-xs md:text-sm text-gray-600">Students Trained</div>
               </div>
             </div>
             
             {/* Background Decoration */}
             <div className="absolute inset-0 -z-10">
-              <div className="absolute top-1/4 -left-12 w-64 h-64 bg-[#00B38F]/20 rounded-full blur-3xl"></div>
-              <div className="absolute bottom-1/4 -right-12 w-64 h-64 bg-[#000ABE]/20 rounded-full blur-3xl"></div>
+              <div className="absolute top-1/4 -left-8 md:-left-12 w-48 md:w-64 h-48 md:h-64 bg-[#00B38F]/20 rounded-full blur-3xl"></div>
+              <div className="absolute bottom-1/4 -right-8 md:-right-12 w-48 md:w-64 h-48 md:h-64 bg-[#000ABE]/20 rounded-full blur-3xl"></div>
             </div>
           </div>
 
           {/* Right Column - Bio Content */}
-          <div className="space-y-6">
+          <div className="space-y-4 md:space-y-6 order-1 lg:order-2">
             <div className="inline-flex items-center px-4 py-2 bg-white rounded-full text-sm font-medium shadow-md border border-gray-200">
               <div className="w-2 h-2 bg-[#00B38F] rounded-full mr-2 animate-pulse"></div>
               Meet Your Instructor
             </div>
 
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900">
               From Professional Trader to Educator
             </h2>
 
-            <div className="space-y-4 text-lg text-gray-700 leading-relaxed">
+            <div className="space-y-3 md:space-y-4 text-base md:text-lg text-gray-700 leading-relaxed">
               <p>
                 I've been trading forex for over 5 years, navigating both the highs of consistent profitability and the lows that taught me invaluable lessons. 
                 My journey took me from institutional trading environments to becoming an independent trader, where I developed and refined the exact strategies 
@@ -70,24 +74,24 @@ export default function FounderBio() {
             </div>
 
             {/* Stats Bar */}
-            <div className="grid grid-cols-3 gap-4 pt-6 border-t border-gray-300">
+            <div className="grid grid-cols-3 gap-3 md:gap-4 pt-4 md:pt-6 border-t border-gray-300">
               <div className="text-center">
-                <div className="text-2xl font-bold text-[#00B38F]">1M+</div>
-                <div className="text-sm text-gray-600">Social Media Views</div>
+                <div className="text-xl md:text-2xl font-bold text-[#00B38F]">1M+</div>
+                <div className="text-xs md:text-sm text-gray-600">Social Media Views</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-[#000ABE]">500+</div>
-                <div className="text-sm text-gray-600">Students Trained</div>
+                <div className="text-xl md:text-2xl font-bold text-[#000ABE]">500+</div>
+                <div className="text-xs md:text-sm text-gray-600">Students Trained</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-[#00B39F]">2</div>
-                <div className="text-sm text-gray-600">Official Partnerships</div>
+                <div className="text-xl md:text-2xl font-bold text-[#00B39F]">2</div>
+                <div className="text-xs md:text-sm text-gray-600">Official Partnerships</div>
               </div>
             </div>
 
             {/* Partnership Badges */}
-            <div className="flex flex-wrap items-center gap-4 pt-4">
-              <div className="flex items-center space-x-2 text-sm text-gray-600">
+            <div className="flex flex-wrap items-center gap-3 md:gap-4 pt-3 md:pt-4">
+              <div className="flex items-center space-x-2 text-xs md:text-sm text-gray-600">
                 <svg className="w-5 h-5 text-[#00B38F]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
