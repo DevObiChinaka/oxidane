@@ -130,7 +130,8 @@ export default function TestimonialsCredibility() {
             {realResults.map((result, index) => (
               <div key={index} className="bg-gradient-to-br from-[#00B38F]/10 to-[#00B39F]/10 rounded-lg md:rounded-xl p-4 md:p-6 text-center">
                 <div className="text-2xl sm:text-3xl font-bold text-[#00B38F]/80 mb-1 md:mb-2">{result.value}</div>
-                <div className="font-semibold text-gray-900 mb-1 text-xs sm:text-sm md:text-base">{result.label}</div>
+                <div className="font-semibold text-gray-900 mb-1 text-xs sm:text-sm md:text-base">{result.metric}</div>
+                <div className="text-xs text-gray-600">{result.period}</div>
               </div>
             ))}
           </div>
