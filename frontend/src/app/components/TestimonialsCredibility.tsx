@@ -227,16 +227,6 @@ export default function TestimonialsCredibility() {
                         {testimonial.name.charAt(1).toUpperCase()}
                       </div>
                     </div>
-                          if (testimonial.name === "Sarah Chen") {
-                            e.currentTarget.src = "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=64&h=64&fit=crop&crop=face&auto=format&q=90";
-                          } else if (testimonial.name === "Marcus Johnson") {
-                            e.currentTarget.src = "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=64&h=64&fit=crop&crop=face&auto=format&q=90";
-                          } else {
-                            e.currentTarget.src = "https://images.unsplash.com/photo-1559233375-61fc6ac57b28?w=64&h=64&fit=crop&crop=face&auto=format&q=90";
-                          }
-                        }}
-                      />
-                    </div>
                     <div className="mt-2 text-center">
                       <p className={`text-xs font-medium transition-colors duration-300 ${
                         index === currentTestimonial ? 'text-white' : 'text-gray-300'
