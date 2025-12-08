@@ -9,15 +9,15 @@ const services = [
         <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
       </svg>
     ),
-    title: 'Professional Forex Signals',
+    title: 'Premium Forex Signals',
     description: 'High-probability trade setups with detailed analysis delivered daily via Telegram.',
     features: [
-      'Daily market analysis & signals',
+      'Daily market analysis & trade signals',
       'Entry/exit levels with reasoning',
-      'Risk management guidance',
+      'Risk management for each trade',
       'Real-time trade updates',
-      'Performance tracking',
-      'Strategy explanations'
+      'Performance tracking & results',
+      'Learn by following live setups'
     ]
   },
   {
@@ -27,14 +27,14 @@ const services = [
       </svg>
     ),
     title: 'Community Mentorship',
-    description: 'Join our trading community with expert guidance and peer support.',
+    description: 'Live interaction with traders and mentors in our active Telegram community.',
     features: [
-      'Group mentorship sessions',
-      'Trade review & feedback',
-      'Live trading rooms',
-      'Community support network',
-      'Weekly market analysis',
-      'Trading psychology workshops'
+      'Live trading sessions & analysis',
+      'Direct Q&A with instructors',
+      'Telegram signals group access',
+      'Real-time market discussions',
+      'Peer learning & support',
+      'Weekly market breakdowns'
     ]
   },
   {
@@ -44,14 +44,14 @@ const services = [
       </svg>
     ),
     title: 'Trading Education',
-    description: 'Comprehensive forex education resources to build your trading foundation.',
+    description: 'Structured video courses covering strategies, technical analysis, and risk management.',
     features: [
-      'Market fundamentals & economics',
+      'HD video lessons on demand',
+      'SMC, ALGO, & advanced strategies',
       'Technical & fundamental analysis',
       'Risk management frameworks',
       'Trading psychology mastery',
-      'Live market examples',
-      'Strategy development guides'
+      'Downloadable resources & guides'
     ]
   }
 ];

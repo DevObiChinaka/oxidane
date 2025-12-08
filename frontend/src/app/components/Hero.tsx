@@ -79,14 +79,13 @@ export default function Hero() {
             {/* Main Heading */}
             <div className="space-y-6">
               <h1 className="text-5xl lg:text-7xl font-bold leading-relaxed pb-6">
-                Master Forex
+                Master Forex Trading
                 <span className="block bg-gradient-to-r from-[#00B38F] to-[#00B39F] bg-clip-text text-transparent pb-3">
-                  Trading
+                  with OxiWorld Forex Academy
                 </span>
               </h1>
               <p className="text-xl lg:text-2xl text-gray-300 leading-relaxed max-w-2xl">
-                Professional-grade education, institutional strategies, and real market insights. 
-                Join 5,000+ traders who've transformed their approach to forex markets.
+                Learn proven trading strategies from a professional forex trader. Join thousands of students mastering SMC, ALGO, and advanced techniques to become consistently profitable traders.
               </p>
             </div>
 
@@ -125,15 +124,15 @@ export default function Hero() {
               <div className="flex flex-wrap items-center gap-8 text-sm text-gray-400">
                 <div className="flex items-center space-x-2">
                   <div className="w-4 h-4 bg-[#00B38F] rounded-full"></div>
-                  <span>CFA Institute Certified</span>
+                  <span>1M+ Social Media Views</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <div className="w-4 h-4 bg-[#000ABE] rounded-full"></div>
-                  <span>Regulated & Compliant</span>
+                  <span>Exness & Maven Partner</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <div className="w-4 h-4 bg-[#00B39F] rounded-full"></div>
-                  <span>Institutional Grade</span>
+                  <span>Real Trading Results</span>
                 </div>
               </div>
             </div>

@@ -4,75 +4,60 @@ import { useState, useEffect } from 'react';
 
 const testimonials = [
   {
-    name: "Sarah Chen",
-    role: "Former Bank Employee",
-    location: "Singapore",
-    image: (
-      <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-gray-100 to-slate-200 flex items-center justify-center overflow-hidden ring-4 ring-[#00B38F]/20 shadow-lg">
-        <img 
-          src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=160&h=160&fit=crop&crop=face&auto=format&q=90" 
-          alt="Sarah Chen - Professional Trader"
-          className="w-full h-full object-cover"
-          onError={(e) => {
-            e.currentTarget.src = "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=160&h=160&fit=crop&crop=face&auto=format&q=90";
-          }}
-        />
-      </div>
-    ),
-    story: "Started as a complete beginner with the free course. The risk management lessons saved me from huge losses. Now I trade part-time with consistent profits.",
-    result: "12% monthly returns",
-    timeframe: "After 8 months",
-    beforeAfter: {
-      before: "Lost $500 in first month",
-      after: "Consistent profitable trader"
-    }
-  },
-  {
-    name: "Marcus Johnson", 
-    role: "Software Engineer",
-    location: "London, UK",
-    image: (
-      <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-gray-100 to-slate-200 flex items-center justify-center overflow-hidden ring-4 ring-[#00B39F]/20 shadow-lg">
-        <img 
-          src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&h=160&fit=crop&crop=face&auto=format&q=90" 
-          alt="Marcus Johnson - Professional Trader"
-          className="w-full h-full object-cover"
-          onError={(e) => {
-            e.currentTarget.src = "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=160&h=160&fit=crop&crop=face&auto=format&q=90";
-          }}
-        />
-      </div>
-    ),
-    story: "The mentorship program changed everything. Having a professional trader guide my development was invaluable. The psychology training was eye-opening.",
-    result: "Funded $50k account",
-    timeframe: "After 6 months", 
-    beforeAfter: {
-      before: "Emotional trader with losses",
-      after: "Disciplined prop firm trader"
-    }
-  },
-  {
-    name: "Emma Rodriguez",
-    role: "Medical Student", 
-    location: "Madrid, Spain",
+    name: "@Manuella_4979",
+    role: "YouTube Viewer",
+    location: "Community Member",
     image: (
       <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-[#00B38F]/20 to-[#00B39F]/20 flex items-center justify-center overflow-hidden ring-4 ring-[#00B38F]/20 shadow-lg">
-        <img 
-          src="https://images.unsplash.com/photo-1580489944761-15a19d654956?w=160&h=160&fit=crop&crop=face&auto=format&q=90" 
-          alt="Emma Rodriguez - Professional Trader"
-          className="w-full h-full object-cover"
-          onError={(e) => {
-            e.currentTarget.src = "https://images.unsplash.com/photo-1559233375-61fc6ac57b28?w=160&h=160&fit=crop&crop=face&auto=format&q=90";
-          }}
-        />
+        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#00B38F] to-[#00B39F] text-white text-2xl font-bold">
+          M
+        </div>
       </div>
     ),
-    story: "Perfect for my busy schedule. Free lessons are incredibly detailed. The telegram signals helped me understand market timing while learning.",
-    result: "Profitable in 4 months",
-    timeframe: "Part-time trading",
+    story: "I can't believe it! After watching your videos on how to read the market, understanding trends and price movement, I applied what I learned—and boom, I'm running in profit!",
+    result: "First Profitable Trades",
+    timeframe: "After watching videos",
     beforeAfter: {
-      before: "No trading knowledge",
-      after: "Supplementing income"
+      before: "Struggling to understand markets",
+      after: "Running in profit"
+    }
+  },
+  {
+    name: "@ShakiruRamoni-h3r", 
+    role: "YouTube Viewer",
+    location: "Community Member",
+    image: (
+      <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-[#000ABE]/20 to-[#00B39F]/20 flex items-center justify-center overflow-hidden ring-4 ring-[#00B39F]/20 shadow-lg">
+        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#000ABE] to-[#00B39F] text-white text-2xl font-bold">
+          S
+        </div>
+      </div>
+    ),
+    story: "Your 19-minute video breaks it down better than full courses I've paid for. Clear, practical, and immediately useful. This is the education traders actually need.",
+    result: "Better than paid courses",
+    timeframe: "Single video", 
+    beforeAfter: {
+      before: "Overwhelmed by complex courses",
+      after: "Clear understanding"
+    }
+  },
+  {
+    name: "@Grandson Jr",
+    role: "YouTube Viewer", 
+    location: "Community Member",
+    image: (
+      <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-gray-100 to-slate-200 flex items-center justify-center overflow-hidden ring-4 ring-[#00B38F]/20 shadow-lg">
+        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#00B38F] to-[#00B39F] text-white text-2xl font-bold">
+          G
+        </div>
+      </div>
+    ),
+    story: "Bro, you need to teach in an academy! Your lesson helped me finally get it. The way you explain things just clicks. More people need access to this quality of teaching.",
+    result: "Concept breakthrough",
+    timeframe: "Single lesson",
+    beforeAfter: {
+      before: "Couldn't grasp concepts",
+      after: "Finally understood"
     }
   }
 ];
@@ -80,21 +65,12 @@ const testimonials = [
 const credentials = [
   {
     icon: (
-      <svg className="w-8 h-8 text-[#00B39F]" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 002.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.228a25.08 25.08 0 012.916.52 6.003 6.003 0 00-5.395 4.972m0 0a6.726 6.726 0 01-2.749 1.35m0 0a6.772 6.772 0 01-3.044 0" />
-      </svg>
-    ),
-    title: "Certified Trader",
-    description: "CFA Institute certified with 5+ years in institutional trading"
-  },
-  {
-    icon: (
       <svg className="w-8 h-8 text-[#00B38F]" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
       </svg>
     ), 
     title: "Track Record",
-    description: "Audited 24-month performance with 78% win rate"
+    description: "Consistent performance with 78% win rate over 24 months"
   },
   {
     icon: (
@@ -113,6 +89,15 @@ const credentials = [
     ),
     title: "Risk First",
     description: "Zero account blow-ups in 3 years of teaching"
+  },
+  {
+    icon: (
+      <svg className="w-8 h-8 text-[#00B38F]" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 002.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.228a25.08 25.08 0 012.916.52 6.003 6.003 0 00-5.395 4.972m0 0a6.726 6.726 0 01-2.749 1.35m0 0a6.772 6.772 0 01-3.044 0" />
+      </svg>
+    ),
+    title: "Professional Trader",
+    description: "5+ years institutional trading experience"
   }
 ];
 
@@ -238,16 +223,10 @@ export default function TestimonialsCredibility() {
                         ? 'ring-4 ring-white shadow-lg shadow-white/30' 
                         : 'ring-2 ring-gray-400 group-hover:ring-white/50'
                     }`}>
-                      <img 
-                        src={testimonial.name === "Sarah Chen" 
-                          ? "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=64&h=64&fit=crop&crop=face&auto=format&q=90"
-                          : testimonial.name === "Marcus Johnson"
-                          ? "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=64&h=64&fit=crop&crop=face&auto=format&q=90"
-                          : "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=64&h=64&fit=crop&crop=face&auto=format&q=90"
-                        }
-                        alt={`${testimonial.name} - Professional Trader`}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#00B38F] to-[#00B39F] text-white text-xl font-bold">
+                        {testimonial.name.charAt(1).toUpperCase()}
+                      </div>
+                    </div>
                           if (testimonial.name === "Sarah Chen") {
                             e.currentTarget.src = "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=64&h=64&fit=crop&crop=face&auto=format&q=90";
                           } else if (testimonial.name === "Marcus Johnson") {
@@ -372,15 +351,15 @@ export default function TestimonialsCredibility() {
           <div className="flex flex-wrap justify-center items-center gap-8 opacity-60">
             <div className="text-gray-400 font-semibold flex items-center">
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 002.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.228a25.08 25.08 0 012.916.52 6.003 6.003 0 00-5.395 4.972m0 0a6.726 6.726 0 01-2.749 1.35m0 0a6.772 6.772 0 01-3.044 0" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
               </svg>
-              CFA Institute
+              Exness Partner
             </div>
             <div className="text-gray-400 font-semibold flex items-center">
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
               </svg>
-              TradingView Partner
+              Maven Partner
             </div>
             <div className="text-gray-400 font-semibold flex items-center">
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
