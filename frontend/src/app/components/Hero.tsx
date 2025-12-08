@@ -140,49 +140,36 @@ export default function Hero() {
 
           {/* Right Column - Live Market Data */}
           <div className="space-y-6">
-            {/* Live Market Feed */}
+            {/* TradingView Widget */}
             <div className="bg-white/8 backdrop-blur-2xl border border-white/15 rounded-2xl p-6 shadow-2xl">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-bold text-white">Live Market Rates</h3>
                 <div className="flex items-center space-x-2 text-sm text-gray-200 bg-white/5 px-3 py-1 rounded-full backdrop-blur-md border border-white/10">
                   <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                  <span>Live • {mounted ? lastUpdate.toLocaleTimeString() : '--:--:--'}</span>
+                  <span>Live • TradingView</span>
                 </div>
               </div>
               
-              {isLoading ? (
-                <div className="space-y-4">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="animate-pulse">
-                      <div className="h-16 bg-white/5 rounded-lg"></div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {rates.slice(0, 4).map((rate, index) => (
-                    <div key={index} className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10 hover:bg-white/8 transition-all duration-200 backdrop-blur-md hover:border-white/20">
-                      <div className="flex items-center space-x-4">
-                        <div>
-                          <div className="text-lg font-bold text-white">{rate.symbol}</div>
-                          <div className="text-xs text-gray-300 bg-white/5 px-2 py-0.5 rounded-md">Spread: {rate.spread} pips</div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-xl font-bold text-white">{rate.price}</div>
-                        <div className={`text-sm font-bold flex items-center justify-end px-2 py-1 rounded-md ${rate.isPositive ? 'text-green-300 bg-green-500/20' : 'text-red-300 bg-red-500/20'}`}>
-                          <span className="mr-1 text-base">{rate.isPositive ? '↗' : '↘'}</span>
-                          {rate.change >= 0 ? '+' : ''}{rate.change} ({rate.changePercent >= 0 ? '+' : ''}{rate.changePercent}%)
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              {/* TradingView Mini Chart Widget */}
+              <div className="space-y-3">
+                <iframe 
+                  src="https://www.tradingview-widget.com/embed-widget/mini-symbol-overview/?locale=en#%7B%22symbol%22%3A%22FX%3AEURUSD%22%2C%22width%22%3A%22100%25%22%2C%22height%22%3A%22220%22%2C%22dateRange%22%3A%221D%22%2C%22colorTheme%22%3A%22dark%22%2C%22trendLineColor%22%3A%22rgba(0%2C%20179%2C%20143%2C%201)%22%2C%22underLineColor%22%3A%22rgba(0%2C%20179%2C%20159%2C%200.3)%22%2C%22isTransparent%22%3Atrue%2C%22autosize%22%3Afalse%2C%22largeChartUrl%22%3A%22%22%2C%22utm_source%22%3A%22oxidane.com%22%2C%22utm_medium%22%3A%22widget%22%2C%22utm_campaign%22%3A%22mini-symbol-overview%22%7D"
+                  className="w-full h-[220px] rounded-lg border-0"
+                  style={{ background: 'transparent' }}
+                  title="EUR/USD Chart"
+                ></iframe>
+                
+                <iframe 
+                  src="https://www.tradingview-widget.com/embed-widget/mini-symbol-overview/?locale=en#%7B%22symbol%22%3A%22FX%3AGBPUSD%22%2C%22width%22%3A%22100%25%22%2C%22height%22%3A%22220%22%2C%22dateRange%22%3A%221D%22%2C%22colorTheme%22%3A%22dark%22%2C%22trendLineColor%22%3A%22rgba(0%2C%20179%2C%20143%2C%201)%22%2C%22underLineColor%22%3A%22rgba(0%2C%20179%2C%20159%2C%200.3)%22%2C%22isTransparent%22%3Atrue%2C%22autosize%22%3Afalse%2C%22largeChartUrl%22%3A%22%22%2C%22utm_source%22%3A%22oxidane.com%22%2C%22utm_medium%22%3A%22widget%22%2C%22utm_campaign%22%3A%22mini-symbol-overview%22%7D"
+                  className="w-full h-[220px] rounded-lg border-0"
+                  style={{ background: 'transparent' }}
+                  title="GBP/USD Chart"
+                ></iframe>
+              </div>
               
               <div className="mt-4 pt-4 border-t border-white/10">
                 <p className="text-xs text-gray-300 text-center bg-white/3 px-3 py-2 rounded-lg backdrop-blur-md">
-                  Real-time institutional feeds • Spreads from 0.1 pips • ECN execution
+                  Live data powered by TradingView • Real-time institutional pricing
                 </p>
               </div>
             </div>

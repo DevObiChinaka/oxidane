@@ -79,7 +79,7 @@ const credentials = [
       </svg>
     ),
     title: "Educator",
-    description: "Trained 5000+ students across 50+ countries"
+    description: "Trained 500+ students with 1M+ social media views"
   },
   {
     icon: (
@@ -102,10 +102,10 @@ const credentials = [
 ];
 
 const realResults = [
-  { metric: "Students Taught", value: "5,247", period: "Since 2021" },
-  { metric: "Countries Reached", value: "52", period: "Globally" },
-  { metric: "Free Course Rating", value: "4.9/5", period: "2,100+ reviews" },
-  { metric: "Student Success Rate", value: "78%", period: "Profitable after 6 months" }
+  { metric: "Students Taught", value: "500+", period: "Since 2021" },
+  { metric: "Social Media Views", value: "1M+", period: "YouTube & TikTok" },
+  { metric: "Active Community", value: "Growing", period: "Telegram Groups" },
+  { metric: "Real Partnerships", value: "2", period: "Exness & Maven" }
 ];
 
 export default function TestimonialsCredibility() {

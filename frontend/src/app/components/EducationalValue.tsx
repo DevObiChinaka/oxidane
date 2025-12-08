@@ -50,15 +50,15 @@ const educationalContent = [
       </svg>
     ),
     content: {
-      title: "Support and Resistance",
-      description: "Price levels where buying or selling pressure historically increases.",
+      title: "Advanced Trading Strategies",
+      description: "Master professional strategies like SMC, ALGO, and advanced price action techniques.",
       keyPoints: [
-        "Support acts as a floor for price",
-        "Resistance acts as a ceiling",
-        "Broken support becomes resistance",
-        "Multiple touches make levels stronger"
+        "Smart Money Concepts (SMC) - institutional order blocks & liquidity",
+        "Algorithmic patterns - automated structure recognition",
+        "Advanced strategies - Alchemist, MSNR, CRT techniques",
+        "Price action mastery - reading market psychology"
       ],
-      tip: "Look for confluence with moving averages, trendlines, and Fibonacci levels."
+      tip: "We teach you multiple strategies so you can discover what works best for YOUR trading style."
     }
   },
   {
