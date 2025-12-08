@@ -71,41 +71,41 @@ export default function Hero() {
           {/* Left Column - Main Content */}
           <div className="space-y-6 md:space-y-8 text-white">
             {/* Professional Badge */}
-            <div className="inline-flex items-center px-4 py-2 bg-white/15 backdrop-blur-xl border border-white/20 rounded-full text-sm font-medium shadow-xl">
+            <div className="inline-flex items-center px-4 sm:px-5 py-2 sm:py-2.5 bg-white/15 backdrop-blur-xl border border-white/20 rounded-full text-sm sm:text-base font-medium shadow-xl">
               <div className={`w-2 h-2 ${sessionStatus.color} rounded-full mr-2 animate-pulse`}></div>
               OxiWorld • Professional Since 2021
             </div>
 
             {/* Main Heading */}
             <div className="space-y-4 md:space-y-6">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold leading-tight pb-4 md:pb-6">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold leading-tight pb-4 md:pb-6">
                 Master Forex Trading
-                <span className="block bg-gradient-to-r from-[#00B38F] to-[#00B39F] bg-clip-text text-transparent pb-2 md:pb-3">
+                <span className="block bg-gradient-to-r from-[#00B38F] to-[#00B39F] bg-clip-text text-transparent pb-2 md:pb-3 mt-2">
                   with OxiWorld Forex Academy
                 </span>
               </h1>
-              <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-300 leading-relaxed">
+              <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-300 leading-relaxed">
                 Learn proven trading strategies from a professional forex trader. Join thousands of students mastering SMC, ALGO, and advanced techniques to become consistently profitable traders.
               </p>
             </div>
 
             {/* Professional Statistics */}
             <div className="grid grid-cols-2 gap-4 sm:gap-6 py-6 md:py-8">
-              <div className="text-center">
-                <div className="text-xl sm:text-2xl md:text-3xl font-bold text-[#00B39F]">$2.5B+</div>
-                <div className="text-xs sm:text-sm text-gray-300">Volume Traded</div>
+              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-white/10 text-center hover:bg-white/10 transition-all">
+                <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#00B39F]">$2.5B+</div>
+                <div className="text-xs sm:text-sm text-gray-300 mt-1">Volume Traded</div>
               </div>
-              <div className="text-center">
-                <div className="text-xl sm:text-2xl md:text-3xl font-bold text-[#00B38F]">78%</div>
-                <div className="text-xs sm:text-sm text-gray-300">Success Rate</div>
+              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-white/10 text-center hover:bg-white/10 transition-all">
+                <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#00B38F]">78%</div>
+                <div className="text-xs sm:text-sm text-gray-300 mt-1">Success Rate</div>
               </div>
-              <div className="text-center">
-                <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white">500+</div>
-                <div className="text-xs sm:text-sm text-gray-300">Students</div>
+              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-white/10 text-center hover:bg-white/10 transition-all">
+                <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-white">500+</div>
+                <div className="text-xs sm:text-sm text-gray-300 mt-1">Students</div>
               </div>
-              <div className="text-center">
-                <div className="text-xl sm:text-2xl md:text-3xl font-bold text-[#00B38F]">24/7</div>
-                <div className="text-xs sm:text-sm text-gray-300">Support</div>
+              <div className="bg-white/5 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-white/10 text-center hover:bg-white/10 transition-all">
+                <div className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#00B38F]">24/7</div>
+                <div className="text-xs sm:text-sm text-gray-300 mt-1">Support</div>
               </div>
             </div>
 
@@ -113,25 +113,25 @@ export default function Hero() {
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
               <Link 
                 href="/auth?mode=signup" 
-                className="bg-gradient-to-r from-[#00B38F] to-[#00B39F] text-white px-8 py-4 rounded-lg text-lg font-semibold hover:from-[#00A87D] hover:to-[#00A58D] transition-all duration-300 transform hover:scale-105 shadow-xl"
+                className="bg-gradient-to-r from-[#00B38F] to-[#00B39F] text-white px-8 py-4 sm:py-5 rounded-xl text-base sm:text-lg md:text-xl font-bold hover:from-[#00A87D] hover:to-[#00A58D] transition-all duration-300 transform hover:scale-105 shadow-2xl shadow-[#00B38F]/50 text-center"
               >
                 Start Trading Today
               </Link>
             </div>
 
             {/* Trust Indicators */}
-            <div className="pt-8 space-y-4">
-              <div className="flex flex-wrap items-center gap-8 text-sm text-gray-400">
+            <div className="pt-6 md:pt-8 space-y-4">
+              <div className="flex flex-wrap items-center gap-4 sm:gap-6 md:gap-8 text-xs sm:text-sm text-gray-400">
                 <div className="flex items-center space-x-2">
-                  <div className="w-4 h-4 bg-[#00B38F] rounded-full"></div>
+                  <div className="w-3 h-3 sm:w-4 sm:h-4 bg-[#00B38F] rounded-full"></div>
                   <span>1M+ Social Media Views</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <div className="w-4 h-4 bg-[#000ABE] rounded-full"></div>
+                  <div className="w-3 h-3 sm:w-4 sm:h-4 bg-[#000ABE] rounded-full"></div>
                   <span>Exness & Maven Partner</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <div className="w-4 h-4 bg-[#00B39F] rounded-full"></div>
+                  <div className="w-3 h-3 sm:w-4 sm:h-4 bg-[#00B39F] rounded-full"></div>
                   <span>Real Trading Results</span>
                 </div>
               </div>
@@ -141,10 +141,10 @@ export default function Hero() {
           {/* Right Column - Live Market Data */}
           <div className="space-y-6 w-full max-w-full overflow-hidden">
             {/* TradingView Widget with Vertical Pair Selection */}
-            <div className="bg-white/8 backdrop-blur-2xl border border-white/15 rounded-2xl p-3 sm:p-4 md:p-6 shadow-2xl">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-white">Live Market Rates</h3>
-                <div className="flex items-center space-x-2 text-sm text-gray-200 bg-white/5 px-3 py-1 rounded-full backdrop-blur-md border border-white/10">
+            <div className="bg-white/8 backdrop-blur-2xl border border-white/15 rounded-2xl p-4 sm:p-5 md:p-6 shadow-2xl">
+              <div className="flex items-center justify-between mb-4 sm:mb-6">
+                <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-white">Live Market Rates</h3>
+                <div className="flex items-center space-x-2 text-xs sm:text-sm text-gray-200 bg-white/5 px-3 py-1 rounded-full backdrop-blur-md border border-white/10">
                   <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                   <span>Live • TradingView</span>
                 </div>
