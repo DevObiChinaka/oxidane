@@ -117,83 +117,84 @@ export default function EducationalValue() {
   };
 
   return (
-    <section id="educational-value" className="py-20 bg-gradient-to-br from-gray-50 to-slate-100">
+    <section id="educational-value" className="py-12 md:py-20 bg-gradient-to-br from-gray-50 to-slate-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="text-center space-y-6 mb-16">
-          <div className="inline-flex items-center px-4 py-2 bg-teal-100 text-teal-700 rounded-full text-sm font-medium">
+        <div className="text-center space-y-4 md:space-y-6 mb-12 md:mb-16">
+          <div className="inline-flex items-center px-4 py-2 bg-teal-100 text-teal-700 rounded-full text-xs md:text-sm font-medium">
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0118 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
             </svg>
             Free Education First
           </div>
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900">
             Learn Before You Earn
           </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <p className="text-base sm:text-lg md:text-xl text-gray-600 max-w-3xl mx-auto">
             We believe in education-first approach. Here's a taste of what you'll learn in our comprehensive courses - completely free.
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-12 items-start">
+        <div className="grid lg:grid-cols-2 gap-8 md:gap-12 items-start">
           {/* Educational Tabs */}
-          <div className="space-y-6">
-            <h3 className="text-2xl font-bold text-gray-900">Core Trading Concepts</h3>
+          <div className="space-y-4 md:space-y-6">
+            <h3 className="text-xl md:text-2xl font-bold text-gray-900">Core Trading Concepts</h3>
             
             {/* Tab Navigation */}
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
               {educationalContent.map((item, index) => (
                 <button
                   key={index}
                   onClick={() => setActiveTab(index)}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                  className={`flex items-center justify-center sm:justify-start space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
                     activeTab === index 
                       ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-lg' 
                       : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
                   }`}
                 >
                   {item.icon(activeTab === index)}
-                  <span>{item.category}</span>
+                  <span className="hidden sm:inline">{item.category}</span>
+                  <span className="sm:hidden text-[10px]">{item.category.split(' ')[0]}</span>
                 </button>
               ))}
             </div>
 
             {/* Tab Content */}
-            <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
-              <div className="space-y-6">
+            <div className="bg-white rounded-xl md:rounded-2xl p-4 sm:p-6 md:p-8 shadow-lg border border-gray-200">
+              <div className="space-y-4 md:space-y-6">
                 <div>
-                  <h4 className="text-xl font-bold text-gray-900 mb-2">
+                  <h4 className="text-lg md:text-xl font-bold text-gray-900 mb-2">
                     {educationalContent[activeTab].content.title}
                   </h4>
-                  <p className="text-gray-600 leading-relaxed">
+                  <p className="text-sm md:text-base text-gray-600 leading-relaxed">
                     {educationalContent[activeTab].content.description}
                   </p>
                 </div>
 
                 <div>
-                  <h5 className="font-semibold text-gray-900 mb-3">Key Points:</h5>
+                  <h5 className="font-semibold text-gray-900 mb-3 text-sm md:text-base">Key Points:</h5>
                   <ul className="space-y-2">
                     {educationalContent[activeTab].content.keyPoints.map((point, index) => (
-                      <li key={index} className="flex items-start space-x-3">
-                        <div className="w-5 h-5 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <li key={index} className="flex items-start space-x-2 md:space-x-3">
+                        <div className="w-4 h-4 md:w-5 md:h-5 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <svg className="w-2.5 h-2.5 md:w-3 md:h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                           </svg>
                         </div>
-                        <span className="text-gray-700">{point}</span>
+                        <span className="text-sm md:text-base text-gray-700">{point}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
 
-                <div className="bg-gradient-to-r from-gray-50 to-slate-100 rounded-lg p-4">
-                  <div className="flex items-start space-x-3">
-                    <svg className="w-6 h-6 text-teal-500 mt-1" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                <div className="bg-gradient-to-r from-gray-50 to-slate-100 rounded-lg p-3 md:p-4">
+                  <div className="flex items-start space-x-2 md:space-x-3">
+                    <svg className="w-5 h-5 md:w-6 md:h-6 text-teal-500 mt-1 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m4.5 0a12.052 12.052 0 00-4.5 0M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <div>
-                      <h6 className="font-semibold text-gray-900 mb-1">Pro Tip:</h6>
-                      <p className="text-gray-700 text-sm">
+                      <h6 className="font-semibold text-gray-900 mb-1 text-sm md:text-base">Pro Tip:</h6>
+                      <p className="text-gray-700 text-xs md:text-sm">
                         {educationalContent[activeTab].content.tip}
                       </p>
                     </div>

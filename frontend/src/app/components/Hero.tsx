@@ -78,34 +78,34 @@ export default function Hero() {
 
             {/* Main Heading */}
             <div className="space-y-4 md:space-y-6">
-              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold leading-tight md:leading-relaxed pb-4 md:pb-6">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold leading-tight pb-4 md:pb-6">
                 Master Forex Trading
                 <span className="block bg-gradient-to-r from-[#00B38F] to-[#00B39F] bg-clip-text text-transparent pb-2 md:pb-3">
                   with OxiWorld Forex Academy
                 </span>
               </h1>
-              <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-300 leading-relaxed max-w-2xl">
+              <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-300 leading-relaxed">
                 Learn proven trading strategies from a professional forex trader. Join thousands of students mastering SMC, ALGO, and advanced techniques to become consistently profitable traders.
               </p>
             </div>
 
             {/* Professional Statistics */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 py-6 md:py-8">
+            <div className="grid grid-cols-2 gap-4 sm:gap-6 py-6 md:py-8">
               <div className="text-center">
-                <div className="text-2xl md:text-3xl font-bold text-[#00B39F]">$2.5B+</div>
-                <div className="text-xs md:text-sm text-gray-300">Volume Traded</div>
+                <div className="text-xl sm:text-2xl md:text-3xl font-bold text-[#00B39F]">$2.5B+</div>
+                <div className="text-xs sm:text-sm text-gray-300">Volume Traded</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl md:text-3xl font-bold text-[#00B38F]">78%</div>
-                <div className="text-xs md:text-sm text-gray-300">Success Rate</div>
+                <div className="text-xl sm:text-2xl md:text-3xl font-bold text-[#00B38F]">78%</div>
+                <div className="text-xs sm:text-sm text-gray-300">Success Rate</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-white">5,247</div>
-                <div className="text-sm text-gray-300">Students</div>
+                <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white">500+</div>
+                <div className="text-xs sm:text-sm text-gray-300">Students</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-[#00B38F]">24/7</div>
-                <div className="text-sm text-gray-300">Support</div>
+                <div className="text-xl sm:text-2xl md:text-3xl font-bold text-[#00B38F]">24/7</div>
+                <div className="text-xs sm:text-sm text-gray-300">Support</div>
               </div>
             </div>
 
@@ -139,9 +139,9 @@ export default function Hero() {
           </div>
 
           {/* Right Column - Live Market Data */}
-          <div className="space-y-6">
+          <div className="space-y-6 w-full overflow-hidden">
             {/* TradingView Widget with Vertical Pair Selection */}
-            <div className="bg-white/8 backdrop-blur-2xl border border-white/15 rounded-2xl p-6 shadow-2xl">
+            <div className="bg-white/8 backdrop-blur-2xl border border-white/15 rounded-2xl p-3 sm:p-4 md:p-6 shadow-2xl">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-bold text-white">Live Market Rates</h3>
                 <div className="flex items-center space-x-2 text-sm text-gray-200 bg-white/5 px-3 py-1 rounded-full backdrop-blur-md border border-white/10">
@@ -150,9 +150,9 @@ export default function Hero() {
                 </div>
               </div>
               
-              <div className="flex flex-col lg:grid lg:grid-cols-3 gap-4">
+              <div className="flex flex-col lg:grid lg:grid-cols-3 gap-3 md:gap-4">
                 {/* Pair List */}
-                <div className="lg:col-span-1 flex lg:flex-col overflow-x-auto lg:overflow-x-visible space-x-2 lg:space-x-0 lg:space-y-2 pb-2 lg:pb-0">
+                <div className="lg:col-span-1 grid grid-cols-3 lg:grid-cols-1 gap-2">
                   {[
                     { symbol: 'EURUSD', name: 'EUR/USD', category: 'FX' },
                     { symbol: 'GBPUSD', name: 'GBP/USD', category: 'FX' },
@@ -164,13 +164,13 @@ export default function Hero() {
                     <button
                       key={pair.symbol}
                       onClick={() => setSelectedPair(pair.symbol)}
-                      className={`flex-shrink-0 lg:flex-shrink lg:w-full text-left px-3 md:px-4 py-2 md:py-3 rounded-lg transition-all duration-200 whitespace-nowrap ${
+                      className={`w-full text-center lg:text-left px-2 sm:px-3 md:px-4 py-2 md:py-3 rounded-lg transition-all duration-200 ${
                         selectedPair === pair.symbol
                           ? 'bg-gradient-to-r from-[#00B38F] to-[#00B39F] text-white shadow-lg ring-2 ring-white/20'
                           : 'bg-white/5 text-gray-300 hover:bg-white/10 border border-white/10'
                       }`}
                     >
-                      <div className="font-bold text-xs md:text-sm">{pair.name}</div>
+                      <div className="font-bold text-xs sm:text-sm">{pair.name}</div>
                       {selectedPair === pair.symbol && (
                         <div className="text-xs opacity-90 mt-1 hidden lg:block">Live Chart</div>
                       )}
@@ -183,8 +183,8 @@ export default function Hero() {
                   <div className="bg-white/5 rounded-lg overflow-hidden border border-white/10">
                     <iframe 
                       key={selectedPair}
-                      src={`https://www.tradingview-widget.com/embed-widget/mini-symbol-overview/?locale=en#%7B%22symbol%22%3A%22FX:${selectedPair}%22%2C%22width%22%3A%22100%25%22%2C%22height%22%3A%22400%22%2C%22dateRange%22%3A%221D%22%2C%22colorTheme%22%3A%22dark%22%2C%22trendLineColor%22%3A%22rgba(0%2C%20179%2C%20143%2C%201)%22%2C%22underLineColor%22%3A%22rgba(0%2C%20179%2C%20159%2C%200.3)%22%2C%22isTransparent%22%3Atrue%2C%22autosize%22%3Afalse%2C%22largeChartUrl%22%3A%22%22%2C%22utm_source%22%3A%22oxidane.com%22%2C%22utm_medium%22%3A%22widget%22%2C%22utm_campaign%22%3A%22mini-symbol-overview%22%7D`}
-                      className="w-full h-[300px] md:h-[400px] border-0"
+                      src={`https://www.tradingview-widget.com/embed-widget/mini-symbol-overview/?locale=en#%7B%22symbol%22%3A%22FX:${selectedPair}%22%2C%22width%22%3A%22100%25%22%2C%22height%22%3A%22350%22%2C%22dateRange%22%3A%221D%22%2C%22colorTheme%22%3A%22dark%22%2C%22trendLineColor%22%3A%22rgba(0%2C%20179%2C%20143%2C%201)%22%2C%22underLineColor%22%3A%22rgba(0%2C%20179%2C%20159%2C%200.3)%22%2C%22isTransparent%22%3Atrue%2C%22autosize%22%3Afalse%2C%22largeChartUrl%22%3A%22%22%2C%22utm_source%22%3A%22oxidane.com%22%2C%22utm_medium%22%3A%22widget%22%2C%22utm_campaign%22%3A%22mini-symbol-overview%22%7D`}
+                      className="w-full h-[250px] sm:h-[300px] md:h-[350px] border-0"
                       style={{ background: 'transparent' }}
                       title={`${selectedPair} Chart`}
                     ></iframe>

@@ -6,7 +6,7 @@ export default function FounderBio() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-8 md:gap-12 items-center">
           {/* Left Column - Founder Image */}
-          <div className="relative order-2 lg:order-1">
+          <div className="relative order-1 lg:order-1">
             <div className="relative z-10">
               {/* Profile Image */}
               <div className="aspect-square rounded-2xl bg-gradient-to-br from-[#00B38F] to-[#00B39F] p-1 shadow-2xl overflow-hidden">
@@ -23,14 +23,14 @@ export default function FounderBio() {
               </div>
               
               {/* Floating Achievement Cards */}
-              <div className="absolute -right-2 md:-right-4 top-4 md:top-8 bg-white rounded-xl p-3 md:p-4 shadow-xl border border-gray-200 max-w-[140px] md:max-w-[200px]">
-                <div className="text-2xl md:text-3xl font-bold text-[#00B38F]">1M+</div>
-                <div className="text-xs md:text-sm text-gray-600">Social Media Views</div>
+              <div className="absolute right-1 sm:-right-2 md:-right-4 top-4 md:top-8 bg-white rounded-lg md:rounded-xl p-2 sm:p-3 md:p-4 shadow-xl border border-gray-200 max-w-[100px] sm:max-w-[130px] md:max-w-[200px]">
+                <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-[#00B38F]">1M+</div>
+                <div className="text-[10px] sm:text-xs md:text-sm text-gray-600">Social Views</div>
               </div>
               
-              <div className="absolute -left-2 md:-left-4 bottom-4 md:bottom-8 bg-white rounded-xl p-3 md:p-4 shadow-xl border border-gray-200 max-w-[140px] md:max-w-[200px]">
-                <div className="text-2xl md:text-3xl font-bold text-[#000ABE]">500+</div>
-                <div className="text-xs md:text-sm text-gray-600">Students Trained</div>
+              <div className="absolute left-1 sm:-left-2 md:-left-4 bottom-4 md:bottom-8 bg-white rounded-lg md:rounded-xl p-2 sm:p-3 md:p-4 shadow-xl border border-gray-200 max-w-[100px] sm:max-w-[130px] md:max-w-[200px]">
+                <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-[#000ABE]">500+</div>
+                <div className="text-[10px] sm:text-xs md:text-sm text-gray-600">Students</div>
               </div>
             </div>
             
@@ -42,10 +42,10 @@ export default function FounderBio() {
           </div>
 
           {/* Right Column - Bio Content */}
-          <div className="space-y-4 md:space-y-6 order-1 lg:order-2">
+          <div className="space-y-4 md:space-y-6 order-2 lg:order-2">
             <div className="inline-flex items-center px-4 py-2 bg-white rounded-full text-sm font-medium shadow-md border border-gray-200">
               <div className="w-2 h-2 bg-[#00B38F] rounded-full mr-2 animate-pulse"></div>
-              Meet Your Instructor
+              <span className="text-gray-700">Meet Your Instructor</span>
             </div>
 
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900">

@@ -119,71 +119,70 @@ export default function TestimonialsCredibility() {
   }, []);
 
   return (
-    <section id="testimonials" className="py-20 bg-white">
+    <section id="testimonials" className="py-12 md:py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Real Results */}
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-8">
+        <div className="text-center mb-12 md:mb-16">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-6 md:mb-8">
             Real Students, Real Results
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
             {realResults.map((result, index) => (
-              <div key={index} className="bg-gradient-to-br from-[#00B38F]/10 to-[#00B39F]/10 rounded-xl p-6 text-center">
-                <div className="text-3xl font-bold text-[#00B38F]/80 mb-2">{result.value}</div>
-                <div className="font-semibold text-gray-900 mb-1">{result.metric}</div>
-                <div className="text-sm text-gray-600">{result.period}</div>
+              <div key={index} className="bg-gradient-to-br from-[#00B38F]/10 to-[#00B39F]/10 rounded-lg md:rounded-xl p-4 md:p-6 text-center">
+                <div className="text-2xl sm:text-3xl font-bold text-[#00B38F]/80 mb-1 md:mb-2">{result.value}</div>
+                <div className="font-semibold text-gray-900 mb-1 text-xs sm:text-sm md:text-base">{result.label}</div>
               </div>
             ))}
           </div>
         </div>
 
         {/* Testimonial Carousel */}
-        <div className="bg-gradient-to-br from-gray-50 to-[#00B38F]/10 rounded-3xl p-8 md:p-12 mb-16">
+        <div className="bg-gradient-to-br from-gray-50 to-[#00B38F]/10 rounded-2xl md:rounded-3xl p-6 md:p-8 lg:p-12 mb-12 md:mb-16">
           <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-8">
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Student Success Stories</h3>
-              <p className="text-gray-600">Real transformations from our education-first approach</p>
+            <div className="text-center mb-6 md:mb-8">
+              <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3 md:mb-4">Student Success Stories</h3>
+              <p className="text-sm sm:text-base text-gray-600">Real transformations from our education-first approach</p>
             </div>
 
-            <div className="bg-white rounded-2xl p-8 shadow-lg relative overflow-hidden">
+            <div className="bg-white rounded-xl md:rounded-2xl p-6 md:p-8 shadow-lg relative overflow-hidden">
               {/* Testimonial Content */}
-              <div className="text-center space-y-6">
+              <div className="text-center space-y-4 md:space-y-6">
                 <div className="mb-4">{testimonials[currentTestimonial].image}</div>
                 
-                <blockquote className="text-lg text-gray-700 leading-relaxed italic">
+                <blockquote className="text-sm sm:text-base md:text-lg text-gray-700 leading-relaxed italic px-2">
                   "{testimonials[currentTestimonial].story}"
                 </blockquote>
 
-                <div className="space-y-4">
-                  <div className="flex justify-center space-x-8">
+                <div className="space-y-3 md:space-y-4">
+                  <div className="flex justify-center space-x-4 sm:space-x-8">
                     <div className="text-center">
-                      <div className="text-sm text-gray-500">Before</div>
-                      <div className="font-semibold text-red-600">
+                      <div className="text-xs sm:text-sm text-gray-500">Before</div>
+                      <div className="font-semibold text-red-600 text-xs sm:text-sm md:text-base">
                         {testimonials[currentTestimonial].beforeAfter.before}
                       </div>
                     </div>
                     <div className="text-center">
-                      <div className="text-sm text-gray-500">After</div>
-                      <div className="font-semibold text-green-600">
+                      <div className="text-xs sm:text-sm text-gray-500">After</div>
+                      <div className="font-semibold text-green-600 text-xs sm:text-sm md:text-base">
                         {testimonials[currentTestimonial].beforeAfter.after}
                       </div>
                     </div>
                   </div>
 
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-[#000ABE]">
+                    <div className="text-lg sm:text-xl md:text-2xl font-bold text-[#000ABE]">
                       {testimonials[currentTestimonial].result}
                     </div>
-                    <div className="text-sm text-gray-600">
+                    <div className="text-xs sm:text-sm text-gray-600">
                       {testimonials[currentTestimonial].timeframe}
                     </div>
                   </div>
 
                   <div className="text-center">
-                    <div className="font-semibold text-gray-900">
+                    <div className="font-semibold text-gray-900 text-sm md:text-base">
                       {testimonials[currentTestimonial].name}
                     </div>
-                    <div className="text-sm text-gray-600">
+                    <div className="text-xs sm:text-sm text-gray-600">
                       {testimonials[currentTestimonial].role} • {testimonials[currentTestimonial].location}
                     </div>
                   </div>
@@ -205,35 +204,35 @@ export default function TestimonialsCredibility() {
             </div>
 
             {/* Testimonial Preview Gallery */}
-            <div className="mt-8 bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
-              <h4 className="text-center text-white text-sm font-medium mb-4">
+            <div className="mt-6 md:mt-8 bg-slate-800/50 backdrop-blur-sm rounded-xl p-4 md:p-6 border border-slate-700/50">
+              <h4 className="text-center text-white text-xs sm:text-sm font-medium mb-3 md:mb-4">
                 All Client Success Stories
               </h4>
-              <div className="flex justify-center items-center space-x-8">
+              <div className="flex justify-center items-center space-x-4 sm:space-x-6 md:space-x-8 overflow-x-auto pb-2">
                 {testimonials.map((testimonial, index) => (
                   <button
                     key={index}
                     onClick={() => setCurrentTestimonial(index)}
-                    className={`group relative transition-all duration-300 ${
+                    className={`group relative transition-all duration-300 flex-shrink-0 ${
                       index === currentTestimonial ? 'scale-110' : 'hover:scale-105 opacity-85'
                     }`}
                   >
-                    <div className={`w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-[#00B38F]/20 to-[#00B39F]/20 flex items-center justify-center overflow-hidden transition-all duration-300 ${
+                    <div className={`w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 mx-auto rounded-full bg-gradient-to-br from-[#00B38F]/20 to-[#00B39F]/20 flex items-center justify-center overflow-hidden transition-all duration-300 ${
                       index === currentTestimonial 
                         ? 'ring-4 ring-white shadow-lg shadow-white/30' 
                         : 'ring-2 ring-gray-400 group-hover:ring-white/50'
                     }`}>
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#00B38F] to-[#00B39F] text-white text-xl font-bold">
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#00B38F] to-[#00B39F] text-white text-base sm:text-lg md:text-xl font-bold">
                         {testimonial.name.charAt(1).toUpperCase()}
                       </div>
                     </div>
-                    <div className="mt-2 text-center">
+                    <div className="mt-1 md:mt-2 text-center hidden sm:block">
                       <p className={`text-xs font-medium transition-colors duration-300 ${
                         index === currentTestimonial ? 'text-white' : 'text-gray-300'
                       }`}>
                         {testimonial.name}
                       </p>
-                      <p className={`text-xs transition-colors duration-300 ${
+                      <p className={`text-xs transition-colors duration-300 hidden md:block ${
                         index === currentTestimonial ? 'text-white' : 'text-gray-400'
                       }`}>
                         {testimonial.result}
@@ -247,88 +246,88 @@ export default function TestimonialsCredibility() {
         </div>
 
         {/* Instructor Credentials */}
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          <div className="space-y-8">
+        <div className="grid lg:grid-cols-2 gap-8 md:gap-12 items-center">
+          <div className="space-y-6 md:space-y-8">
             <div>
-              <h3 className="text-3xl font-bold text-gray-900 mb-4">
+              <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 md:mb-4">
                 Your Instructor: Professional Credentials
               </h3>
-              <p className="text-lg text-gray-600 leading-relaxed">
+              <p className="text-base sm:text-lg text-gray-600 leading-relaxed">
                 Learn from someone who's been there. Our lead instructor brings institutional 
                 trading experience and a proven track record of student success.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
               {credentials.map((credential, index) => (
-                <div key={index} className="bg-white rounded-xl p-6 shadow-lg border border-[#00B38F]/20">
-                  <div className="mb-3">{credential.icon}</div>
-                  <h4 className="font-bold text-gray-900 mb-2">{credential.title}</h4>
-                  <p className="text-gray-600 text-sm">{credential.description}</p>
+                <div key={index} className="bg-white rounded-lg md:rounded-xl p-4 md:p-6 shadow-lg border border-[#00B38F]/20">
+                  <div className="mb-2 md:mb-3">{credential.icon}</div>
+                  <h4 className="font-bold text-gray-900 mb-1 md:mb-2 text-sm md:text-base">{credential.title}</h4>
+                  <p className="text-gray-600 text-xs md:text-sm">{credential.description}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-4 md:space-y-6">
             {/* Verified Track Record */}
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-8 border border-green-200">
-              <h4 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                <svg className="w-6 h-6 text-green-600 mr-2" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl md:rounded-2xl p-6 md:p-8 border border-green-200">
+              <h4 className="text-lg md:text-xl font-bold text-gray-900 mb-3 md:mb-4 flex items-center">
+                <svg className="w-5 h-5 md:w-6 md:h-6 text-green-600 mr-2 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                Verified Trading Record
+                <span className="text-sm sm:text-base md:text-lg lg:text-xl">Verified Trading Record</span>
               </h4>
-              <div className="space-y-4">
+              <div className="space-y-3 md:space-y-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-700">Win Rate (24 months)</span>
-                  <span className="font-bold text-green-600">78.3%</span>
+                  <span className="text-gray-700 text-xs sm:text-sm md:text-base">Win Rate (24 months)</span>
+                  <span className="font-bold text-green-600 text-sm sm:text-base">78.3%</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-700">Average Risk-Reward</span>
-                  <span className="font-bold text-green-600">1:2.4</span>
+                  <span className="text-gray-700 text-xs sm:text-sm md:text-base">Average Risk-Reward</span>
+                  <span className="font-bold text-green-600 text-sm sm:text-base">1:2.4</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-700">Maximum Drawdown</span>
-                  <span className="font-bold text-green-600">8.2%</span>
+                  <span className="text-gray-700 text-xs sm:text-sm md:text-base">Maximum Drawdown</span>
+                  <span className="font-bold text-green-600 text-sm sm:text-base">8.2%</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-700">Consistency Score</span>
-                  <span className="font-bold text-green-600">92/100</span>
+                  <span className="text-gray-700 text-xs sm:text-sm md:text-base">Consistency Score</span>
+                  <span className="font-bold text-green-600 text-sm sm:text-base">92/100</span>
                 </div>
               </div>
-              <div className="mt-4 text-xs text-gray-600">
+              <div className="mt-3 md:mt-4 text-[10px] sm:text-xs text-gray-600">
                 *Audited by third-party verification service
               </div>
             </div>
 
             {/* Education Philosophy */}
-            <div className="bg-gradient-to-br from-[#000ABE]/10 to-[#00B39F]/10 rounded-2xl p-8">
-              <h4 className="text-xl font-bold text-gray-900 mb-4">Our Teaching Philosophy</h4>
-              <ul className="space-y-3">
-                <li className="flex items-start space-x-3">
+            <div className="bg-gradient-to-br from-[#000ABE]/10 to-[#00B39F]/10 rounded-xl md:rounded-2xl p-6 md:p-8">
+              <h4 className="text-lg md:text-xl font-bold text-gray-900 mb-3 md:mb-4">Our Teaching Philosophy</h4>
+              <ul className="space-y-2 md:space-y-3">
+                <li className="flex items-start space-x-2 md:space-x-3">
                   <div className="w-5 h-5 bg-gradient-to-r from-[#00B38F] to-[#00B39F] rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                     <span className="text-white text-xs">1</span>
                   </div>
-                  <span className="text-gray-700">Education before profit - understand before you trade</span>
+                  <span className="text-gray-700 text-xs sm:text-sm md:text-base">Education before profit - understand before you trade</span>
                 </li>
-                <li className="flex items-start space-x-3">
+                <li className="flex items-start space-x-2 md:space-x-3">
                   <div className="w-5 h-5 bg-gradient-to-r from-[#000ABE] to-[#00B38F] rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                     <span className="text-white text-xs">2</span>
                   </div>
-                  <span className="text-gray-700">Risk management is the foundation of all profitable trading</span>
+                  <span className="text-gray-700 text-xs sm:text-sm md:text-base">Risk management is the foundation of all profitable trading</span>
                 </li>
-                <li className="flex items-start space-x-3">
+                <li className="flex items-start space-x-2 md:space-x-3">
                   <div className="w-5 h-5 bg-gradient-to-r from-[#00B39F] to-[#000ABE] rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                     <span className="text-white text-xs">3</span>
                   </div>
-                  <span className="text-gray-700">Psychology and discipline matter more than indicators</span>
+                  <span className="text-gray-700 text-xs sm:text-sm md:text-base">Psychology and discipline matter more than indicators</span>
                 </li>
-                <li className="flex items-start space-x-3">
+                <li className="flex items-start space-x-2 md:space-x-3">
                   <div className="w-5 h-5 bg-gradient-to-r from-[#00B38F] to-[#000ABE] rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                     <span className="text-white text-xs">4</span>
                   </div>
-                  <span className="text-gray-700">Real market experience through guided practice</span>
+                  <span className="text-gray-700 text-xs sm:text-sm md:text-base">Real market experience through guided practice</span>
                 </li>
               </ul>
             </div>
@@ -336,9 +335,9 @@ export default function TestimonialsCredibility() {
         </div>
 
         {/* Trust Badges */}
-        <div className="text-center mt-16">
-          <p className="text-gray-600 mb-6">Trusted by students worldwide</p>
-          <div className="flex flex-wrap justify-center items-center gap-8 opacity-60">
+        <div className="text-center mt-12 md:mt-16">
+          <p className="text-sm md:text-base text-gray-600 mb-4 md:mb-6">Trusted by students worldwide</p>
+          <div className="flex flex-wrap justify-center items-center gap-4 sm:gap-6 md:gap-8 opacity-60">
             <div className="text-gray-400 font-semibold flex items-center">
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
