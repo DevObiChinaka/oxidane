@@ -153,9 +153,9 @@ export default function Hero() {
                 </div>
               </div>
               
-              <div className="flex flex-col lg:grid lg:grid-cols-3 gap-4 lg:gap-6">
+              <div className="flex flex-col lg:grid lg:grid-cols-4 gap-4 lg:gap-5">
                 {/* Pair List */}
-                <div className="lg:col-span-1 grid grid-cols-3 lg:grid-cols-1 gap-2 lg:gap-3">
+                <div className="lg:col-span-1 grid grid-cols-3 lg:grid-cols-1 gap-2 lg:gap-2.5">
                   {[
                     { symbol: 'EURUSD', name: 'EUR/USD', category: 'Major', flag: '🇪🇺/🇺🇸' },
                     { symbol: 'GBPUSD', name: 'GBP/USD', category: 'Major', flag: '🇬🇧/🇺🇸' },
@@ -167,21 +167,21 @@ export default function Hero() {
                     <button
                       key={pair.symbol}
                       onClick={() => setSelectedPair(pair.symbol)}
-                      className={`group relative w-full text-center lg:text-left px-3 py-3 lg:py-4 rounded-xl transition-all duration-300 ${
+                      className={`group relative w-full text-center lg:text-left px-3 py-2.5 lg:py-3 rounded-xl transition-all duration-300 ${
                         selectedPair === pair.symbol
                           ? 'bg-gradient-to-r from-[#00B38F] to-[#00B39F] text-white shadow-xl shadow-[#00B38F]/30 ring-2 ring-white/30 scale-105 lg:scale-100'
                           : 'bg-white/5 text-gray-300 hover:bg-white/10 border border-white/10 hover:border-white/20 hover:scale-105'
                       }`}
                     >
                       <div className="flex items-center justify-center lg:justify-start gap-2">
-                        <span className="text-base lg:text-lg hidden lg:inline">{pair.flag}</span>
+                        <span className="text-sm lg:text-base hidden lg:inline">{pair.flag}</span>
                         <div>
-                          <div className="font-bold text-xs sm:text-sm lg:text-base">{pair.name}</div>
+                          <div className="font-bold text-xs sm:text-sm lg:text-sm">{pair.name}</div>
                           {selectedPair === pair.symbol && (
-                            <div className="text-xs opacity-90 mt-0.5 hidden lg:block font-normal">Live Chart</div>
+                            <div className="text-[10px] opacity-90 mt-0.5 hidden lg:block font-normal">Live Chart</div>
                           )}
                           {selectedPair !== pair.symbol && (
-                            <div className="text-[10px] opacity-70 mt-0.5 hidden lg:block">{pair.category}</div>
+                            <div className="text-[9px] opacity-70 mt-0.5 hidden lg:block">{pair.category}</div>
                           )}
                         </div>
                       </div>
@@ -193,10 +193,10 @@ export default function Hero() {
                 </div>
 
                 {/* Selected Pair Widget */}
-                <div className="lg:col-span-2">
+                <div className="lg:col-span-3">
                   <div className="relative bg-gradient-to-br from-white/10 to-white/5 rounded-2xl overflow-hidden border-2 border-white/20 shadow-2xl">
                     {/* Chart Header */}
-                    <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/40 to-transparent p-4 z-10">
+                    <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/40 to-transparent p-3 lg:p-4 z-10">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
@@ -210,8 +210,8 @@ export default function Hero() {
                     
                     <iframe 
                       key={selectedPair}
-                      src={`https://www.tradingview-widget.com/embed-widget/mini-symbol-overview/?locale=en#%7B%22symbol%22%3A%22FX:${selectedPair}%22%2C%22width%22%3A%22100%25%22%2C%22height%22%3A%22400%22%2C%22dateRange%22%3A%221D%22%2C%22colorTheme%22%3A%22dark%22%2C%22trendLineColor%22%3A%22rgba(0%2C%20179%2C%20143%2C%201)%22%2C%22underLineColor%22%3A%22rgba(0%2C%20179%2C%20159%2C%200.3)%22%2C%22isTransparent%22%3Atrue%2C%22autosize%22%3Afalse%2C%22largeChartUrl%22%3A%22%22%2C%22utm_source%22%3A%22oxidane.com%22%2C%22utm_medium%22%3A%22widget%22%2C%22utm_campaign%22%3A%22mini-symbol-overview%22%7D`}
-                      className="w-full h-[250px] sm:h-[300px] lg:h-[400px] border-0"
+                      src={`https://www.tradingview-widget.com/embed-widget/mini-symbol-overview/?locale=en#%7B%22symbol%22%3A%22FX:${selectedPair}%22%2C%22width%22%3A%22100%25%22%2C%22height%22%3A%22320%22%2C%22dateRange%22%3A%221D%22%2C%22colorTheme%22%3A%22dark%22%2C%22trendLineColor%22%3A%22rgba(0%2C%20179%2C%20143%2C%201)%22%2C%22underLineColor%22%3A%22rgba(0%2C%20179%2C%20159%2C%200.3)%22%2C%22isTransparent%22%3Atrue%2C%22autosize%22%3Afalse%2C%22largeChartUrl%22%3A%22%22%2C%22utm_source%22%3A%22oxidane.com%22%2C%22utm_medium%22%3A%22widget%22%2C%22utm_campaign%22%3A%22mini-symbol-overview%22%7D`}
+                      className="w-full h-[250px] sm:h-[280px] lg:h-[320px] border-0"
                       style={{ background: 'transparent' }}
                       title={`${selectedPair} Chart`}
                     ></iframe>
