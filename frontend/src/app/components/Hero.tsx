@@ -2,12 +2,12 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { useForexData, useMarketSessions } from '../hooks/useForexData';
+import { useMarketSessions } from '../hooks/useForexData';
 
 export default function Hero() {
-  const { rates, isLoading, lastUpdate } = useForexData();
   const sessions = useMarketSessions();
   const [mounted, setMounted] = useState(false);
+  const [selectedPair, setSelectedPair] = useState('EURUSD');
 
   useEffect(() => {
     setMounted(true);
@@ -140,7 +140,7 @@ export default function Hero() {
 
           {/* Right Column - Live Market Data */}
           <div className="space-y-6">
-            {/* TradingView Widget */}
+            {/* TradingView Widget with Vertical Pair Selection */}
             <div className="bg-white/8 backdrop-blur-2xl border border-white/15 rounded-2xl p-6 shadow-2xl">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-bold text-white">Live Market Rates</h3>
@@ -150,21 +150,48 @@ export default function Hero() {
                 </div>
               </div>
               
-              {/* TradingView Mini Chart Widget */}
-              <div className="space-y-3">
-                <iframe 
-                  src="https://www.tradingview-widget.com/embed-widget/mini-symbol-overview/?locale=en#%7B%22symbol%22%3A%22FX%3AEURUSD%22%2C%22width%22%3A%22100%25%22%2C%22height%22%3A%22220%22%2C%22dateRange%22%3A%221D%22%2C%22colorTheme%22%3A%22dark%22%2C%22trendLineColor%22%3A%22rgba(0%2C%20179%2C%20143%2C%201)%22%2C%22underLineColor%22%3A%22rgba(0%2C%20179%2C%20159%2C%200.3)%22%2C%22isTransparent%22%3Atrue%2C%22autosize%22%3Afalse%2C%22largeChartUrl%22%3A%22%22%2C%22utm_source%22%3A%22oxidane.com%22%2C%22utm_medium%22%3A%22widget%22%2C%22utm_campaign%22%3A%22mini-symbol-overview%22%7D"
-                  className="w-full h-[220px] rounded-lg border-0"
-                  style={{ background: 'transparent' }}
-                  title="EUR/USD Chart"
-                ></iframe>
-                
-                <iframe 
-                  src="https://www.tradingview-widget.com/embed-widget/mini-symbol-overview/?locale=en#%7B%22symbol%22%3A%22FX%3AGBPUSD%22%2C%22width%22%3A%22100%25%22%2C%22height%22%3A%22220%22%2C%22dateRange%22%3A%221D%22%2C%22colorTheme%22%3A%22dark%22%2C%22trendLineColor%22%3A%22rgba(0%2C%20179%2C%20143%2C%201)%22%2C%22underLineColor%22%3A%22rgba(0%2C%20179%2C%20159%2C%200.3)%22%2C%22isTransparent%22%3Atrue%2C%22autosize%22%3Afalse%2C%22largeChartUrl%22%3A%22%22%2C%22utm_source%22%3A%22oxidane.com%22%2C%22utm_medium%22%3A%22widget%22%2C%22utm_campaign%22%3A%22mini-symbol-overview%22%7D"
-                  className="w-full h-[220px] rounded-lg border-0"
-                  style={{ background: 'transparent' }}
-                  title="GBP/USD Chart"
-                ></iframe>
+              <div className="grid grid-cols-3 gap-4">
+                {/* Left Side - Pair List */}
+                <div className="col-span-1 space-y-2">
+                  {[
+                    { symbol: 'EURUSD', name: 'EUR/USD', category: 'FX' },
+                    { symbol: 'GBPUSD', name: 'GBP/USD', category: 'FX' },
+                    { symbol: 'USDJPY', name: 'USD/JPY', category: 'FX' },
+                    { symbol: 'XAUUSD', name: 'XAU/USD', category: 'FX' },
+                    { symbol: 'BTCUSD', name: 'BTC/USD', category: 'CRYPTO:BINANCE' },
+                    { symbol: 'AUDUSD', name: 'AUD/USD', category: 'FX' }
+                  ].map((pair) => (
+                    <button
+                      key={pair.symbol}
+                      onClick={() => setSelectedPair(pair.symbol)}
+                      className={`w-full text-left px-4 py-3 rounded-lg transition-all duration-200 ${
+                        selectedPair === pair.symbol
+                          ? 'bg-gradient-to-r from-[#00B38F] to-[#00B39F] text-white shadow-lg ring-2 ring-white/20'
+                          : 'bg-white/5 text-gray-300 hover:bg-white/10 border border-white/10'
+                      }`}
+                    >
+                      <div className="font-bold text-sm">{pair.name}</div>
+                      {selectedPair === pair.symbol && (
+                        <div className="text-xs opacity-90 mt-1">Live Chart</div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Right Side - Selected Pair Widget */}
+                <div className="col-span-2">
+                  <div className="bg-white/5 rounded-lg overflow-hidden border border-white/10">
+                    <iframe 
+                      key={selectedPair}
+                      src={`https://www.tradingview-widget.com/embed-widget/mini-symbol-overview/?locale=en#%7B%22symbol%22%3A%22${
+                        selectedPair === 'BTCUSD' ? 'CRYPTO:BINANCE:BTCUSD' : `FX:${selectedPair}`
+                      }%22%2C%22width%22%3A%22100%25%22%2C%22height%22%3A%22400%22%2C%22dateRange%22%3A%221D%22%2C%22colorTheme%22%3A%22dark%22%2C%22trendLineColor%22%3A%22rgba(0%2C%20179%2C%20143%2C%201)%22%2C%22underLineColor%22%3A%22rgba(0%2C%20179%2C%20159%2C%200.3)%22%2C%22isTransparent%22%3Atrue%2C%22autosize%22%3Afalse%2C%22largeChartUrl%22%3A%22%22%2C%22utm_source%22%3A%22oxidane.com%22%2C%22utm_medium%22%3A%22widget%22%2C%22utm_campaign%22%3A%22mini-symbol-overview%22%7D`}
+                      className="w-full h-[400px] border-0"
+                      style={{ background: 'transparent' }}
+                      title={`${selectedPair} Chart`}
+                    ></iframe>
+                  </div>
+                </div>
               </div>
               
               <div className="mt-4 pt-4 border-t border-white/10">
