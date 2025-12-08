@@ -167,21 +167,15 @@ export default function Hero() {
                     <button
                       key={pair.symbol}
                       onClick={() => setSelectedPair(pair.symbol)}
-                      className={`group relative w-full text-center px-3 py-3 rounded-xl transition-all duration-300 ${
+                      className={`group relative w-full text-center px-2 py-2.5 rounded-lg transition-all duration-300 ${
                         selectedPair === pair.symbol
                           ? 'bg-gradient-to-r from-[#00B38F] to-[#00B39F] text-white shadow-xl shadow-[#00B38F]/30 ring-2 ring-white/30'
                           : 'bg-white/5 text-gray-300 hover:bg-white/10 border border-white/10 hover:border-white/20 hover:shadow-lg'
                       }`}
                     >
-                      <div className="flex flex-col items-center justify-center gap-1">
-                        <span className="text-lg hidden sm:block">{pair.flag}</span>
-                        <div className="font-bold text-xs sm:text-sm">{pair.name}</div>
-                        {selectedPair === pair.symbol && (
-                          <div className="text-[10px] opacity-90 hidden lg:block">Live</div>
-                        )}
-                      </div>
+                      <div className="font-bold text-xs sm:text-sm">{pair.name}</div>
                       {selectedPair === pair.symbol && (
-                        <div className="absolute inset-0 bg-gradient-to-r from-[#00B38F]/20 to-[#00B39F]/20 rounded-xl blur-xl -z-10"></div>
+                        <div className="absolute inset-0 bg-gradient-to-r from-[#00B38F]/20 to-[#00B39F]/20 rounded-lg blur-xl -z-10"></div>
                       )}
                     </button>
                   ))}
