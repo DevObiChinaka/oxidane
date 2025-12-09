@@ -58,6 +58,11 @@ export default function CourseDetailPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [expandedLessons, setExpandedLessons] = useState(true); // For collapsible lesson list
 
+  // DEBUG: Log when component loads
+  useEffect(() => {
+    console.log('🎯 Course Detail Page Component Mounted - VERSION: Dec 9 4:20pm with debug logging');
+  }, []);
+
   useEffect(() => {
     if (slug) {
       checkAuthAndFetchCourse();
@@ -188,11 +193,23 @@ export default function CourseDetailPage() {
   };
 
   const handleStartLearning = () => {
+    console.log('🎓 START LEARNING clicked');
+    console.log('📚 Course:', course?.title);
+    console.log('📝 Total lessons:', course?.lessons?.length);
+    
     if (course && course.lessons.length > 0) {
       // Find the first incomplete lesson, or default to the first lesson
       const firstIncomplete = course.lessons.find(l => !l.is_completed);
       const targetLesson = firstIncomplete || course.lessons[0];
-      router.push(`/courses/${course.slug}/watch?lesson=${targetLesson.id}`);
+      
+      const watchUrl = `/courses/${course.slug}/watch?lesson=${targetLesson.id}`;
+      console.log('🎯 Redirecting to:', watchUrl);
+      console.log('🎯 Target lesson:', targetLesson.title);
+      
+      router.push(watchUrl);
+    } else {
+      console.log('❌ No lessons available or course is null');
+      alert('No lessons available for this course');
     }
   };
 

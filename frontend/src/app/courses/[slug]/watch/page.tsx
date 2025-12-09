@@ -301,9 +301,9 @@ export default function VideoPlayerPage() {
         <div className="flex-1 flex flex-col">
           
           {/* Video Player Container */}
-          <div className="bg-gray-50 px-4 py-6 lg:px-8 lg:py-8">
+          <div className="bg-gray-50 px-2 py-3 sm:px-4 sm:py-4 lg:px-8 lg:py-8">
             <div className="max-w-7xl mx-auto">
-              <div className="aspect-video w-full bg-black rounded-xl overflow-hidden shadow-2xl">
+              <div className="aspect-video w-full bg-black rounded-lg sm:rounded-xl overflow-hidden shadow-lg sm:shadow-2xl">
                 {getVideoPlayer()}
               </div>
             </div>
@@ -362,10 +362,10 @@ export default function VideoPlayerPage() {
 
           {/* Content Section */}
           <div className="flex-1 overflow-y-auto">
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
               
               {/* Breadcrumb Navigation */}
-              <nav className="flex items-center space-x-2 text-sm text-gray-600 mb-6">
+              <nav className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 lg:mb-6 overflow-x-auto">
                 <button
                   onClick={() => router.push('/courses')}
                   className="hover:text-[#00B38F] transition-colors font-medium"
@@ -388,12 +388,12 @@ export default function VideoPlayerPage() {
               </nav>
 
               {/* Lesson Header */}
-              <div className="mb-8">
-                <div className="flex items-start justify-between gap-4 mb-6">
-                  <h1 className="text-4xl font-bold text-gray-900 leading-tight flex-1">
+              <div className="mb-4 sm:mb-6 lg:mb-8">
+                <div className="flex flex-col sm:flex-row items-start justify-between gap-2 sm:gap-4 mb-4 sm:mb-6">
+                  <h1 className="text-xl sm:text-2xl lg:text-4xl font-bold text-gray-900 leading-tight flex-1">
                     {currentLesson.title}
                   </h1>
-                  <span className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-semibold rounded-lg whitespace-nowrap">
+                  <span className="px-3 py-1.5 sm:px-4 sm:py-2 bg-gray-100 text-gray-700 text-xs sm:text-sm font-semibold rounded-lg whitespace-nowrap">
                     {currentLesson.duration}
                   </span>
                 </div>
@@ -432,55 +432,55 @@ export default function VideoPlayerPage() {
               </div>
 
               {/* About This Lesson */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-                <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                  <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center mr-3">
-                    <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 lg:p-8">
+                <h2 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 mb-3 sm:mb-4 flex items-center">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 bg-emerald-100 rounded-lg flex items-center justify-center mr-2 sm:mr-3">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
                   About This Lesson
                 </h2>
-                <p className="text-gray-600 leading-relaxed whitespace-pre-line">{currentLesson.description}</p>
+                <p className="text-sm sm:text-base text-gray-600 leading-relaxed whitespace-pre-line">{currentLesson.description}</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Sidebar - Course Progress & Lessons */}
-        <div className="lg:w-[420px] bg-white border-l border-gray-200 overflow-y-auto flex-shrink-0">
-          <div className="sticky top-0 bg-white border-b border-gray-200 p-6 z-10">
-            <h2 className="text-xl font-bold text-gray-900 mb-6">Course Progress</h2>
+        <div className="lg:w-[420px] bg-white border-t lg:border-t-0 lg:border-l border-gray-200 overflow-y-auto flex-shrink-0">
+          <div className="sticky top-0 bg-white border-b border-gray-200 p-4 sm:p-5 lg:p-6 z-10">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-5 lg:mb-6">Course Progress</h2>
             
             {/* Progress Stats */}
-            <div className="mb-4">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-semibold text-gray-600">Completion</span>
-                <span className="text-3xl font-bold text-emerald-600">
+            <div className="mb-3 sm:mb-4">
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <span className="text-xs sm:text-sm font-semibold text-gray-600">Completion</span>
+                <span className="text-2xl sm:text-3xl font-bold text-emerald-600">
                   {course.progress_percentage || 0}%
                 </span>
               </div>
-              <div className="h-3 bg-gray-200 rounded-full overflow-hidden mb-3">
+              <div className="h-2.5 sm:h-3 bg-gray-200 rounded-full overflow-hidden mb-2 sm:mb-3">
                 <div
                   className="h-full bg-emerald-600 rounded-full transition-all duration-500"
                   style={{ width: `${course.progress_percentage || 0}%` }}
                 />
               </div>
-              <p className="text-sm text-gray-600 font-medium">
+              <p className="text-xs sm:text-sm text-gray-600 font-medium">
                 {course.lessons_completed || 0} of {course.total_lessons} lessons completed
               </p>
             </div>
           </div>
 
           {/* Lessons List */}
-          <div className="p-6">
-            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">LESSONS</h3>
-            <div className="space-y-3">
+          <div className="p-3 sm:p-4 lg:p-6">
+            <h3 className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 sm:mb-4">LESSONS</h3>
+            <div className="space-y-2 sm:space-y-3">
               {course.lessons.map((lesson) => (
                 <button
                   key={lesson.id}
                   onClick={() => selectLesson(lesson)}
-                  className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
+                  className={`w-full text-left p-3 sm:p-4 rounded-lg border-2 transition-all ${
                     currentLesson.id === lesson.id
                       ? 'bg-emerald-50 border-emerald-500 shadow-sm'
                       : lesson.is_completed
@@ -488,9 +488,9 @@ export default function VideoPlayerPage() {
                       : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-sm'
                   }`}
                 >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center space-x-2">
-                      <span className={`text-xs font-bold px-2.5 py-1 rounded-md ${
+                  <div className="flex items-start justify-between mb-1.5 sm:mb-2">
+                    <div className="flex items-center space-x-1.5 sm:space-x-2">
+                      <span className={`text-[10px] sm:text-xs font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md ${
                         currentLesson.id === lesson.id
                           ? 'bg-emerald-600 text-white'
                           : lesson.is_completed
@@ -522,17 +522,15 @@ export default function VideoPlayerPage() {
                       )}
                     </div>
                   </div>
-                  <h4 className={`font-semibold mb-1 text-sm ${
+                  <h4 className={`font-semibold mb-1 text-xs sm:text-sm ${
                     currentLesson.id === lesson.id ? 'text-gray-900' : 'text-gray-700'
                   }`}>
                     {lesson.title}
                   </h4>
-                  <span className={`text-xs flex items-center font-medium ${
+                  <span className={`text-[10px] sm:text-xs flex items-center font-medium ${
                     currentLesson.id === lesson.id ? 'text-emerald-700' : 'text-gray-500'
                   }`}>
-                    <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+                    <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">\n                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />\n                    </svg>
                     {lesson.duration}
                   </span>
                 </button>
@@ -540,20 +538,20 @@ export default function VideoPlayerPage() {
             </div>
 
             {/* Course Details */}
-            <div className="mt-8 pt-6 border-t-2 border-gray-200">
-              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">COURSE DETAILS</h3>
+            <div className="mt-6 sm:mt-8 pt-5 sm:pt-6 border-t-2 border-gray-200">
+              <h3 className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 sm:mb-4">COURSE DETAILS</h3>
               <div className="space-y-2">
                 <button
                   onClick={() => router.push(`/courses/${course.slug}`)}
-                  className="w-full flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-emerald-500 hover:bg-emerald-50 transition-all group"
+                  className="w-full flex items-center justify-between p-2.5 sm:p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-emerald-500 hover:bg-emerald-50 transition-all group"
                 >
-                  <div className="flex items-center space-x-3">
-                    <div className="w-9 h-9 bg-emerald-100 rounded-lg flex items-center justify-center">
-                      <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="flex items-center space-x-2 sm:space-x-3">
+                    <div className="w-8 h-8 sm:w-9 sm:h-9 bg-emerald-100 rounded-lg flex items-center justify-center">
+                      <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     </div>
-                    <span className="font-semibold text-gray-900 text-sm">Course Overview</span>
+                    <span className="font-semibold text-gray-900 text-xs sm:text-sm">Course Overview</span>
                   </div>
                   <svg className="w-4 h-4 text-gray-400 group-hover:text-emerald-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -562,15 +560,15 @@ export default function VideoPlayerPage() {
 
                 <button
                   onClick={() => router.push('/my-courses')}
-                  className="w-full flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-emerald-500 hover:bg-emerald-50 transition-all group"
+                  className="w-full flex items-center justify-between p-2.5 sm:p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-emerald-500 hover:bg-emerald-50 transition-all group"
                 >
-                  <div className="flex items-center space-x-3">
-                    <div className="w-9 h-9 bg-emerald-100 rounded-lg flex items-center justify-center">
-                      <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="flex items-center space-x-2 sm:space-x-3">
+                    <div className="w-8 h-8 sm:w-9 sm:h-9 bg-emerald-100 rounded-lg flex items-center justify-center">
+                      <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                       </svg>
                     </div>
-                    <span className="font-semibold text-gray-900 text-sm">My Courses</span>
+                    <span className="font-semibold text-gray-900 text-xs sm:text-sm">My Courses</span>
                   </div>
                   <svg className="w-4 h-4 text-gray-400 group-hover:text-emerald-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -584,56 +582,56 @@ export default function VideoPlayerPage() {
 
       {/* Course Completion Modal */}
       {showCompletionModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-8 shadow-2xl animate-in zoom-in duration-300">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 animate-in fade-in duration-300">
+          <div className="bg-white rounded-xl sm:rounded-2xl max-w-lg w-full p-5 sm:p-6 lg:p-8 shadow-2xl animate-in zoom-in duration-300">
             
             {/* Trophy Animation */}
-            <div className="flex justify-center mb-6">
+            <div className="flex justify-center mb-4 sm:mb-5 lg:mb-6">
               <div className="relative">
-                <div className="w-32 h-32 bg-emerald-600 rounded-full flex items-center justify-center shadow-xl">
-                  <TrophyIcon className="w-20 h-20 text-white" />
+                <div className="w-24 h-24 sm:w-28 sm:h-28 lg:w-32 lg:h-32 bg-emerald-600 rounded-full flex items-center justify-center shadow-xl">
+                  <TrophyIcon className="w-16 h-16 sm:w-18 sm:h-18 lg:w-20 lg:h-20 text-white" />
                 </div>
               </div>
             </div>
 
             {/* Success Message */}
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-gray-900 mb-3">
+            <div className="text-center mb-5 sm:mb-6 lg:mb-8">
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 sm:mb-3">
                 Congratulations! 🎉
               </h2>
-              <p className="text-lg text-gray-600 mb-2">
+              <p className="text-base sm:text-lg text-gray-600 mb-1 sm:mb-2">
                 You've successfully completed
               </p>
-              <p className="text-xl font-bold text-emerald-600">
+              <p className="text-lg sm:text-xl font-bold text-emerald-600">
                 {course?.title}
               </p>
             </div>
 
             {/* Stats Card */}
-            <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 mb-8 border border-gray-200">
-              <div className="grid grid-cols-2 gap-6">
+            <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg sm:rounded-xl p-4 sm:p-5 lg:p-6 mb-5 sm:mb-6 lg:mb-8 border border-gray-200">
+              <div className="grid grid-cols-2 gap-4 sm:gap-6">
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-gray-900 mb-1">{course?.total_lessons}</div>
-                  <div className="text-sm text-gray-600">Lessons Completed</div>
+                  <div className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">{course?.total_lessons}</div>
+                  <div className="text-xs sm:text-sm text-gray-600">Lessons Completed</div>
                 </div>
                 <div className="text-center">
-                  <div className="flex items-center justify-center space-x-2 mb-1">
-                    <CheckCircleIcon className="w-7 h-7 text-emerald-600" />
-                    <span className="text-3xl font-bold text-emerald-600">100%</span>
+                  <div className="flex items-center justify-center space-x-1 sm:space-x-2 mb-1">
+                    <CheckCircleIcon className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-600" />
+                    <span className="text-2xl sm:text-3xl font-bold text-emerald-600">100%</span>
                   </div>
-                  <div className="text-sm text-gray-600">Course Progress</div>
+                  <div className="text-xs sm:text-sm text-gray-600">Course Progress</div>
                 </div>
               </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               <button
                 onClick={() => {
                   setShowCompletionModal(false);
                   router.push('/courses');
                 }}
-                className="w-full px-6 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl"
+                className="w-full px-5 py-3 sm:px-6 sm:py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm sm:text-base rounded-lg transition-all shadow-lg hover:shadow-xl"
               >
                 Explore More Courses
               </button>
@@ -642,7 +640,7 @@ export default function VideoPlayerPage() {
                   setShowCompletionModal(false);
                   router.push(`/courses/${slug}`);
                 }}
-                className="w-full px-6 py-4 bg-gray-100 hover:bg-gray-200 text-gray-900 font-semibold rounded-lg transition-all"
+                className="w-full px-5 py-3 sm:px-6 sm:py-4 bg-gray-100 hover:bg-gray-200 text-gray-900 font-semibold text-sm sm:text-base rounded-lg transition-all"
               >
                 Back to Course Details
               </button>

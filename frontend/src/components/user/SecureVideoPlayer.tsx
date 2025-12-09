@@ -68,7 +68,7 @@ export default function SecureVideoPlayer({
       }
 
       const response = await fetch(
-        `${API_ENDPOINTS.user.lessonVideoEmbed}${lessonId}/video-embed/`,
+        API_ENDPOINTS.user.videoEmbed(lessonId),
         {
           method: 'GET',
           headers: {
