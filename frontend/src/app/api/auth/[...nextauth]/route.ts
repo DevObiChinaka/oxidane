@@ -86,6 +86,8 @@ const handler = NextAuth({
               const backendUser = await response.json()
               token.backendUser = backendUser
               token.backendId = backendUser.id
+              token.backendAccessToken = backendUser.access_token
+              token.backendRefreshToken = backendUser.refresh_token
             } else {
               console.error('Backend OAuth sync failed:', await response.text())
             }
@@ -102,6 +104,15 @@ const handler = NextAuth({
       session.accessToken = token.accessToken as string
       session.provider = token.provider as string
       session.backendUser = token.backendUser
+      session.backendAccessToken = token.backendAccessToken as string
+      session.backendRefreshToken = token.backendRefreshToken as string
+      
+      // Store backend JWT in localStorage (client-side)
+      if (typeof window !== 'undefined' && token.backendAccessToken) {
+        localStorage.setItem('user_auth_token', token.backendAccessToken as string)
+        localStorage.setItem('refresh_token', token.backendRefreshToken as string)
+      }
+      
       return session
     },
   },
