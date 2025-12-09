@@ -53,7 +53,7 @@ export default function OAuthCallbackPage() {
             
             console.log('[OAuth Callback] Calling backend OAuth endpoint...');
             
-            const response = await fetch(`${apiUrl}/api/auth/oauth/`, {
+            const response = await fetch(`${apiUrl}/auth/oauth/`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
