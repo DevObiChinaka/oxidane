@@ -107,12 +107,6 @@ const handler = NextAuth({
       session.backendAccessToken = token.backendAccessToken as string
       session.backendRefreshToken = token.backendRefreshToken as string
       
-      // Store backend JWT in localStorage (client-side)
-      if (typeof window !== 'undefined' && token.backendAccessToken) {
-        localStorage.setItem('user_auth_token', token.backendAccessToken as string)
-        localStorage.setItem('refresh_token', token.backendRefreshToken as string)
-      }
-      
       return session
     },
   },
