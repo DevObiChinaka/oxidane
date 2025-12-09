@@ -681,7 +681,7 @@ export default function EmailTemplatesPage() {
                               </div>
                             </div>
                           </div>
-                          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:ml-4">center gap-2 sm:ml-4">
+                          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:ml-4">
                             <button
                               onClick={() => handleSend(template)}
                               className="inline-flex items-center justify-center px-2 sm:px-3 py-1.5 border border-transparent shadow-sm text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
