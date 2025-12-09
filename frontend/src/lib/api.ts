@@ -46,11 +46,12 @@ export async function apiFetch(
     // Clear tokens
     localStorage.removeItem('user_auth_token');
     localStorage.removeItem('refresh_token');
+    localStorage.removeItem('access_token');
     
     // Redirect to login with current path for post-login redirect
     const currentPath = window.location.pathname;
     const redirectParam = currentPath !== '/' ? `?redirect=${currentPath}` : '';
-    window.location.href = `/auth/login${redirectParam}`;
+    window.location.href = `/auth${redirectParam}`;
     
     // Throw to prevent further processing
     throw new Error('Unauthorized - redirecting to login');

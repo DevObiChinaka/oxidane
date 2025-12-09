@@ -119,12 +119,18 @@ export default function CourseDetailPage() {
 
   const handleEnroll = async () => {
     const token = localStorage.getItem('user_auth_token') || localStorage.getItem('access_token');
+    console.log('🔐 Enroll - Token found:', !!token);
+    console.log('🔐 user_auth_token:', !!localStorage.getItem('user_auth_token'));
+    console.log('🔐 access_token:', !!localStorage.getItem('access_token'));
+    
     if (!token) {
+      console.log('❌ No token - redirecting to /auth');
       router.push('/auth');
       return;
     }
 
     if (course?.course_type === 'premium' && course?.requires_subscription) {
+      console.log('💳 Premium course - redirecting to /pricing');
       router.push('/pricing');
       return;
     }
@@ -132,10 +138,13 @@ export default function CourseDetailPage() {
     try {
       setEnrolling(true);
       setError(null); // Clear any previous errors
+      console.log('📤 Sending enrollment request to:', `/courses/${slug}/enroll/`);
       const response = await apiPost(`/courses/${slug}/enroll/`);
+      console.log('📥 Enrollment response status:', response.status);
 
       if (response.ok) {
         const data = await response.json();
+        console.log('✅ Enrollment successful:', data);
 
         setSuccessMessage(data.message || 'Successfully enrolled in course!');
         setTimeout(() => setSuccessMessage(null), 1500);
@@ -143,10 +152,11 @@ export default function CourseDetailPage() {
         setTimeout(() => router.push('/my-courses'), 1600);
       } else {
         const data = await response.json();
-        console.error('Enrollment failed:', data);
+        console.error('❌ Enrollment failed:', data);
         setError(data.error || 'Failed to enroll in course');
       }
     } catch (err) {
+      console.error('💥 Enrollment exception:', err);
       setError('Failed to enroll in course. Please try again.');
     } finally {
       setEnrolling(false);
