@@ -203,41 +203,39 @@ export default function CoursesPage() {
         </header>
 
         {/* Courses Grid */}
-        <div className="p-4 sm:p-6 lg:p-8">
+        <div className="p-3 sm:p-6 lg:p-8">
           <div className="max-w-7xl mx-auto">
           {filteredCourses.length === 0 ? (
-            <div className="max-w-md mx-auto bg-white border border-gray-200 rounded-lg p-12 text-center">
-              <div className="w-20 h-20 rounded-full bg-gray-50 flex items-center justify-center mx-auto mb-4">
-                <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="max-w-md mx-auto bg-white border border-gray-200 rounded-xl p-8 sm:p-12 text-center">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gray-50 flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">No courses found</h3>
-              <p className="text-sm text-gray-500">Try adjusting your filters or search query</p>
+              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">No courses found</h3>
+              <p className="text-xs sm:text-sm text-gray-500">Try adjusting your filters or search query</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 lg:gap-5">
               {filteredCourses.map((course) => (
                 <div
                   key={course.id}
                   onClick={() => handleCourseClick(course)}
                   className="group bg-white rounded-lg overflow-hidden hover:shadow-lg transition-shadow cursor-pointer border border-gray-200"
                 >
-                  {/* Thumbnail */}
-                  <div className="relative w-full h-44 bg-gray-100 flex-shrink-0">
+                  {/* Thumbnail - Compact on Mobile */}
+                  <div className="relative w-full h-36 sm:h-44 bg-gray-100 flex-shrink-0">
                     {getCourseThumbnail(course) ? (
                       <img 
                         src={getCourseThumbnail(course)!} 
                         alt={course.title} 
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          // Fallback to medium quality if maxresdefault doesn't exist
                           if (course.first_lesson_thumbnail?.medium && e.currentTarget.src !== course.first_lesson_thumbnail.medium) {
                             e.currentTarget.src = course.first_lesson_thumbnail.medium;
                           } else if (course.thumbnail && e.currentTarget.src !== course.thumbnail) {
                             e.currentTarget.src = course.thumbnail;
                           } else {
-                            // Show placeholder on final failure
                             e.currentTarget.style.display = 'none';
                             const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
                             if (placeholder) placeholder.style.display = 'flex';
@@ -247,7 +245,7 @@ export default function CoursesPage() {
                     ) : null}
                     {!getCourseThumbnail(course) && (
                       <div className="w-full h-full flex items-center justify-center">
-                        <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                        <svg className="w-10 h-10 sm:w-12 sm:h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                         </svg>
                       </div>
@@ -255,48 +253,48 @@ export default function CoursesPage() {
                     
                     {/* Progress Bar */}
                     {course.is_enrolled && course.progress_percentage > 0 && (
-                      <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-gray-200">
+                      <div className="absolute bottom-0 left-0 right-0 h-1 sm:h-1.5 bg-gray-200">
                         <div className="h-full bg-[#00B38F]" style={{ width: `${course.progress_percentage}%` }} />
                       </div>
                     )}
 
                     {/* Type Badge */}
-                    <div className="absolute top-3 left-3">
-                      <span className={`px-2.5 py-1 rounded text-xs font-medium ${course.course_type === 'free' ? 'bg-white/90 text-gray-700' : 'bg-gray-900/90 text-white'}`}>
+                    <div className="absolute top-2 sm:top-3 left-2 sm:left-3">
+                      <span className={`px-2 sm:px-2.5 py-0.5 sm:py-1 rounded text-[10px] sm:text-xs font-medium ${course.course_type === 'free' ? 'bg-white/90 text-gray-700' : 'bg-gray-900/90 text-white'}`}>
                         {course.course_type === 'free' ? 'Free' : 'Premium'}
                       </span>
                     </div>
                   </div>
 
-                  {/* Content */}
-                  <div className="p-5">
+                  {/* Content - Compact on Mobile */}
+                  <div className="p-3 sm:p-4 lg:p-5">
                     {/* Difficulty Badge */}
-                    <div className="mb-2">
-                      <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded border border-gray-200 capitalize">
+                    <div className="mb-1.5 sm:mb-2">
+                      <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-gray-100 text-gray-700 text-[10px] sm:text-xs font-medium rounded border border-gray-200 capitalize">
                         {course.difficulty_level}
                       </span>
                     </div>
 
-                    {/* Title */}
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-[#00B38F] transition-colors min-h-[3.5rem]">
+                    {/* Title - Smaller on Mobile */}
+                    <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 mb-1.5 sm:mb-2 line-clamp-2 group-hover:text-[#00B38F] transition-colors min-h-[2.5rem] sm:min-h-[3rem]">
                       {course.title}
                     </h3>
 
-                    {/* Description */}
-                    <p className="text-sm text-gray-600 mb-4 line-clamp-2 min-h-[2.5rem]">{course.short_description}</p>
+                    {/* Description - Hidden on Mobile */}
+                    <p className="hidden sm:block text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 line-clamp-2 min-h-[2.5rem]">{course.short_description}</p>
 
-                    {/* Footer */}
-                    <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                      {/* Stats */}
-                      <div className="flex items-center gap-3 text-xs text-gray-500">
-                        <span className="flex items-center gap-1">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    {/* Footer - Compact on Mobile */}
+                    <div className="flex items-center justify-between pt-2 sm:pt-3 border-t border-gray-100">
+                      {/* Stats - Smaller Icons on Mobile */}
+                      <div className="flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs text-gray-500">
+                        <span className="flex items-center gap-0.5 sm:gap-1">
+                          <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                           {course.estimated_duration}m
                         </span>
-                        <span className="flex items-center gap-1">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                        <span className="flex items-center gap-0.5 sm:gap-1">
+                          <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                           </svg>
                           {course.total_lessons}
