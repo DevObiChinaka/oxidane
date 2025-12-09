@@ -27,6 +27,10 @@ interface CourseDetail {
   short_description: string;
   description: string;
   thumbnail?: string;
+  first_lesson_thumbnail?: {
+    high: string;
+    medium: string;
+  } | null;
   trailer_video_url?: string;
   course_type: 'free' | 'premium';
   difficulty_level: 'beginner' | 'intermediate' | 'advanced';

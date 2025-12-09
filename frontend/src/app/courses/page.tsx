@@ -13,6 +13,10 @@ interface Course {
   course_type: 'free' | 'premium';
   difficulty_level: 'beginner' | 'intermediate' | 'advanced';
   thumbnail: string | null;
+  first_lesson_thumbnail: {
+    high: string;
+    medium: string;
+  } | null;
   estimated_duration: number;
   total_lessons: number;
   is_enrolled: boolean;
@@ -76,6 +80,21 @@ export default function CoursesPage() {
 
   const handleCourseClick = (course: Course) => {
     router.push(`/courses/${course.slug}`);
+  };
+
+  const getCourseThumbnail = (course: Course) => {
+    // Priority 1: YouTube auto-generated thumbnail from first lesson
+    if (course.first_lesson_thumbnail?.high) {
+      return course.first_lesson_thumbnail.high;
+    }
+    
+    // Priority 2: Manually uploaded thumbnail
+    if (course.thumbnail) {
+      return course.thumbnail;
+    }
+    
+    // Priority 3: No thumbnail - will show placeholder
+    return null;
   };
 
   if (loading) {
@@ -204,9 +223,27 @@ export default function CoursesPage() {
                 >
                   {/* Thumbnail */}
                   <div className="relative w-full h-44 bg-gray-100 flex-shrink-0">
-                    {course.thumbnail ? (
-                      <img src={course.thumbnail} alt={course.title} className="w-full h-full object-cover" />
-                    ) : (
+                    {getCourseThumbnail(course) ? (
+                      <img 
+                        src={getCourseThumbnail(course)!} 
+                        alt={course.title} 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // Fallback to medium quality if maxresdefault doesn't exist
+                          if (course.first_lesson_thumbnail?.medium && e.currentTarget.src !== course.first_lesson_thumbnail.medium) {
+                            e.currentTarget.src = course.first_lesson_thumbnail.medium;
+                          } else if (course.thumbnail && e.currentTarget.src !== course.thumbnail) {
+                            e.currentTarget.src = course.thumbnail;
+                          } else {
+                            // Show placeholder on final failure
+                            e.currentTarget.style.display = 'none';
+                            const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (placeholder) placeholder.style.display = 'flex';
+                          }
+                        }}
+                      />
+                    ) : null}
+                    {!getCourseThumbnail(course) && (
                       <div className="w-full h-full flex items-center justify-center">
                         <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />

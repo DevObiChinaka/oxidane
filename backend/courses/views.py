@@ -31,6 +31,29 @@ def check_mentorship_access(user):
         return False
 
 
+def get_first_lesson_youtube_thumbnail(course):
+    """Get YouTube thumbnail from first lesson with video"""
+    try:
+        # Get first lesson with YouTube video
+        first_lesson = course.lessons.filter(
+            video_source='youtube'
+        ).exclude(
+            youtube_video_id=''
+        ).order_by('order').first()
+        
+        if not first_lesson or not first_lesson.youtube_video_id:
+            return None
+        
+        # Return both high-quality and fallback URLs
+        return {
+            'high': f"https://img.youtube.com/vi/{first_lesson.youtube_video_id}/maxresdefault.jpg",
+            'medium': f"https://img.youtube.com/vi/{first_lesson.youtube_video_id}/hqdefault.jpg",
+        }
+    except Exception as e:
+        print(f"Error getting YouTube thumbnail: {e}")
+        return None
+
+
 def can_access_course(user, course):
     """
     Check if user can access a course.
@@ -144,6 +167,7 @@ def list_courses(request):
                 'difficulty_level': course.difficulty_level,
                 'status': course.status,
                 'thumbnail': course.thumbnail.url if course.thumbnail else None,
+                'first_lesson_thumbnail': get_first_lesson_youtube_thumbnail(course),
                 'estimated_duration': course.estimated_duration,
                 'total_lessons': course.total_lessons,
                 'is_enrolled': is_enrolled,
@@ -284,6 +308,7 @@ def course_detail(request, slug):
             'course_type': course.course_type,
             'difficulty_level': course.difficulty_level,
             'thumbnail': course.thumbnail.url if course.thumbnail else None,
+            'first_lesson_thumbnail': get_first_lesson_youtube_thumbnail(course),
             'trailer_video_url': course.trailer_video_url,
             'estimated_duration': course.estimated_duration,
             'total_lessons': course.total_lessons,

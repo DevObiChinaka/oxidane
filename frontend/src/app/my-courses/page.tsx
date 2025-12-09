@@ -14,6 +14,10 @@ interface Course {
   course_type: 'free' | 'premium';
   difficulty_level: 'beginner' | 'intermediate' | 'advanced';
   thumbnail: string | null;
+  first_lesson_thumbnail: {
+    high: string;
+    medium: string;
+  } | null;
   estimated_duration: number;
   total_lessons: number;
   lessons_completed: number;
