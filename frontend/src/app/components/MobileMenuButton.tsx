@@ -7,6 +7,7 @@ export default function MobileMenuButton({ showNavbar, onMenuOpen }: MobileMenuB
   return (
     <>
       {/* Mobile Menu Button - Smart scroll behavior */}
+      {/* Mobile Menu Button - Smart scroll behavior */}
       <div className={`lg:hidden fixed top-0 left-0 right-0 z-30 bg-white border-b border-gray-200 px-4 py-3 shadow-sm transition-transform duration-300 ${
         showNavbar ? 'translate-y-0' : '-translate-y-full'
       }`}>
@@ -20,6 +21,8 @@ export default function MobileMenuButton({ showNavbar, onMenuOpen }: MobileMenuB
           <span className="text-sm font-medium">Menu</span>
         </button>
       </div>
+      {/* Spacer for fixed navbar on mobile */}
+      {/* Spacer for fixed navbar on mobile */}
       {/* Spacer for fixed navbar on mobile */}
       <div className="lg:hidden h-[52px]"></div>
     </>
