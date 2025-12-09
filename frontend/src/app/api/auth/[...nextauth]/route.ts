@@ -55,12 +55,24 @@ const handler = NextAuth({
     async jwt({ token, user, account, profile }) {
       // Persist OAuth access token and user info
       if (account && user) {
+        console.log('[NextAuth JWT] New authentication detected');
+        console.log('[NextAuth JWT] Provider:', account.provider);
+        console.log('[NextAuth JWT] User:', user.email);
+        
         token.accessToken = account.access_token
         token.provider = account.provider
         
         // Send OAuth data to Django backend
         if (account.provider === 'google') {
           try {
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+            console.log('[NextAuth JWT] API URL:', apiUrl);
+            
+            if (!apiUrl) {
+              console.error('[NextAuth JWT] NEXT_PUBLIC_API_URL is not set!');
+              throw new Error('NEXT_PUBLIC_API_URL environment variable is missing');
+            }
+
             const userInfo = {
               email: user.email,
               name: user.name,
@@ -70,7 +82,13 @@ const handler = NextAuth({
               sub: profile?.sub || user.id,
             }
 
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/oauth/`, {
+            console.log('[NextAuth JWT] Calling backend OAuth endpoint...');
+            console.log('[NextAuth JWT] User info:', userInfo);
+
+            const backendUrl = `${apiUrl}/api/auth/oauth/`;
+            console.log('[NextAuth JWT] Full URL:', backendUrl);
+
+            const response = await fetch(backendUrl, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -82,17 +100,28 @@ const handler = NextAuth({
               }),
             })
             
+            console.log('[NextAuth JWT] Backend response status:', response.status);
+            
             if (response.ok) {
               const backendUser = await response.json()
+              console.log('[NextAuth JWT] Backend sync successful');
+              console.log('[NextAuth JWT] Backend user ID:', backendUser.id);
+              console.log('[NextAuth JWT] Has access token:', !!backendUser.access_token);
+              console.log('[NextAuth JWT] Has refresh token:', !!backendUser.refresh_token);
+              
               token.backendUser = backendUser
               token.backendId = backendUser.id
               token.backendAccessToken = backendUser.access_token
               token.backendRefreshToken = backendUser.refresh_token
             } else {
-              console.error('Backend OAuth sync failed:', await response.text())
+              const errorText = await response.text()
+              console.error('[NextAuth JWT] Backend OAuth sync failed');
+              console.error('[NextAuth JWT] Status:', response.status);
+              console.error('[NextAuth JWT] Response:', errorText);
             }
           } catch (error) {
-            console.error('Backend OAuth sync error:', error)
+            console.error('[NextAuth JWT] Backend OAuth sync error:', error);
+            console.error('[NextAuth JWT] Error details:', error instanceof Error ? error.message : String(error));
           }
         }
       }
