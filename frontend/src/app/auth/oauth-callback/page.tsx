@@ -21,33 +21,76 @@ export default function OAuthCallbackPage() {
         console.log('[OAuth Callback] Session:', session);
 
         if (session) {
+          // Check if backend tokens are already in session
           const backendAccessToken = (session as any).backendAccessToken;
-          const backendRefreshToken = (session as any).backendRefreshToken;
           
-          console.log('[OAuth Callback] Backend tokens:', {
-            hasAccessToken: !!backendAccessToken,
-            hasRefreshToken: !!backendRefreshToken
-          });
-
           if (backendAccessToken) {
-            setDebugInfo('Storing tokens...');
+            console.log('[OAuth Callback] Backend tokens found in session');
+            setDebugInfo('Storing tokens from session...');
             
-            // Store JWT tokens in localStorage
             localStorage.setItem('user_auth_token', backendAccessToken);
-            localStorage.setItem('refresh_token', backendRefreshToken || '');
+            localStorage.setItem('refresh_token', (session as any).backendRefreshToken || '');
             
-            console.log('[OAuth Callback] Tokens stored successfully');
-            
-            // Small delay to ensure tokens are stored
             await new Promise(resolve => setTimeout(resolve, 200));
-            
             setDebugInfo('Redirecting to dashboard...');
-            // Redirect to dashboard
             router.push('/dashboard');
           } else {
-            console.error('[OAuth Callback] No backend access token in session');
-            setError('Authentication incomplete. Backend sync may have failed.');
-            setTimeout(() => router.push('/auth'), 3000);
+            // Manually sync with backend since NextAuth callback might have failed
+            console.log('[OAuth Callback] No backend tokens in session, manually syncing...');
+            setDebugInfo('Syncing with backend...');
+            
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.oxiworldforexacademy.com';
+            console.log('[OAuth Callback] API URL:', apiUrl);
+            
+            const userInfo = {
+              email: session.user?.email,
+              name: session.user?.name,
+              picture: session.user?.image,
+              given_name: session.user?.name?.split(' ')[0] || '',
+              family_name: session.user?.name?.split(' ').slice(1).join(' ') || '',
+              sub: (session.user as any)?.id || session.user?.email,
+            };
+            
+            console.log('[OAuth Callback] Calling backend OAuth endpoint...');
+            
+            const response = await fetch(`${apiUrl}/api/auth/oauth/`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                provider: (session as any).provider || 'google',
+                access_token: (session as any).accessToken,
+                user_info: userInfo,
+              }),
+            });
+            
+            console.log('[OAuth Callback] Backend response status:', response.status);
+            
+            if (response.ok) {
+              const backendUser = await response.json();
+              console.log('[OAuth Callback] Backend sync successful');
+              console.log('[OAuth Callback] Has access token:', !!backendUser.access_token);
+              
+              if (backendUser.access_token) {
+                setDebugInfo('Storing tokens...');
+                localStorage.setItem('user_auth_token', backendUser.access_token);
+                localStorage.setItem('refresh_token', backendUser.refresh_token || '');
+                
+                await new Promise(resolve => setTimeout(resolve, 200));
+                setDebugInfo('Redirecting to dashboard...');
+                router.push('/dashboard');
+              } else {
+                console.error('[OAuth Callback] No access token in backend response');
+                setError('Backend sync incomplete. No access token received.');
+                setTimeout(() => router.push('/auth'), 3000);
+              }
+            } else {
+              const errorText = await response.text();
+              console.error('[OAuth Callback] Backend sync failed:', errorText);
+              setError(`Backend sync failed: ${response.status}`);
+              setTimeout(() => router.push('/auth'), 3000);
+            }
           }
         } else {
           console.error('[OAuth Callback] No session found');
