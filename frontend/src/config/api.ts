@@ -58,6 +58,7 @@ export const API_ENDPOINTS = {
     
     // Subscriptions Management
     subscriptions: `${API_BASE_URL}/admin/subscriptions-management/`,
+    subscriptionsManagement: `${API_BASE_URL}/admin/subscriptions-management/`,
     subscriptionDetail: (id: string) => `${API_BASE_URL}/admin/subscriptions-management/${id}/`,
     
     // Analytics

@@ -56,14 +56,22 @@ export default function AdminDashboard() {
         const setupResponse = await fetch(API_ENDPOINTS.admin.setupStatus, { headers });
         if (setupResponse.ok) {
           const setupData = await setupResponse.json();
+          console.log('Setup status data:', setupData);
           setSetupStatus(setupData);
+        } else {
+          console.error('Setup status failed:', setupResponse.status, setupResponse.statusText);
         }
 
         // Fetch subscription stats
-        const subsResponse = await fetch(`${API_ENDPOINTS.admin.subscriptionsManagement}?page=1&page_size=1`, { headers });
+        const subsResponse = await fetch(`${API_ENDPOINTS.admin.subscriptions}?page=1&page_size=1`, { headers });
         if (subsResponse.ok) {
           const subsData = await subsResponse.json();
+          console.log('Subscription analytics data:', subsData);
           setSubscriptionStats(subsData.analytics);
+        } else {
+          console.error('Subscription stats failed:', subsResponse.status, subsResponse.statusText);
+          const errorText = await subsResponse.text();
+          console.error('Response:', errorText);
         }
 
         // Fetch email stats
