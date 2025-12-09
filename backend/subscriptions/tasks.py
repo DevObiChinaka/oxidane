@@ -1270,7 +1270,7 @@ def _process_verification_code(verification_code, telegram_user_id, telegram_use
 def _send_welcome_message(chat_id, username, bot_token):
     """Send welcome message when user clicks /start."""
     message = (
-        f"👋 Welcome to the bot{', @' + username if username else ''}!\n\n"
+        f"👋 Welcome to OxiWorld Forex Academy{', @' + username if username else ''}!\n\n"
         "To verify your Telegram account:\n"
         "1. Generate a verification code on the website\n"
         "2. Send the 6-character code here\n\n"

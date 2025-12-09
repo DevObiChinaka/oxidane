@@ -195,6 +195,11 @@ urlpatterns = [
     path('admin/subscriptions-management/plans/', admin_views.subscription_plans_filter, name='subscription_plans_filter'),
     
     # ============================================================================
+    # SYSTEM HEALTH & MONITORING
+    # ============================================================================
+    path('admin/health/', admin_views.system_health_check, name='system_health'),
+    
+    # ============================================================================
     # PAYMENT TRANSACTIONS MANAGEMENT
     # ============================================================================
     path('admin/payments/transactions/', payment_admin_views.payment_transactions_list, name='payment_transactions_list'),

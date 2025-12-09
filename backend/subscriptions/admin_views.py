@@ -188,6 +188,17 @@ def subscription_management_list(request):
             for sub in subscriptions.filter(status__in=['active', 'expired', 'cancelled'])
         )
         
+        # Calculate recent revenue (last 30 days)
+        thirty_days_ago = timezone.now() - timezone.timedelta(days=30)
+        recent_subs = subscriptions.filter(
+            created_at__gte=thirty_days_ago,
+            status__in=['active', 'expired', 'cancelled']
+        )
+        recent_revenue_30d = sum(
+            float(sub.plan.base_price) if sub.plan else 0.0
+            for sub in recent_subs
+        )
+        
         avg_value = total_revenue / total_count if total_count > 0 else 0
         
         # Plan breakdown
@@ -241,6 +252,7 @@ def subscription_management_list(request):
                 'total_count': total_count,
                 'active_count': active_count,
                 'total_revenue_usd': round(total_revenue, 2),
+                'recent_revenue_30d': round(recent_revenue_30d, 2),
                 'average_value_usd': round(avg_value, 2),
                 'plan_breakdown': plan_breakdown,
             },
@@ -371,3 +383,76 @@ def subscription_plans_filter(request):
     except Exception as e:
         return Response({'error': 'Failed to fetch plans', 'details': str(e)},
                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ============================================================================
+# SYSTEM HEALTH CHECK
+# ============================================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def system_health_check(request):
+    """
+    System health check endpoint for admin monitoring.
+    Returns the status of various system components.
+    """
+    from django.db import connection
+    from django.core.cache import cache
+    import redis
+    
+    health_data = {
+        'status': 'healthy',
+        'timestamp': timezone.now().isoformat(),
+        'components': {}
+    }
+    
+    # Check database
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+        health_data['components']['database'] = {
+            'status': 'healthy',
+            'message': 'Database connection OK'
+        }
+    except Exception as e:
+        health_data['status'] = 'degraded'
+        health_data['components']['database'] = {
+            'status': 'unhealthy',
+            'message': f'Database error: {str(e)}'
+        }
+    
+    # Check cache/Redis
+    try:
+        cache.set('health_check', 'ok', 10)
+        cache_val = cache.get('health_check')
+        if cache_val == 'ok':
+            health_data['components']['cache'] = {
+                'status': 'healthy',
+                'message': 'Cache connection OK'
+            }
+        else:
+            raise Exception('Cache value mismatch')
+    except Exception as e:
+        health_data['status'] = 'degraded'
+        health_data['components']['cache'] = {
+            'status': 'unhealthy',
+            'message': f'Cache error: {str(e)}'
+        }
+    
+    # Check Celery (check if tasks are registered)
+    try:
+        from oxidane.celery import app as celery_app
+        registered_tasks = list(celery_app.tasks.keys())
+        task_count = len([t for t in registered_tasks if not t.startswith('celery.')])
+        health_data['components']['celery'] = {
+            'status': 'healthy',
+            'message': f'{task_count} tasks registered'
+        }
+    except Exception as e:
+        health_data['status'] = 'degraded'
+        health_data['components']['celery'] = {
+            'status': 'unhealthy',
+            'message': f'Celery error: {str(e)}'
+        }
+    
+    return Response(health_data)

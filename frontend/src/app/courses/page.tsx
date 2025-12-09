@@ -1,5 +1,7 @@
 'use client';
 
+// Force Vercel rebuild - YouTube thumbnails deployed 2025-12-09
+
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardSidebar from '../components/DashboardSidebar';

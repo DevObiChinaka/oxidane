@@ -378,8 +378,9 @@ CELERY_WORKER_MAX_TASKS_PER_CHILD = 50  # Recycle worker after 50 tasks (release
 CELERY_RESULT_EXPIRES = 3600  # Results expire after 1 hour
 CELERY_RESULT_PERSISTENT = False  # Don't persist results after expiry
 
-# Celery Beat Schedule (populated in celery.py)
-CELERY_BEAT_SCHEDULE = {}
+# Celery Beat Schedule
+# Don't define CELERY_BEAT_SCHEDULE here - it's configured in oxidane/celery.py
+# If you define it here, it will override the schedule in celery.py
 
 # ========================================
 # CACHE CONFIGURATION

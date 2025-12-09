@@ -25,10 +25,10 @@ app.autodiscover_tasks()
 
 # Configure periodic tasks (Celery Beat)
 app.conf.beat_schedule = {
-    # Telegram bot update polling (every 30 seconds)
+    # Telegram bot update polling (every 5 seconds)
     'process-telegram-updates': {
         'task': 'subscriptions.tasks.process_telegram_updates',
-        'schedule': 30.0,  # Every 30 seconds
+        'schedule': 5.0,  # Every 5 seconds
     },
     
     # Check expired subscriptions every day at midnight
