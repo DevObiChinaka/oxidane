@@ -42,6 +42,7 @@ export const API_ENDPOINTS = {
     // Dashboard
     setupStatus: `${API_BASE_URL}/admin/setup/status/`,
     dashboard: `${API_BASE_URL}/admin/dashboard/`,
+    health: `${API_BASE_URL}/admin/health/`,
     
     // User Management
     users: `${API_BASE_URL}/admin/users/`,
