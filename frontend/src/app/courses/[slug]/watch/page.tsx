@@ -365,26 +365,27 @@ export default function VideoPlayerPage() {
             <div className="max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
               
               {/* Breadcrumb Navigation */}
-              <nav className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 lg:mb-6 overflow-x-auto">
+              <nav className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4 lg:mb-6 overflow-x-auto pb-1">
                 <button
                   onClick={() => router.push('/courses')}
-                  className="hover:text-[#00B38F] transition-colors font-medium"
+                  className="hover:text-[#00B38F] transition-colors font-medium whitespace-nowrap flex-shrink-0"
                 >
                   Courses
                 </button>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
                 <button
                   onClick={() => router.push(`/courses/${course.slug}`)}
-                  className="hover:text-[#00B38F] transition-colors font-medium"
+                  className="hover:text-[#00B38F] transition-colors font-medium truncate max-w-[120px] sm:max-w-xs"
+                  title={course.title}
                 >
                   {course.title}
                 </button>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
-                <span className="text-gray-900 font-medium">Lesson {currentLesson.order}</span>
+                <span className="text-gray-900 font-medium whitespace-nowrap flex-shrink-0">Lesson {currentLesson.order}</span>
               </nav>
 
               {/* Lesson Header */}
@@ -399,33 +400,35 @@ export default function VideoPlayerPage() {
                 </div>
 
                 {/* Action Button */}
-                <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-3 sm:space-x-4">
                   {!currentLesson.is_completed ? (
                     <button
                       onClick={handleMarkComplete}
                       disabled={marking}
-                      className="px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-3 font-semibold text-base"
+                      className="px-4 py-2.5 sm:px-6 sm:py-3 lg:px-8 lg:py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 sm:space-x-3 font-semibold text-sm sm:text-base"
                     >
                       {marking ? (
                         <>
-                          <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                          <span>Marking Complete...</span>
+                          <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-2 border-white border-t-transparent"></div>
+                          <span className="hidden sm:inline">Marking Complete...</span>
+                          <span className="sm:hidden">Marking...</span>
                         </>
                       ) : (
                         <>
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                           </svg>
-                          <span>Mark as Complete</span>
+                          <span className="hidden sm:inline">Mark as Complete</span>
+                          <span className="sm:hidden">Complete</span>
                         </>
                       )}
                     </button>
                   ) : (
-                    <div className="inline-flex items-center space-x-3 px-8 py-4 bg-emerald-50 border-2 border-emerald-500 text-emerald-700 rounded-lg shadow-sm">
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <div className="inline-flex items-center justify-center space-x-2 sm:space-x-3 px-4 py-2.5 sm:px-6 sm:py-3 lg:px-8 lg:py-4 bg-emerald-50 border-2 border-emerald-500 text-emerald-700 rounded-lg shadow-sm">
+                      <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                       </svg>
-                      <span className="font-semibold text-base">Completed</span>
+                      <span className="font-semibold text-sm sm:text-base">Completed</span>
                     </div>
                   )}
                 </div>
