@@ -304,7 +304,7 @@ export default function NewAuthForm({ initialIsLogin = true }: NewAuthFormProps)
       
       // Use NextAuth.js Google provider
       const { signIn } = await import('next-auth/react');
-      await signIn('google', { callbackUrl: '/' });
+      await signIn('google', { callbackUrl: '/dashboard' });
     } catch (error) {
       console.error('Google Sign-In Error:', error);
       setError('Google sign-in failed. Please try again.');
