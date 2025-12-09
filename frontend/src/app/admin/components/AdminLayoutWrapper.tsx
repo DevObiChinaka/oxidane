@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
@@ -19,6 +19,9 @@ export default function AdminLayoutWrapper({ children }: AdminLayoutWrapperProps
   const [setupComplete, setSetupComplete] = useState(false);
   const [checkingSetup, setCheckingSetup] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showNavbar, setShowNavbar] = useState(true);
+  const lastScrollY = useRef(0);
+  const navbarRef = useRef<HTMLDivElement>(null);
   
   // Don't protect login and password reset pages
   const publicPages = ['/admin/login', '/admin/forgot-password'];
@@ -87,6 +90,33 @@ export default function AdminLayoutWrapper({ children }: AdminLayoutWrapperProps
 
     checkSetupStatus();
   }, [pathname, router, isPublicPage, isSetupPage, isConfigPage]);
+
+  // Smart navbar scroll behavior: hide on scroll down, show on scroll up
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // Only trigger after scrolling past 10px to avoid jitter at top
+      if (currentScrollY < 10) {
+        setShowNavbar(true);
+      } else if (currentScrollY > lastScrollY.current) {
+        // Scrolling down - hide navbar
+        setShowNavbar(false);
+      } else {
+        // Scrolling up - show navbar
+        setShowNavbar(true);
+      }
+      
+      lastScrollY.current = currentScrollY;
+    };
+
+    // Attach scroll listener to main content area
+    const mainElement = document.querySelector('main');
+    if (mainElement) {
+      mainElement.addEventListener('scroll', handleScroll, { passive: true });
+      return () => mainElement.removeEventListener('scroll', handleScroll);
+    }
+  }, []);
   
   
   // Render public pages without protection or layout
@@ -118,9 +148,14 @@ export default function AdminLayoutWrapper({ children }: AdminLayoutWrapperProps
           />
         )}
         <main className="flex-1 overflow-y-auto">
-          {/* Mobile Menu Button - Only visible on mobile */}
+          {/* Mobile Menu Button - Smart scroll behavior: fixed, hides on scroll down, shows on scroll up */}
           {!isSetupPage && (
-            <div className="md:hidden sticky top-0 z-40 bg-white border-b border-gray-200 px-4 py-3">
+            <div 
+              ref={navbarRef}
+              className={`md:hidden fixed top-0 left-0 right-0 z-40 bg-white border-b border-gray-200 px-4 py-3 shadow-sm transition-transform duration-300 ${
+                showNavbar ? 'translate-y-0' : '-translate-y-full'
+              }`}
+            >
               <button
                 onClick={() => setIsMobileMenuOpen(true)}
                 className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
@@ -132,6 +167,8 @@ export default function AdminLayoutWrapper({ children }: AdminLayoutWrapperProps
               </button>
             </div>
           )}
+          {/* Spacer for fixed navbar on mobile */}
+          {!isSetupPage && <div className="md:hidden h-[52px]"></div>}
           {children}
         </main>
       </div>
