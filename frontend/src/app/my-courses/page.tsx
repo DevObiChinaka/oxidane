@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import DashboardSidebar from '../components/DashboardSidebar';
 import { apiGet } from '@/lib/api';
+import MobileMenuButton from '../components/MobileMenuButton';
+import { useSmartNavbar } from '../hooks/useSmartNavbar';
 
 interface Course {
   id: string;
@@ -33,6 +35,7 @@ export default function MyCoursesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const showNavbar = useSmartNavbar();
 
   useEffect(() => {
     checkAuthAndFetchCourses();
@@ -119,15 +122,7 @@ export default function MyCoursesPage() {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      {/* Mobile Menu Button */}
-      <button
-        onClick={() => setIsMobileMenuOpen(true)}
-        className="lg:hidden fixed top-4 left-4 z-30 p-2 bg-white rounded-lg shadow-lg border border-gray-200 hover:bg-gray-50 transition-colors"
-      >
-        <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-      </button>
+      <MobileMenuButton showNavbar={showNavbar} onMenuOpen={() => setIsMobileMenuOpen(true)} />
 
       <DashboardSidebar 
         isMobileMenuOpen={isMobileMenuOpen}
@@ -139,13 +134,13 @@ export default function MyCoursesPage() {
         {/* Clean Header - Mobile Optimized */}
         <header className="bg-white border-b border-gray-200 px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
           <div className="flex flex-col gap-3 sm:gap-4">
-            <div className="ml-12 lg:ml-0">
+            <div>
               <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-1">My Learning Journey</h2>
               <p className="text-gray-500 text-xs sm:text-sm">Track your progress and continue where you left off</p>
             </div>
             
             {/* Stats Row - Compact Mobile */}
-            <div className="ml-12 lg:ml-0 flex items-center gap-3 sm:gap-4 lg:gap-6 overflow-x-auto pb-2 scrollbar-hide">
+            <div className="flex items-center gap-3 sm:gap-4 lg:gap-6 overflow-x-auto pb-2 scrollbar-hide">
               <div className="text-center px-3 sm:px-4 flex-shrink-0">
                 <div className="text-xl sm:text-2xl font-bold text-[#000856]">{courses.length}</div>
                 <div className="text-[10px] sm:text-xs text-gray-500 whitespace-nowrap">Enrolled</div>

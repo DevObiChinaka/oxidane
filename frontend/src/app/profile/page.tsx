@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardSidebar from '../components/DashboardSidebar';
+import MobileMenuButton from '../components/MobileMenuButton';
+import { useSmartNavbar } from '../hooks/useSmartNavbar';
 import { apiGet, apiPut, apiPost } from '@/lib/api';
 
 interface UserData {
@@ -22,6 +24,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const showNavbar = useSmartNavbar();
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -213,21 +216,11 @@ export default function ProfilePage() {
 
       {/* Main Content */}
       <main className="flex-1 min-h-screen lg:ml-0">
-        {/* Mobile Menu Button */}
-        <div className="lg:hidden fixed top-4 left-4 z-30">
-          <button
-            onClick={() => setIsMobileMenuOpen(true)}
-            className="p-2 rounded-lg bg-white border border-gray-200 shadow-sm hover:bg-gray-50"
-          >
-            <svg className="w-6 h-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-        </div>
+        <MobileMenuButton showNavbar={showNavbar} onMenuOpen={() => setIsMobileMenuOpen(true)} />
 
         {/* Header */}
         <header className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-6">
-          <div className="ml-12 lg:ml-0">
+          <div>
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Profile Settings</h1>
             <p className="text-sm sm:text-base text-gray-600 mt-1">Manage your account information</p>
           </div>
