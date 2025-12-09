@@ -147,7 +147,7 @@ export default function UserDashboard() {
         {/* Header - Mobile Responsive */}
         <div className="bg-white shadow">
           <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6">
-            <div className="md:flex md:items-center md:justify-between">
+            <div className="flex items-center justify-between">
               <div className="flex-1 min-w-0">
                 <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
                   Welcome back, {user?.first_name || user?.name?.split(' ')[0] || 'User'}
@@ -158,7 +158,7 @@ export default function UserDashboard() {
                     : 'Track your learning journey and manage your account'}
                 </p>
               </div>
-              <div className="mt-3 md:mt-0 flex items-center space-x-3">
+              <div className="flex items-center space-x-3 ml-2 sm:ml-4">
                 <div className="text-right hidden lg:block">
                   <p className="text-xs text-gray-400 uppercase tracking-wide">Account</p>
                   <p className="text-sm text-gray-700 font-medium truncate max-w-[200px]">{user?.email}</p>
