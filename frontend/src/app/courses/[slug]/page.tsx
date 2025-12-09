@@ -118,29 +118,53 @@ export default function CourseDetailPage() {
   };
 
   const handleEnroll = async () => {
-    const token = localStorage.getItem('user_auth_token') || localStorage.getItem('access_token');
-    console.log('🔐 Enroll - Token found:', !!token);
-    console.log('🔐 user_auth_token:', !!localStorage.getItem('user_auth_token'));
-    console.log('🔐 access_token:', !!localStorage.getItem('access_token'));
+    console.log('🚀 ENROLL BUTTON CLICKED - handleEnroll function called');
+    console.log('📍 Current URL:', window.location.href);
+    console.log('🔍 Checking localStorage...');
+    
+    const userAuthToken = localStorage.getItem('user_auth_token');
+    const accessToken = localStorage.getItem('access_token');
+    const token = userAuthToken || accessToken;
+    
+    console.log('🔐 user_auth_token:', userAuthToken ? `EXISTS (${userAuthToken.substring(0, 20)}...)` : 'NULL');
+    console.log('🔐 access_token:', accessToken ? `EXISTS (${accessToken.substring(0, 20)}...)` : 'NULL');
+    console.log('🔐 Final token used:', token ? 'FOUND' : 'NOT FOUND');
     
     if (!token) {
-      console.log('❌ No token - redirecting to /auth');
+      console.log('❌ NO TOKEN - Redirecting to /auth');
+      alert('No authentication token found. Redirecting to login...');
       router.push('/auth');
       return;
     }
+    
+    console.log('✅ Token exists, proceeding with enrollment...');
+
+    console.log('✅ Token exists, proceeding with enrollment...');
 
     if (course?.course_type === 'premium' && course?.requires_subscription) {
-      console.log('💳 Premium course - redirecting to /pricing');
+      console.log('💳 Premium course detected - requires_subscription:', course.requires_subscription);
+      console.log('💳 Redirecting to /pricing');
+      alert('This is a premium course. Redirecting to pricing...');
       router.push('/pricing');
       return;
     }
+    
+    console.log('📦 Course type:', course?.course_type);
+    console.log('🔓 Requires subscription:', course?.requires_subscription);
 
     try {
       setEnrolling(true);
-      setError(null); // Clear any previous errors
-      console.log('📤 Sending enrollment request to:', `/courses/${slug}/enroll/`);
-      const response = await apiPost(`/courses/${slug}/enroll/`);
-      console.log('📥 Enrollment response status:', response.status);
+      setError(null);
+      
+      const enrollUrl = `/courses/${slug}/enroll/`;
+      console.log('📤 Making POST request to:', enrollUrl);
+      console.log('📤 Using apiPost function...');
+      
+      const response = await apiPost(enrollUrl);
+      
+      console.log('📥 Response received!');
+      console.log('📥 Status:', response.status);
+      console.log('📥 OK:', response.ok);
 
       if (response.ok) {
         const data = await response.json();
