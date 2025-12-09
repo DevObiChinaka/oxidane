@@ -51,7 +51,7 @@ export default function QuickSetupModal({
       setError('');
 
       // Update user profile
-      const token = localStorage.getItem('access_token');
+      const token = localStorage.getItem('user_auth_token') || localStorage.getItem('access_token');
       const response = await fetch(API_ENDPOINTS.auth.profile, {
         method: 'PATCH',
         headers: {

@@ -114,7 +114,7 @@ export default function CourseDetailPage() {
   };
 
   const handleEnroll = async () => {
-    const token = localStorage.getItem('access_token');
+    const token = localStorage.getItem('user_auth_token') || localStorage.getItem('access_token');
     if (!token) {
       router.push('/auth');
       return;

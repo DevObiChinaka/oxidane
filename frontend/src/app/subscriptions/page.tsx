@@ -130,7 +130,7 @@ export default function SubscriptionsPage() {
 
   const checkAuthAndFetchSubscriptions = async () => {
     try {
-      const token = localStorage.getItem('access_token');
+      const token = localStorage.getItem('user_auth_token') || localStorage.getItem('access_token');
       
       if (!token) {
         router.push('/auth');

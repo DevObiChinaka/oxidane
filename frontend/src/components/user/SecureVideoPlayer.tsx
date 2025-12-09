@@ -60,7 +60,7 @@ export default function SecureVideoPlayer({
     setError(null);
 
     try {
-      const token = localStorage.getItem('access_token');
+      const token = localStorage.getItem('user_auth_token') || localStorage.getItem('access_token');
       if (!token) {
         setError('Please log in to watch this video');
         setLoading(false);
