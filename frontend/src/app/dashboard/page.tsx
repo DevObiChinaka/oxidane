@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardSidebar from '../components/DashboardSidebar';
 import { apiGet } from '@/lib/api';
@@ -30,9 +30,34 @@ export default function UserDashboard() {
   const [coursesCount, setCoursesCount] = useState(0);
   const [subscriptionData, setSubscriptionData] = useState<SubscriptionData | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showNavbar, setShowNavbar] = useState(true);
+  const lastScrollY = useRef(0);
 
   useEffect(() => {
     checkAuth();
+  }, []);
+
+  // Smart navbar scroll behavior: hide on scroll down, show on scroll up
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // Only trigger after scrolling past 10px to avoid jitter at top
+      if (currentScrollY < 10) {
+        setShowNavbar(true);
+      } else if (currentScrollY > lastScrollY.current) {
+        // Scrolling down - hide navbar
+        setShowNavbar(false);
+      } else {
+        // Scrolling up - show navbar
+        setShowNavbar(true);
+      }
+      
+      lastScrollY.current = currentScrollY;
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   const checkAuth = async () => {
@@ -138,23 +163,28 @@ export default function UserDashboard() {
 
       {/* Main Content */}
       <main className="flex-1 min-h-screen lg:ml-0">
-        {/* Mobile Menu Button */}
-        <div className="lg:hidden fixed top-4 left-4 z-30">
+        {/* Mobile Menu Button - Smart scroll behavior */}
+        <div className={`lg:hidden fixed top-0 left-0 right-0 z-30 bg-white border-b border-gray-200 px-4 py-3 shadow-sm transition-transform duration-300 ${
+          showNavbar ? 'translate-y-0' : '-translate-y-full'
+        }`}>
           <button
             onClick={() => setIsMobileMenuOpen(true)}
-            className="p-2 rounded-lg bg-white border border-gray-200 shadow-sm hover:bg-gray-50"
+            className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
           >
-            <svg className="w-6 h-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
+            <span className="text-sm font-medium">Menu</span>
           </button>
         </div>
+        {/* Spacer for fixed navbar on mobile */}
+        <div className="lg:hidden h-[52px]"></div>
 
-        {/* Top Header */}
-        <header className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <div className="ml-12 lg:ml-0">
-              <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">
+        {/* Welcome Section */}
+        <div className="bg-white border-b border-gray-200 px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+            <div>
+              <h1 className="text-lg sm:text-xl md:text-2xl font-semibold text-gray-900">
                 Welcome back, {user?.first_name || user?.name?.split(' ')[0] || 'User'}
               </h1>
               <p className="text-xs sm:text-sm text-gray-500 mt-1">
@@ -163,41 +193,41 @@ export default function UserDashboard() {
                   : 'Manage your account and subscriptions'}
               </p>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3 sm:space-x-4">
               <div className="text-right hidden md:block">
                 <p className="text-xs text-gray-400 uppercase tracking-wide">Account</p>
-                <p className="text-sm text-gray-700 font-medium">{user?.email}</p>
+                <p className="text-sm text-gray-700 font-medium truncate max-w-[150px]">{user?.email}</p>
               </div>
-              <div className="w-10 h-10 rounded-lg bg-[#00B38F] flex items-center justify-center text-white font-semibold text-sm">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-[#00B38F] flex items-center justify-center text-white font-semibold text-sm">
                 {(user?.first_name?.[0] || user?.name?.[0] || 'U').toUpperCase()}
               </div>
             </div>
           </div>
-        </header>
+        </div>
 
         {/* Dashboard Content */}
-        <div className="p-4 sm:p-6 lg:p-8">
-          <div className="max-w-7xl mx-auto space-y-6">
+        <div className="p-3 sm:p-4 md:p-6 lg:p-8">
+          <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
               {/* Stats Cards - Clean and Minimal */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {/* Subscription Status Card */}
-                <div className="bg-white border border-gray-200 rounded-lg p-6 hover:border-gray-300 transition-colors">
-                  <div className="flex items-start justify-between mb-4">
+                <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 hover:border-gray-300 transition-colors">
+                  <div className="flex items-start justify-between mb-3 sm:mb-4">
                     <div>
                       <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Subscription</p>
-                      <p className="text-2xl font-semibold text-gray-900">
+                      <p className="text-xl sm:text-2xl font-semibold text-gray-900">
                         {subscriptionData?.has_active_subscription ? 'Active' : 'Inactive'}
                       </p>
                     </div>
-                    <div className="w-8 h-8 rounded bg-gray-50 flex items-center justify-center">
-                      <svg className={`w-4 h-4 ${
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded bg-gray-50 flex items-center justify-center">
+                      <svg className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${
                         subscriptionData?.has_active_subscription ? 'text-[#00B38F]' : 'text-gray-400'
                       }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                       </svg>
                     </div>
                   </div>
-                  <div className="text-sm text-gray-600 space-y-1">
+                  <div className="text-xs sm:text-sm text-gray-600 space-y-1">
                     {subscriptionData?.plan_names && subscriptionData.plan_names.length > 0 ? (
                       <>
                         {subscriptionData.plan_names.slice(0, 2).map((name, idx) => (

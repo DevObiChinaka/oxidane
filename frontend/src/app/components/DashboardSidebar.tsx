@@ -131,9 +131,9 @@ export default function DashboardSidebar({ isMobileMenuOpen = false, setIsMobile
         </div>
 
         {/* Logo Section */}
-      <div className="p-4 border-b border-gray-200">
-        <div className="flex items-center space-x-3">
-          <div className="w-16 h-16 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
+      <div className="p-3 sm:p-4 border-b border-gray-200">
+        <div className="flex items-center space-x-2 sm:space-x-3">
+          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
             <Image 
               src="/logo_main.png" 
               alt="OxiWorld Logo" 
@@ -143,7 +143,7 @@ export default function DashboardSidebar({ isMobileMenuOpen = false, setIsMobile
             />
           </div>
           <div>
-            <h1 className="text-lg font-semibold text-[#000856]">
+            <h1 className="text-base sm:text-lg font-semibold text-[#000856]">
               OxiWorld
             </h1>
             <p className="text-xs text-gray-500">Forex Academy</p>
@@ -152,7 +152,7 @@ export default function DashboardSidebar({ isMobileMenuOpen = false, setIsMobile
       </div>
 
       {/* Navigation Menu */}
-      <nav className="flex-1 overflow-y-auto p-4 space-y-1">
+      <nav className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-1">
         {menuItems.map((item) => (
           <button
             key={item.path}
@@ -166,20 +166,20 @@ export default function DashboardSidebar({ isMobileMenuOpen = false, setIsMobile
                 : 'text-gray-700 hover:bg-gray-50'
             }`}
           >
-            <div className="flex items-center space-x-3 px-4 py-3">
+            <div className="flex items-center space-x-2 sm:space-x-3 px-3 sm:px-4 py-2.5 sm:py-3">
               <div className={`flex-shrink-0 ${isActive(item.path) ? 'text-gray-900' : 'text-gray-400'}`}>
                 {item.icon}
               </div>
-              <div className="flex-1 text-left">
-                <div className={`text-sm font-medium ${isActive(item.path) ? 'text-gray-900' : 'text-gray-900'}`}>
+              <div className="flex-1 text-left min-w-0">
+                <div className={`text-xs sm:text-sm font-medium truncate ${isActive(item.path) ? 'text-gray-900' : 'text-gray-900'}`}>
                   {item.label}
                 </div>
-                <div className={`text-xs ${isActive(item.path) ? 'text-gray-600' : 'text-gray-500'}`}>
+                <div className={`text-xs ${isActive(item.path) ? 'text-gray-600' : 'text-gray-500'} truncate`}>
                   {item.description}
                 </div>
               </div>
               {isActive(item.path) && (
-                <div className="w-1 h-8 bg-[#00B38F] rounded-full" />
+                <div className="w-1 h-6 sm:h-8 bg-[#00B38F] rounded-full flex-shrink-0" />
               )}
             </div>
           </button>
@@ -187,9 +187,9 @@ export default function DashboardSidebar({ isMobileMenuOpen = false, setIsMobile
       </nav>
 
       {/* User Info & Logout */}
-      <div className="p-4 border-t border-gray-200 space-y-3">
+      <div className="p-3 sm:p-4 border-t border-gray-200 space-y-2 sm:space-y-3">
         {/* Quick Stats */}
-        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+        <div className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-medium text-gray-700">Learning Streak</span>
             <span className="text-base font-semibold text-gray-900">7 days</span>
@@ -205,9 +205,9 @@ export default function DashboardSidebar({ isMobileMenuOpen = false, setIsMobile
         {/* Logout Button */}
         <button
           onClick={handleLogout}
-          className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100 border border-gray-200 hover:border-gray-300 transition-colors font-medium text-sm"
+          className="w-full flex items-center justify-center space-x-2 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg text-gray-700 hover:bg-gray-100 border border-gray-200 hover:border-gray-300 transition-colors font-medium text-xs sm:text-sm"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
           </svg>
           <span>Logout</span>
