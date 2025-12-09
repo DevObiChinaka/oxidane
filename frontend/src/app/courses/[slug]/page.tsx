@@ -59,6 +59,7 @@ export default function CourseDetailPage() {
   const [expandedLessons, setExpandedLessons] = useState(true); // For collapsible lesson list
 
   useEffect(() => {
+    console.log('🎯 COURSE PAGE LOADED - Debug version with alerts ACTIVE');
     if (slug) {
       checkAuthAndFetchCourse();
     }
