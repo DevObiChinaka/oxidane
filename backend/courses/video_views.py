@@ -435,10 +435,33 @@ def generate_embed_html(lesson):
 
         document.getElementById('fullscreen').addEventListener('click', () => {{
             const container = document.getElementById('video-container');
-            if (document.fullscreenElement) {{
-                document.exitFullscreen();
+            const elem = container;
+            
+            // Check if already in fullscreen
+            if (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement) {{
+                // Exit fullscreen
+                if (document.exitFullscreen) {{
+                    document.exitFullscreen();
+                }} else if (document.webkitExitFullscreen) {{
+                    document.webkitExitFullscreen();
+                }} else if (document.mozCancelFullScreen) {{
+                    document.mozCancelFullScreen();
+                }} else if (document.msExitFullscreen) {{
+                    document.msExitFullscreen();
+                }}
             }} else {{
-                container.requestFullscreen();
+                // Enter fullscreen with vendor prefixes for mobile support
+                if (elem.requestFullscreen) {{
+                    elem.requestFullscreen();
+                }} else if (elem.webkitRequestFullscreen) {{
+                    elem.webkitRequestFullscreen(); // Safari iOS
+                }} else if (elem.webkitEnterFullscreen) {{
+                    elem.webkitEnterFullscreen(); // Older iOS
+                }} else if (elem.mozRequestFullScreen) {{
+                    elem.mozRequestFullScreen();
+                }} else if (elem.msRequestFullscreen) {{
+                    elem.msRequestFullscreen();
+                }}
             }}
         }});
 
