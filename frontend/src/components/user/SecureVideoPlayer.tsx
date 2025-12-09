@@ -141,6 +141,12 @@ export default function SecureVideoPlayer({
           allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
           sandbox="allow-same-origin allow-scripts allow-presentation allow-forms"
           title={lessonTitle}
+          // Add mobile fullscreen support
+          {...({
+            'webkitallowfullscreen': 'true',
+            'mozallowfullscreen': 'true',
+            'allowfullscreen': 'true'
+          } as any)}
         />
         
         {/* Invisible overlay to prevent direct iframe manipulation */}
