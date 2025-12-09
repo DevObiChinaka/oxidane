@@ -88,6 +88,14 @@ export default function SystemHealthPage() {
       if (healthRes.ok) {
         const healthData = await healthRes.json();
         setHealthStatus(healthData);
+      } else {
+        console.error('Health check failed:', healthRes.status, healthRes.statusText);
+        const errorText = await healthRes.text();
+        console.error('Response:', errorText);
+        setHealthStatus({
+          status: 'error',
+          message: `API returned ${healthRes.status}: ${healthRes.statusText}`,
+        });
       }
 
       const setupRes = await fetch(API_ENDPOINTS.admin.setupStatus, {
@@ -99,6 +107,10 @@ export default function SystemHealthPage() {
       if (setupRes.ok) {
         const setupData = await setupRes.json();
         setSetupStatus(setupData);
+      } else {
+        console.error('Setup status check failed:', setupRes.status, setupRes.statusText);
+        const errorText = await setupRes.text();
+        console.error('Response:', errorText);
       }
 
       setLastUpdate(new Date());
@@ -137,7 +149,7 @@ export default function SystemHealthPage() {
     );
   }
 
-  const isHealthy = healthStatus?.status === 'ok';
+  const isHealthy = healthStatus?.status === 'healthy' || healthStatus?.status === 'degraded';
   const setupComplete = setupStatus?.setup_complete || false;
   const completionPercentage = setupStatus?.completion_percentage || 0;
 
