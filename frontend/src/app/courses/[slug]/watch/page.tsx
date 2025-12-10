@@ -252,6 +252,7 @@ export default function VideoPlayerPage() {
     // Use SecureVideoPlayer for all video sources
     return (
       <SecureVideoPlayer
+        key={currentLesson.id}
         lessonId={currentLesson.id}
         lessonTitle={currentLesson.title}
         videoSource={currentLesson.video_source}
