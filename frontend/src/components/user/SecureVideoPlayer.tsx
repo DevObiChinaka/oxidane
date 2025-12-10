@@ -134,6 +134,7 @@ export default function SecureVideoPlayer({
       {/* Main Video Container */}
       <div className="relative w-full h-full bg-black">
         <iframe
+          key={lessonId}
           ref={iframeRef}
           srcDoc={embedHtml}
           className="w-full h-full border-0"

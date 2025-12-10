@@ -50,6 +50,7 @@ export default function VideoPlayerPage() {
   const [showAutoAdvanceNotification, setShowAutoAdvanceNotification] = useState(false);
   const [autoAdvanceCountdown, setAutoAdvanceCountdown] = useState(5);
   const [showCompletedToast, setShowCompletedToast] = useState(false);
+  const [videoKey, setVideoKey] = useState(0);
 
   useEffect(() => {
     if (slug) {
@@ -71,13 +72,17 @@ export default function VideoPlayerPage() {
         const lesson = course.lessons.find(l => l.id === lessonIdParam);
         if (lesson) {
           setCurrentLesson(lesson);
+          // Force video player to remount
+          setVideoKey(prev => prev + 1);
         } else {
           setCurrentLesson(course.lessons[0]);
+          setVideoKey(prev => prev + 1);
         }
       } else {
         // Find first incomplete lesson or first lesson
         const firstIncomplete = course.lessons.find(l => !l.is_completed);
         setCurrentLesson(firstIncomplete || course.lessons[0]);
+        setVideoKey(prev => prev + 1);
       }
     }
   }, [course, lessonIdParam]);
@@ -204,7 +209,7 @@ export default function VideoPlayerPage() {
   };
 
   const selectLesson = (lesson: Lesson) => {
-    setCurrentLesson(lesson);
+    // Don't set state here - let the URL change trigger the useEffect
     router.push(`/courses/${slug}/watch?lesson=${lesson.id}`, { scroll: false });
   };
 
@@ -252,7 +257,7 @@ export default function VideoPlayerPage() {
     // Use SecureVideoPlayer for all video sources
     return (
       <SecureVideoPlayer
-        key={currentLesson.id}
+        key={`${currentLesson.id}-${videoKey}`}
         lessonId={currentLesson.id}
         lessonTitle={currentLesson.title}
         videoSource={currentLesson.video_source}
