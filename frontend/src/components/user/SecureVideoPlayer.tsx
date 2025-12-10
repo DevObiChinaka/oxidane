@@ -20,13 +20,24 @@ export default function SecureVideoPlayer({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [embedHtml, setEmbedHtml] = useState<string>('');
+  const [isUnmounting, setIsUnmounting] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
-    // Clear previous video before loading new one
+    // Properly unmount old video before loading new one
+    setIsUnmounting(true);
     setEmbedHtml('');
-    setLoading(true);
-    loadVideoEmbed();
+    
+    // Give time for iframe to fully unmount and cleanup
+    const unmountTimer = setTimeout(() => {
+      setIsUnmounting(false);
+      setLoading(true);
+      loadVideoEmbed();
+    }, 100);
+
+    return () => {
+      clearTimeout(unmountTimer);
+    };
   }, [lessonId]);
 
   useEffect(() => {
@@ -101,7 +112,7 @@ export default function SecureVideoPlayer({
     }
   };
 
-  if (loading) {
+  if (isUnmounting || loading) {
     return (
       <div className={`flex items-center justify-center bg-gray-900 ${className}`}>
         <div className="text-center">
@@ -138,9 +149,9 @@ export default function SecureVideoPlayer({
     <div className={`relative ${className}`} style={{ userSelect: 'none' }}>
       {/* Main Video Container */}
       <div className="relative w-full h-full bg-black">
-        {embedHtml ? (
+        {embedHtml && !isUnmounting && (
           <iframe
-            key={`${lessonId}-${embedHtml.substring(0, 50)}`}
+            key={lessonId}
             ref={iframeRef}
             srcDoc={embedHtml}
             className="w-full h-full border-0"
@@ -155,18 +166,16 @@ export default function SecureVideoPlayer({
               'allowfullscreen': 'true'
             } as any)}
           />
-        ) : (
-          <div className="flex items-center justify-center w-full h-full">
-            <div className="animate-spin rounded-full h-16 w-16 border-4 border-gray-700 border-t-[#00B38F]"></div>
-          </div>
         )}
         
         {/* Invisible overlay to prevent direct iframe manipulation */}
-        <div 
-          className="absolute inset-0 pointer-events-none"
-          style={{ zIndex: 1 }}
-          onContextMenu={(e) => e.preventDefault()}
-        />
+        {embedHtml && !isUnmounting && (
+          <div 
+            className="absolute inset-0 pointer-events-none"
+            style={{ zIndex: 1 }}
+            onContextMenu={(e) => e.preventDefault()}
+          />
+        )}
       </div>
     </div>
   );
