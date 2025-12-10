@@ -104,7 +104,7 @@ class EmailAutomationService:
             }
             
             result = self.email_service.send_email(
-                template_type='notification',
+                template_type='signin_notification',
                 recipient_email=user.email,
                 user=user,
                 custom_vars=custom_vars,
@@ -333,7 +333,7 @@ def send_login_notification(user, login_details=None, test_mode=False):
             'login_method': login_details.get('method', 'Email & Password') if login_details else 'Email & Password',
         }
         return EmailTemplateService().send_email(
-            template_type='notification',
+            template_type='signin_notification',
             recipient_email=user.email,
             user=user,
             custom_vars=custom_vars,

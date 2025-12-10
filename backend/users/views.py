@@ -682,9 +682,14 @@ def oauth_callback(request):
             # Welcome email will be sent automatically via Django signals
             pass
         else:
-            # Existing user - send sign-in notification
-            from .email_automation import send_login_notification
-            send_login_notification(user, {'method': f'{provider.title()} OAuth'})
+            # Existing user - send sign-in notification using user template
+            send_signin_notification_email(user, {'method': f'{provider.title()} OAuth'}, request)
+        
+        # Generate JWT tokens for the user
+        from rest_framework_simplejwt.tokens import RefreshToken
+        refresh = RefreshToken.for_user(user)
+        access_token = str(refresh.access_token)
+        refresh_token = str(refresh)
         
         return JsonResponse({
             'id': str(user.id),
@@ -693,6 +698,8 @@ def oauth_callback(request):
             'avatar': user.avatar,
             'provider': provider,
             'created': created,
+            'access_token': access_token,
+            'refresh_token': refresh_token,
         })
         
     except Exception as e:
