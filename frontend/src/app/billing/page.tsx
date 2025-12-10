@@ -34,7 +34,7 @@ interface BillingProfile {
 // Declare PaystackPop global type
 declare global {
   interface Window {
-    PaystackPop: any;
+    PaystackPop?: any;
   }
 }
 

@@ -497,7 +497,7 @@ export default function SubscriptionsPage() {
 
                       {/* Actions */}
                       <div className="flex gap-3">
-                        {!subscription.is_lifetime && (
+                        {!subscription.is_lifetime && subscription.status !== 'cancelled' && (
                           <button
                             onClick={() => handleCancelSubscription(subscription)}
                             disabled={cancellingId === subscription.id}

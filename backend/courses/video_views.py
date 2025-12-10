@@ -320,7 +320,8 @@ def generate_embed_html(lesson):
                     'modestbranding': 1,
                     'fs': 0,
                     'iv_load_policy': 3,
-                    'disablekb': 1
+                    'disablekb': 1,
+                    'playsinline': 1
                 }},
                 events: {{
                     'onReady': onPlayerReady,

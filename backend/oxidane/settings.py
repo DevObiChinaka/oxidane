@@ -353,11 +353,29 @@ if REDIS_URL.startswith('rediss://'):
         'ssl_cert_reqs': 'CERT_NONE'
     }
 
-# Connection Settings (Reduced for Redis Free Tier - 30 max connections)
+# Connection Settings (Optimized for Redis Free Tier - 30 max connections)
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_BROKER_CONNECTION_MAX_RETRIES = 10
-CELERY_BROKER_POOL_LIMIT = 1  # Reduced to 1 per worker to save connections
-CELERY_REDIS_MAX_CONNECTIONS = 2  # Maximum connections per worker
+CELERY_BROKER_POOL_LIMIT = 1  # Only 1 connection per worker to broker
+CELERY_REDIS_MAX_CONNECTIONS = 3  # Max 3 connections total per worker
+
+# Connection recycling - close connections after each task
+CELERY_BROKER_TRANSPORT_OPTIONS = {
+    'max_connections': 3,  # Limit pool size
+    'socket_keepalive': True,
+    'socket_keepalive_options': {
+        1: 1,  # TCP_KEEPIDLE
+        2: 2,  # TCP_KEEPINTVL
+        3: 2,  # TCP_KEEPCNT
+    },
+}
+
+# Result backend connection pooling
+CELERY_REDIS_BACKEND_HEALTH_CHECK_INTERVAL = 30  # Check connection health every 30s
+CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS = {
+    'max_connections': 3,
+    'socket_keepalive': True,
+}
 
 # Task Serialization
 CELERY_ACCEPT_CONTENT = ['json']
@@ -372,7 +390,8 @@ CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes hard limit
 CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60  # 25 minutes soft limit
 CELERY_TASK_ACKS_LATE = True  # Acknowledge tasks after completion (safer)
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1  # Fetch one task at a time
-CELERY_WORKER_MAX_TASKS_PER_CHILD = 50  # Recycle worker after 50 tasks (releases connections)
+CELERY_WORKER_MAX_TASKS_PER_CHILD = 20  # Recycle worker after 20 tasks (releases ALL connections)
+CELERY_WORKER_DISABLE_RATE_LIMITS = True  # Disable rate limiting overhead
 
 # Result Backend Settings
 CELERY_RESULT_EXPIRES = 3600  # Results expire after 1 hour

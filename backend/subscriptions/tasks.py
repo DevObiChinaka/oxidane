@@ -10,8 +10,6 @@ from decimal import Decimal
 from datetime import timedelta
 from django.utils import timezone
 from django.conf import settings
-from django.core.mail import EmailMultiAlternatives
-from django.template.loader import render_to_string
 from celery import shared_task
 import requests
 
@@ -369,16 +367,16 @@ def add_user_to_telegram_groups(self, user_id, plan_id):
                         # This is a supergroup/channel - create secure single-use invite link
                         logger.info(f"{group.name} is a supergroup - creating single-use invite link")
                         
-                        # Create a single-use invite link (expires in 1 hour, max 1 member)
+                        # Create a single-use invite link (expires in 24 hours, max 1 member)
                         # This link can only be used ONCE by ONE person, preventing sharing
                         import time
-                        expire_timestamp = int(time.time()) + 3600  # 1 hour from now
+                        expire_timestamp = int(time.time()) + 86400  # 24 hours from now
                         
                         create_link_url = f"https://api.telegram.org/bot{bot_token}/createChatInviteLink"
                         create_link_payload = {
                             'chat_id': group.chat_id,
                             'member_limit': 1,  # Only 1 person can use this link (SECURITY)
-                            'expire_date': expire_timestamp,  # Expires in 1 hour
+                            'expire_date': expire_timestamp,  # Expires in 24 hours
                             'name': f"Access for @{billing_profile.telegram_username}"  # Track who it's for
                         }
                         
@@ -398,7 +396,7 @@ def add_user_to_telegram_groups(self, user_id, plan_id):
                             message += f"🔒 *Security:* This link:\n"
                             message += f"   • Works only ONCE\n"
                             message += f"   • Only for YOU \\(@{username}\\)\n"
-                            message += f"   • Expires in 1 hour\n"
+                            message += f"   • Expires in 24 hours\n"
                             message += f"   • Cannot be shared or reused"
                             
                             send_url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
@@ -683,15 +681,14 @@ def remove_user_from_telegram_groups(self, user_id, plan_id):
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
 def send_payment_receipt_email(self, payment_id):
     """
-    Send payment receipt email to user
+    Send payment receipt email to user using EmailTemplateService
     
     Args:
         payment_id: ID of the successful payment
         
     Actions:
         1. Get payment details
-        2. Render email template (payment_success.html)
-        3. Send email via EmailConfiguration SMTP
+        2. Send email using payment_success template from EmailTemplateService
         
     Retries: 3 times with 60-second delay
     """
@@ -715,90 +712,49 @@ def send_payment_receipt_email(self, payment_id):
         
         user = payment.billing_profile.user
         
-        # Get email configuration
-        try:
-            email_config = EmailConfiguration.get_instance()
-            
-            if not email_config.is_configured():
-                logger.warning("Email not configured, using Django default")
-                from_email = settings.DEFAULT_FROM_EMAIL
-            else:
-                from_email = email_config.from_email
+        # Use EmailTemplateService to send payment_success email
+        from users.email_service import EmailTemplateService
+        email_service = EmailTemplateService()
         
-        except Exception as e:
-            logger.warning(f"Error getting email configuration: {str(e)}, using default")
-            from_email = settings.DEFAULT_FROM_EMAIL
-        
-        # Prepare email context
-        context = {
-            'user': user,
-            'payment': payment,
-            'plan': payment.subscription.plan if payment.subscription else None,
-            'subscription': payment.subscription,
-            'amount': payment.amount,
-            'processing_fee': payment.processing_fee,
-            'total_amount': payment.total_amount,
+        # Prepare custom variables for the template
+        custom_vars = {
+            'payment_amount': f"{payment.currency} {payment.amount:,.2f}",
+            'processing_fee': f"{payment.currency} {payment.processing_fee:,.2f}",
+            'total_amount': f"{payment.currency} {payment.total_amount:,.2f}",
             'currency': payment.currency,
-            'payment_date': payment.paid_at or payment.created_at,
-            'reference': payment.gateway_reference,
-            'invoice_number': f"INV-{str(payment.id)[:8].upper()}",  # Use first 8 chars of UUID
-            'site_name': 'OxiWorld',
-            'site_url': settings.FRONTEND_URL,
+            'payment_date': (payment.paid_at or payment.created_at).strftime('%B %d, %Y at %I:%M %p'),
+            'payment_reference': payment.gateway_reference,
+            'invoice_number': f"INV-{str(payment.id)[:8].upper()}",
+            'plan_name': payment.subscription.plan.name if payment.subscription and payment.subscription.plan else 'Subscription',
+            'subscription_start': payment.subscription.start_date.strftime('%B %d, %Y') if payment.subscription else None,
+            'subscription_end': payment.subscription.end_date.strftime('%B %d, %Y') if payment.subscription else None,
+            'payment_method': payment.gateway.upper() if payment.gateway else 'Online Payment',
+            'dashboard_url': f"{settings.FRONTEND_URL}/dashboard",
         }
         
-        # Render email templates
-        try:
-            html_content = render_to_string('emails/payment_receipt.html', context)
-            text_content = render_to_string('emails/payment_receipt.txt', context)
-        except Exception as e:
-            logger.warning(f"Email templates not found, using simple text: {str(e)}")
-            
-            # Fallback plain text email
-            text_content = f"""
-Payment Receipt - OxiWorld
-
-Hi {user.first_name or user.email},
-
-Thank you for your payment!
-
-Payment Details:
-- Amount: {payment.currency} {payment.amount}
-- Processing Fee: {payment.currency} {payment.processing_fee}
-- Total Paid: {payment.currency} {payment.total_amount}
-- Reference: {payment.gateway_reference}
-- Date: {payment.paid_at or payment.created_at}
-
-Your subscription is now active. You can access your account at {settings.FRONTEND_URL}/dashboard
-
-Thank you,
-OxiWorld Team
-            """.strip()
-            html_content = None
-        
-        # Send email
-        subject = f"Payment Receipt - {payment.currency} {payment.total_amount}"
-        to_email = user.email
-        
-        email = EmailMultiAlternatives(
-            subject=subject,
-            body=text_content,
-            from_email=from_email,
-            to=[to_email]
+        # Send email using template service
+        result = email_service.send_email(
+            template_type='payment_success',
+            recipient_email=user.email,
+            user=user,
+            custom_vars=custom_vars,
+            test_mode=False
         )
         
-        if html_content:
-            email.attach_alternative(html_content, "text/html")
-        
-        email.send(fail_silently=False)
-        
-        logger.info(f"Payment receipt email sent to {to_email} for payment {payment_id}")
-        
-        return {
-            'success': True,
-            'payment_id': payment_id,
-            'recipient': to_email,
-            'subject': subject
-        }
+        if result and result.get('success'):
+            logger.info(f"Payment receipt email sent to {user.email} for payment {payment_id}")
+            return {
+                'success': True,
+                'payment_id': payment_id,
+                'recipient': user.email,
+            }
+        else:
+            error_msg = result.get('error', 'Unknown error') if result else 'Email service returned no result'
+            logger.error(f"Failed to send payment receipt: {error_msg}")
+            return {
+                'success': False,
+                'error': error_msg
+            }
     
     except Exception as e:
         logger.error(f"Error sending payment receipt email for payment {payment_id}: {str(e)}", exc_info=True)
