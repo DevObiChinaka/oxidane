@@ -58,21 +58,26 @@ export default function VideoPlayerPage() {
     }
   }, [slug]);
 
-  // Re-fetch course data when lesson changes to get updated completion states
+  // Update lesson immediately when lessonIdParam changes
   useEffect(() => {
-    if (slug && lessonIdParam) {
-      fetchCourseAndLessons();
+    if (course && course.lessons.length > 0 && lessonIdParam) {
+      const lesson = course.lessons.find(l => l.id === lessonIdParam);
+      if (lesson && lesson.id !== currentLesson?.id) {
+        console.log('[WATCH] Switching to lesson:', lesson.title);
+        setCurrentLesson(lesson);
+        // Force video player to remount
+        setVideoKey(prev => prev + 1);
+      }
     }
-  }, [lessonIdParam]);
+  }, [lessonIdParam, course]);
 
+  // Set initial lesson when course loads
   useEffect(() => {
-    if (course && course.lessons.length > 0) {
+    if (course && course.lessons.length > 0 && !currentLesson) {
       if (lessonIdParam) {
-        // Compare as strings since IDs are UUIDs
         const lesson = course.lessons.find(l => l.id === lessonIdParam);
         if (lesson) {
           setCurrentLesson(lesson);
-          // Force video player to remount
           setVideoKey(prev => prev + 1);
         } else {
           setCurrentLesson(course.lessons[0]);
@@ -85,7 +90,7 @@ export default function VideoPlayerPage() {
         setVideoKey(prev => prev + 1);
       }
     }
-  }, [course, lessonIdParam]);
+  }, [course]);
 
   const checkAuthAndFetchCourse = async () => {
     try {

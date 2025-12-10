@@ -23,6 +23,9 @@ export default function SecureVideoPlayer({
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
+    // Clear previous video before loading new one
+    setEmbedHtml('');
+    setLoading(true);
     loadVideoEmbed();
   }, [lessonId]);
 
@@ -67,17 +70,18 @@ export default function SecureVideoPlayer({
         return;
       }
 
-      const response = await fetch(
-        API_ENDPOINTS.user.videoEmbed(lessonId),
-        {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          cache: 'no-store'
-        }
-      );
+      // Add timestamp to prevent any caching
+      const timestamp = new Date().getTime();
+      const url = `${API_ENDPOINTS.user.videoEmbed(lessonId)}?t=${timestamp}`;
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        cache: 'no-store'
+      });
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -134,22 +138,28 @@ export default function SecureVideoPlayer({
     <div className={`relative ${className}`} style={{ userSelect: 'none' }}>
       {/* Main Video Container */}
       <div className="relative w-full h-full bg-black">
-        <iframe
-          key={lessonId}
-          ref={iframeRef}
-          srcDoc={embedHtml}
-          className="w-full h-full border-0"
-          allowFullScreen
-          allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-          sandbox="allow-same-origin allow-scripts allow-presentation allow-forms"
-          title={lessonTitle}
-          // Add mobile fullscreen support
-          {...({
-            'webkitallowfullscreen': 'true',
-            'mozallowfullscreen': 'true',
-            'allowfullscreen': 'true'
-          } as any)}
-        />
+        {embedHtml ? (
+          <iframe
+            key={`${lessonId}-${embedHtml.substring(0, 50)}`}
+            ref={iframeRef}
+            srcDoc={embedHtml}
+            className="w-full h-full border-0"
+            allowFullScreen
+            allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+            sandbox="allow-same-origin allow-scripts allow-presentation allow-forms"
+            title={lessonTitle}
+            // Add mobile fullscreen support
+            {...({
+              'webkitallowfullscreen': 'true',
+              'mozallowfullscreen': 'true',
+              'allowfullscreen': 'true'
+            } as any)}
+          />
+        ) : (
+          <div className="flex items-center justify-center w-full h-full">
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-gray-700 border-t-[#00B38F]"></div>
+          </div>
+        )}
         
         {/* Invisible overlay to prevent direct iframe manipulation */}
         <div 
