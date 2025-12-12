@@ -87,28 +87,60 @@ def generate_simple_embed_html(lesson):
             background: #000; 
             user-select: none;
             -webkit-user-select: none;
+            position: relative;
+        }}
+        .video-container {{
+            width: 100%;
+            height: 100%;
+            position: relative;
         }}
         iframe {{
             width: 100%;
             height: 100%;
             border: none;
             display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }}
+        .overlay {{
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 9999;
+            pointer-events: none;
         }}
     </style>
 </head>
 <body>
-    <iframe 
-        src="https://www.youtube.com/embed/{video_id}?autoplay=1&rel=0&modestbranding=1&playsinline=1"
-        allowfullscreen
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
-    </iframe>
+    <div class="video-container">
+        <iframe 
+            src="https://www.youtube.com/embed/{video_id}?autoplay=1&rel=0&modestbranding=1&playsinline=1"
+            allowfullscreen
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
+        </iframe>
+        <div class="overlay"></div>
+    </div>
 
     <script>
-        // Security: Disable right-click
+        // Security: Disable right-click on entire page
         document.addEventListener('contextmenu', e => {{
             e.preventDefault();
+            e.stopPropagation();
             return false;
         }}, true);
+
+        // Security: Block right-click specifically on iframe
+        const iframe = document.querySelector('iframe');
+        if (iframe) {{
+            iframe.addEventListener('contextmenu', e => {{
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }}, true);
+        }}
 
         // Security: Disable DevTools shortcuts
         document.addEventListener('keydown', e => {{
@@ -124,6 +156,14 @@ def generate_simple_embed_html(lesson):
         // Prevent text selection
         document.body.style.userSelect = 'none';
         document.body.style.webkitUserSelect = 'none';
+
+        // Additional overlay protection
+        const overlay = document.querySelector('.overlay');
+        overlay.addEventListener('contextmenu', e => {{
+            e.preventDefault();
+            return false;
+        }}, true);
+    </script>
 </body>
 </html>'''
     
