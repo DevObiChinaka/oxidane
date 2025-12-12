@@ -302,7 +302,7 @@ def generate_simple_embed_html(lesson):
         document.body.style.userSelect = 'none';
         document.body.style.webkitUserSelect = 'none';
 
-        function onYouTubeIframeAPIReady() {{
+        function initPlayer() {{
             player = new YT.Player('player', {{
                 height: '100%',
                 width: '100%',
@@ -468,6 +468,17 @@ def generate_simple_embed_html(lesson):
                 }}
             }}, 3000);
         }});
+
+        // Initialize player - check if YT API is already loaded
+        function onYouTubeIframeAPIReady() {{
+            initPlayer();
+        }}
+
+        // If YT is already loaded (switching videos), init immediately
+        if (typeof YT !== 'undefined' && YT.Player) {{
+            initPlayer();
+        }}
+        // Otherwise, wait for API to load (first video)
     </script>
 </body>
 </html>'''
