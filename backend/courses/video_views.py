@@ -103,43 +103,60 @@ def generate_simple_embed_html(lesson):
             top: 0;
             left: 0;
         }}
-        .overlay {{
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 9999;
-            pointer-events: none;
-        }}
+
     </style>
 </head>
 <body>
-    <div class="video-container">
+    <div class="video-container" oncontextmenu="return false;">
         <iframe 
-            src="https://www.youtube.com/embed/{video_id}?autoplay=1&rel=0&modestbranding=1&playsinline=1"
+            src="https://www.youtube-nocookie.com/embed/{video_id}?autoplay=1&rel=0&modestbranding=1&playsinline=1&controls=1&showinfo=0&fs=1&iv_load_policy=3&enablejsapi=1"
             allowfullscreen
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            frameborder="0"
+            oncontextmenu="return false;">
         </iframe>
-        <div class="overlay"></div>
     </div>
 
     <script>
-        // Security: Disable right-click on entire page
-        document.addEventListener('contextmenu', e => {{
+        // Security: Aggressive right-click blocking
+        function blockContextMenu(e) {{
             e.preventDefault();
             e.stopPropagation();
+            e.stopImmediatePropagation();
             return false;
-        }}, true);
+        }}
 
-        // Security: Block right-click specifically on iframe
+        // Apply to document
+        document.addEventListener('contextmenu', blockContextMenu, true);
+        document.addEventListener('contextmenu', blockContextMenu, false);
+        
+        // Apply to body
+        document.body.addEventListener('contextmenu', blockContextMenu, true);
+        document.body.addEventListener('contextmenu', blockContextMenu, false);
+        
+        // Apply to video container
+        const container = document.querySelector('.video-container');
+        if (container) {{
+            container.addEventListener('contextmenu', blockContextMenu, true);
+            container.addEventListener('contextmenu', blockContextMenu, false);
+            container.oncontextmenu = blockContextMenu;
+        }}
+
+        // Apply to iframe when loaded
         const iframe = document.querySelector('iframe');
         if (iframe) {{
-            iframe.addEventListener('contextmenu', e => {{
-                e.preventDefault();
-                e.stopPropagation();
-                return false;
-            }}, true);
+            iframe.addEventListener('contextmenu', blockContextMenu, true);
+            iframe.addEventListener('contextmenu', blockContextMenu, false);
+            iframe.oncontextmenu = blockContextMenu;
+            
+            // Also try to block after iframe loads
+            iframe.addEventListener('load', () => {{
+                try {{
+                    iframe.contentWindow.document.addEventListener('contextmenu', blockContextMenu, true);
+                }} catch(e) {{
+                    // Cross-origin, can't access
+                }}
+            }});
         }}
 
         // Security: Disable DevTools shortcuts
@@ -149,6 +166,7 @@ def generate_simple_embed_html(lesson):
                 (e.ctrlKey && e.keyCode === 85) ||
                 (e.ctrlKey && e.keyCode === 83)) {{
                 e.preventDefault();
+                e.stopPropagation();
                 return false;
             }}
         }}, true);
@@ -156,13 +174,7 @@ def generate_simple_embed_html(lesson):
         // Prevent text selection
         document.body.style.userSelect = 'none';
         document.body.style.webkitUserSelect = 'none';
-
-        // Additional overlay protection
-        const overlay = document.querySelector('.overlay');
-        overlay.addEventListener('contextmenu', e => {{
-            e.preventDefault();
-            return false;
-        }}, true);
+        document.body.style.webkitTouchCallout = 'none';
     </script>
 </body>
 </html>'''
