@@ -103,9 +103,9 @@ export default function SecureVideoPlayer({
 
       // Add timestamp to prevent any caching
       const timestamp = new Date().getTime();
-      const url = `${API_ENDPOINTS.user.videoEmbed(lessonId)}?t=${timestamp}`;
+      const apiUrl = `${API_ENDPOINTS.user.videoEmbed(lessonId)}?t=${timestamp}`;
       
-      const response = await fetch(url, {
+      const response = await fetch(apiUrl, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -126,8 +126,8 @@ export default function SecureVideoPlayer({
       
       // Convert HTML to Blob URL
       const blob = new Blob([data.embed_html], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      setBlobUrl(url);
+      const blobObjectUrl = URL.createObjectURL(blob);
+      setBlobUrl(blobObjectUrl);
       
       setLoading(false);
 
