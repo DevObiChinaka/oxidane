@@ -51,6 +51,9 @@ export default function VideoPlayerPage() {
   const [autoAdvanceCountdown, setAutoAdvanceCountdown] = useState(5);
   const [showCompletedToast, setShowCompletedToast] = useState(false);
   const [videoKey, setVideoKey] = useState(0);
+  // Cache for pre-loaded video embeds
+  const [videoEmbedCache, setVideoEmbedCache] = useState<Map<string, string>>(new Map());
+  const [preloadingVideos, setPreloadingVideos] = useState(false);
 
   useEffect(() => {
     if (slug) {
@@ -70,6 +73,14 @@ export default function VideoPlayerPage() {
       }
     }
   }, [lessonIdParam, course]);
+
+  // Pre-load all video embeds when course loads
+  useEffect(() => {
+    if (course && course.lessons.length > 0 && videoEmbedCache.size === 0) {
+      console.log('[WATCH] Pre-loading all video embeds...');
+      preloadAllVideoEmbeds();
+    }
+  }, [course]);
 
   // Set initial lesson when course loads
   useEffect(() => {
@@ -213,6 +224,55 @@ export default function VideoPlayerPage() {
     }
   };
 
+  const preloadAllVideoEmbeds = async () => {
+    setPreloadingVideos(true);
+    const cache = new Map<string, string>();
+    const token = localStorage.getItem('user_auth_token') || localStorage.getItem('access_token');
+
+    if (!token || !course) {
+      setPreloadingVideos(false);
+      return;
+    }
+
+    try {
+      // Fetch all video embeds in parallel
+      const promises = course.lessons.map(async (lesson) => {
+        try {
+          const timestamp = new Date().getTime();
+          const response = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/lessons/${lesson.id}/video-embed/?t=${timestamp}`,
+            {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              },
+              cache: 'no-store'
+            }
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            cache.set(lesson.id, data.embed_html);
+            console.log(`[WATCH] Cached video embed for: ${lesson.title}`);
+          } else {
+            console.error(`[WATCH] Failed to load embed for ${lesson.title}`);
+          }
+        } catch (err) {
+          console.error(`[WATCH] Error loading embed for ${lesson.title}:`, err);
+        }
+      });
+
+      await Promise.all(promises);
+      setVideoEmbedCache(cache);
+      console.log(`[WATCH] Pre-loaded ${cache.size} video embeds`);
+    } catch (error) {
+      console.error('[WATCH] Error pre-loading video embeds:', error);
+    } finally {
+      setPreloadingVideos(false);
+    }
+  };
+
   const selectLesson = (lesson: Lesson) => {
     console.log('[WATCH] selectLesson called for:', lesson.title);
     // Update state immediately AND change URL
@@ -262,7 +322,10 @@ export default function VideoPlayerPage() {
   const getVideoPlayer = () => {
     if (!currentLesson) return null;
 
-    // Use SecureVideoPlayer for all video sources
+    // Get cached embed HTML for current lesson
+    const cachedEmbed = videoEmbedCache.get(currentLesson.id);
+
+    // Use SecureVideoPlayer with cached embed
     return (
       <SecureVideoPlayer
         key={`${currentLesson.id}-${videoKey}`}
@@ -271,6 +334,8 @@ export default function VideoPlayerPage() {
         videoSource={currentLesson.video_source}
         onVideoEnd={handleVideoEnd}
         className="w-full h-full"
+        preloadedEmbed={cachedEmbed}
+        isPreloading={preloadingVideos}
       />
     );
   };

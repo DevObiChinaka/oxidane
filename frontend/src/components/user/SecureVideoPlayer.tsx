@@ -9,13 +9,17 @@ interface SecureVideoPlayerProps {
   videoSource: 'youtube' | 'vimeo' | 'upload';
   onVideoEnd?: () => void;
   className?: string;
+  preloadedEmbed?: string;  // Pre-loaded embed HTML from cache
+  isPreloading?: boolean;   // Whether embeds are still being pre-loaded
 }
 
 export default function SecureVideoPlayer({
   lessonId,
   lessonTitle,
   onVideoEnd,
-  className = ''
+  className = '',
+  preloadedEmbed,
+  isPreloading = false
 }: SecureVideoPlayerProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,10 +28,21 @@ export default function SecureVideoPlayer({
 
   useEffect(() => {
     console.log('[VIDEO_PLAYER] Loading video for lesson:', lessonId);
-    setLoading(true);
-    setError(null);
-    loadVideoEmbed();
-  }, [lessonId]);
+    
+    // If we have a preloaded embed, use it immediately
+    if (preloadedEmbed) {
+      console.log('[VIDEO_PLAYER] Using pre-loaded embed');
+      setEmbedHtml(preloadedEmbed);
+      setLoading(false);
+      setError(null);
+    } else if (!isPreloading) {
+      // Fallback: fetch if not preloaded and not currently preloading
+      console.log('[VIDEO_PLAYER] Fetching embed (not cached)');
+      setLoading(true);
+      setError(null);
+      loadVideoEmbed();
+    }
+  }, [lessonId, preloadedEmbed, isPreloading]);
 
   useEffect(() => {
     // Disable right-click and keyboard shortcuts on mount
@@ -101,12 +116,14 @@ export default function SecureVideoPlayer({
     }
   };
 
-  if (loading) {
+  if (loading || isPreloading) {
     return (
       <div className={`flex items-center justify-center bg-gray-900 ${className}`}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-4 border-gray-700 border-t-[#00B38F] mx-auto mb-4"></div>
-          <p className="text-gray-400 text-lg">Loading video...</p>
+          <p className="text-gray-400 text-lg">
+            {isPreloading ? 'Preparing videos...' : 'Loading video...'}
+          </p>
         </div>
       </div>
     );
