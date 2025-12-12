@@ -103,6 +103,54 @@ export default function VideoPlayerPage() {
     }
   }, [course]);
 
+  const preloadAllVideoEmbeds = async () => {
+    if (!course || preloadingVideos) return;
+
+    setPreloadingVideos(true);
+    console.log('[WATCH] Starting pre-load of', course.lessons.length, 'videos');
+
+    try {
+      const token = localStorage.getItem('user_auth_token') || localStorage.getItem('access_token');
+      if (!token) return;
+
+      const cache = new Map<string, string>();
+      
+      // Fetch all video embeds in parallel
+      const promises = course.lessons.map(async (lesson) => {
+        try {
+          const timestamp = new Date().getTime();
+          const response = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/lessons/${lesson.id}/video-embed/?t=${timestamp}`,
+            {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              },
+              cache: 'no-store'
+            }
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            cache.set(lesson.id, data.embed_html);
+            console.log('[WATCH] Pre-loaded:', lesson.title);
+          }
+        } catch (error) {
+          console.error('[WATCH] Failed to pre-load:', lesson.title, error);
+        }
+      });
+
+      await Promise.all(promises);
+      
+      setVideoEmbedCache(cache);
+      console.log('[WATCH] Pre-loaded', cache.size, 'video embeds');
+    } catch (error) {
+      console.error('[WATCH] Pre-load error:', error);
+    } finally {
+      setPreloadingVideos(false);
+    }
+  };
+
   const checkAuthAndFetchCourse = async () => {
     try {
       // Verify token is valid

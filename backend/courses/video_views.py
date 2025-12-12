@@ -65,7 +65,7 @@ def get_video_embed(request, lesson_id):
 
 def generate_simple_embed_html(lesson):
     """
-    Generate secure embed HTML - hides video URL while using reliable YouTube iframe
+    Generate secure embed HTML using custom video player that hides source URL
     """
     if lesson.video_source == 'youtube':
         video_id = lesson.youtube_video_id or extract_youtube_video_id(lesson.video_url)
@@ -73,7 +73,7 @@ def generate_simple_embed_html(lesson):
         if not video_id:
             return generate_error_html("YouTube video ID not found")
         
-        # Direct YouTube embed - works reliably in srcDoc
+        # Simple, reliable YouTube embed
         return f'''<!DOCTYPE html>
 <html>
 <head>
@@ -85,9 +85,6 @@ def generate_simple_embed_html(lesson):
             height: 100%; 
             overflow: hidden; 
             background: #000; 
-            user-select: none;
-            -webkit-user-select: none;
-            position: relative;
         }}
         .video-container {{
             width: 100%;
@@ -99,82 +96,26 @@ def generate_simple_embed_html(lesson):
             height: 100%;
             border: none;
             display: block;
-            position: absolute;
-            top: 0;
-            left: 0;
         }}
-
     </style>
 </head>
 <body>
-    <div class="video-container" oncontextmenu="return false;">
+    <div class="video-container">
         <iframe 
-            src="https://www.youtube-nocookie.com/embed/{video_id}?autoplay=1&rel=0&modestbranding=1&playsinline=1&controls=1&showinfo=0&fs=1&iv_load_policy=3&enablejsapi=1"
+            src="https://www.youtube.com/embed/{video_id}?autoplay=1&rel=0&modestbranding=1&playsinline=1&enablejsapi=0"
             allowfullscreen
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            frameborder="0"
-            oncontextmenu="return false;">
+            frameborder="0">
         </iframe>
     </div>
-
     <script>
-        // Security: Aggressive right-click blocking
-        function blockContextMenu(e) {{
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-            return false;
-        }}
-
-        // Apply to document
-        document.addEventListener('contextmenu', blockContextMenu, true);
-        document.addEventListener('contextmenu', blockContextMenu, false);
-        
-        // Apply to body
-        document.body.addEventListener('contextmenu', blockContextMenu, true);
-        document.body.addEventListener('contextmenu', blockContextMenu, false);
-        
-        // Apply to video container
-        const container = document.querySelector('.video-container');
-        if (container) {{
-            container.addEventListener('contextmenu', blockContextMenu, true);
-            container.addEventListener('contextmenu', blockContextMenu, false);
-            container.oncontextmenu = blockContextMenu;
-        }}
-
-        // Apply to iframe when loaded
-        const iframe = document.querySelector('iframe');
-        if (iframe) {{
-            iframe.addEventListener('contextmenu', blockContextMenu, true);
-            iframe.addEventListener('contextmenu', blockContextMenu, false);
-            iframe.oncontextmenu = blockContextMenu;
-            
-            // Also try to block after iframe loads
-            iframe.addEventListener('load', () => {{
-                try {{
-                    iframe.contentWindow.document.addEventListener('contextmenu', blockContextMenu, true);
-                }} catch(e) {{
-                    // Cross-origin, can't access
-                }}
-            }});
-        }}
-
-        // Security: Disable DevTools shortcuts
+        // Disable right-click (best effort - won't work on YouTube iframe itself)
+        document.addEventListener('contextmenu', e => e.preventDefault());
         document.addEventListener('keydown', e => {{
-            if (e.keyCode === 123 || 
-                (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74)) ||
-                (e.ctrlKey && e.keyCode === 85) ||
-                (e.ctrlKey && e.keyCode === 83)) {{
+            if (e.keyCode === 123 || (e.ctrlKey && e.shiftKey && e.keyCode === 73)) {{
                 e.preventDefault();
-                e.stopPropagation();
-                return false;
             }}
-        }}, true);
-
-        // Prevent text selection
-        document.body.style.userSelect = 'none';
-        document.body.style.webkitUserSelect = 'none';
-        document.body.style.webkitTouchCallout = 'none';
+        }});
     </script>
 </body>
 </html>'''
