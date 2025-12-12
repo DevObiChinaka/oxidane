@@ -155,12 +155,6 @@ export default function SecureVideoPlayer({
     <div className={`relative ${className}`} style={{ userSelect: 'none' }}>
       {/* Main Video Container */}
       <div className="relative w-full h-full bg-black">
-        {blobUrl && (
-          <iframe
-  return (
-    <div className={`relative ${className}`} style={{ userSelect: 'none' }}>
-      {/* Main Video Container */}
-      <div className="relative w-full h-full bg-black">
         {embedHtml && (
           <iframe
             key={`video-${lessonId}`}
@@ -187,3 +181,7 @@ export default function SecureVideoPlayer({
             onContextMenu={(e) => e.preventDefault()}
           />
         )}
+      </div>
+    </div>
+  );
+}
