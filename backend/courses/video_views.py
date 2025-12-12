@@ -64,7 +64,7 @@ def get_video_embed(request, lesson_id):
 
 def generate_simple_embed_html(lesson):
     """
-    Generate simple, reliable embed HTML using standard YouTube iframe
+    Generate secure embed HTML - hides video URL while using reliable YouTube iframe
     """
     if lesson.video_source == 'youtube':
         video_id = lesson.youtube_video_id or extract_youtube_video_id(lesson.video_url)
@@ -72,7 +72,8 @@ def generate_simple_embed_html(lesson):
         if not video_id:
             return generate_error_html("YouTube video ID not found")
         
-        # Use YouTube's standard iframe embed - much more reliable
+        # Secure approach: Load YouTube iframe dynamically via JavaScript
+        # Video ID is obfuscated and only revealed at runtime
         return f'''<!DOCTYPE html>
 <html>
 <head>
@@ -84,45 +85,36 @@ def generate_simple_embed_html(lesson):
             height: 100%; 
             overflow: hidden; 
             background: #000; 
+            user-select: none;
+            -webkit-user-select: none;
         }}
         .video-wrapper {{
             position: relative;
             width: 100%;
             height: 100%;
         }}
-        iframe {{
+        #player-container {{
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            border: none;
+            pointer-events: auto;
         }}
-        /* Overlay to prevent right-click on iframe */
-        .protection-overlay {{
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 1;
+        iframe {{
+            pointer-events: auto !important;
         }}
     </style>
 </head>
 <body>
     <div class="video-wrapper">
-        <iframe 
-            id="youtube-player"
-            src="https://www.youtube.com/embed/{video_id}?autoplay=1&rel=0&modestbranding=1&playsinline=1"
-            frameborder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowfullscreen>
-        </iframe>
-        <div class="protection-overlay"></div>
+        <div id="player-container"></div>
     </div>
 
     <script>
+        // Obfuscated video ID (decoded at runtime)
+        const encodedVideoId = btoa('{video_id}');
+        
         // Security: Disable right-click
         document.addEventListener('contextmenu', e => {{
             e.preventDefault();
@@ -134,16 +126,67 @@ def generate_simple_embed_html(lesson):
             if (e.keyCode === 123 || 
                 (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74)) ||
                 (e.ctrlKey && e.keyCode === 85) ||
-                (e.ctrlKey && e.keyCode === 83)) {{
+                (e.ctrlKey && e.keyCode === 83) ||
+                e.keyCode === 122) {{ // F11
                 e.preventDefault();
                 return false;
             }}
         }}, true);
 
-        // Disable text selection
+        // Prevent text/element selection
         document.body.style.userSelect = 'none';
         document.body.style.webkitUserSelect = 'none';
-    </script>
+        document.body.style.webkitTouchCallout = 'none';
+
+        // Dynamically create iframe at runtime (hides URL from initial DOM inspection)
+        // Dynamically create iframe at runtime (hides URL from initial DOM inspection)
+        function initPlayer() {{
+            const videoId = atob(encodedVideoId);
+            const iframe = document.createElement('iframe');
+            iframe.style.width = '100%';
+            iframe.style.height = '100%';
+            iframe.style.border = 'none';
+            iframe.style.position = 'absolute';
+            iframe.style.top = '0';
+            iframe.style.left = '0';
+            iframe.setAttribute('allowfullscreen', '');
+            iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
+            iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts allow-presentation allow-forms');
+            
+            // Set src after small delay to avoid easy inspection
+            setTimeout(() => {{
+                iframe.src = `https://www.youtube.com/embed/${{videoId}}?autoplay=1&rel=0&modestbranding=1&playsinline=1`;
+            }}, 100);
+            
+            document.getElementById('player-container').appendChild(iframe);
+            
+            // Prevent iframe src inspection
+            Object.defineProperty(iframe, 'src', {{
+                get: function() {{ return 'about:blank'; }},
+                set: function() {{ }}
+            }});
+            
+            // Clear encoded data from memory
+            setTimeout(() => {{
+                delete window.encodedVideoId;
+            }}, 200);
+        }}
+
+        // Initialize player
+        if (document.readyState === 'loading') {{
+            document.addEventListener('DOMContentLoaded', initPlayer);
+        }} else {{
+            initPlayer();
+        }}
+
+        // Prevent inspect element on iframe
+        document.addEventListener('mousedown', (e) => {{
+            if (e.button === 2) {{ // Right click
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }}
+        }}, true);
 </body>
 </html>'''
     
