@@ -35,7 +35,12 @@ export default function SecureVideoPlayer({
     if (preloadedEmbed) {
       console.log('[VIDEO_PLAYER] Using pre-loaded embed for lesson:', lessonId);
       setEmbedHtml(preloadedEmbed);
-      // Loading will be set to false by iframe onLoad event
+      
+      // Give YouTube IFrame API time to initialize (it loads async inside srcDoc)
+      setTimeout(() => {
+        console.log('[VIDEO_PLAYER] Hiding loading indicator');
+        setLoading(false);
+      }, 1500);
     } else if (!isPreloading) {
       // Fallback: fetch if not preloaded and not currently preloading
       console.log('[VIDEO_PLAYER] Fetching embed (not cached) for lesson:', lessonId);
@@ -174,10 +179,6 @@ export default function SecureVideoPlayer({
             allowFullScreen
             allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
             title={lessonTitle}
-            onLoad={() => {
-              // Hide loading indicator after iframe loads
-              setTimeout(() => setLoading(false), 500);
-            }}
             // Add mobile fullscreen support
             {...({
               'webkitallowfullscreen': 'true',
