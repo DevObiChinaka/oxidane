@@ -1,6 +1,7 @@
 """
 Simplified video streaming with reliable YouTube iframe embed
 """
+import base64
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -72,8 +73,10 @@ def generate_simple_embed_html(lesson):
         if not video_id:
             return generate_error_html("YouTube video ID not found")
         
-        # Secure approach: Load YouTube iframe dynamically via JavaScript
-        # Video ID is obfuscated and only revealed at runtime
+        # Encode video ID in base64 for obfuscation
+        encoded_id = base64.b64encode(video_id.encode()).decode()
+        
+        # Simpler secure approach: iframe in HTML with obfuscated ID loaded via JS
         return f'''<!DOCTYPE html>
 <html>
 <head>
@@ -88,32 +91,28 @@ def generate_simple_embed_html(lesson):
             user-select: none;
             -webkit-user-select: none;
         }}
-        .video-wrapper {{
-            position: relative;
-            width: 100%;
-            height: 100%;
-        }}
-        #player-container {{
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: auto;
-        }}
         iframe {{
-            pointer-events: auto !important;
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
         }}
     </style>
 </head>
 <body>
-    <div class="video-wrapper">
-        <div id="player-container"></div>
-    </div>
+    <iframe 
+        id="video-player"
+        allowfullscreen
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
+    </iframe>
 
     <script>
-        // Obfuscated video ID (decoded at runtime)
-        const encodedVideoId = btoa('{video_id}');
+        // Obfuscated video ID
+        const v = atob('{encoded_id}');
+        
+        // Load video immediately
+        document.getElementById('video-player').src = 
+            `https://www.youtube.com/embed/${{v}}?autoplay=1&rel=0&modestbranding=1&playsinline=1`;
         
         // Security: Disable right-click
         document.addEventListener('contextmenu', e => {{
@@ -126,71 +125,26 @@ def generate_simple_embed_html(lesson):
             if (e.keyCode === 123 || 
                 (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74)) ||
                 (e.ctrlKey && e.keyCode === 85) ||
-                (e.ctrlKey && e.keyCode === 83) ||
-                e.keyCode === 122) {{ // F11
+                (e.ctrlKey && e.keyCode === 83)) {{
                 e.preventDefault();
                 return false;
             }}
         }}, true);
 
-        // Prevent text/element selection
+        // Prevent text selection
         document.body.style.userSelect = 'none';
         document.body.style.webkitUserSelect = 'none';
-        document.body.style.webkitTouchCallout = 'none';
-
-        // Dynamically create iframe at runtime (hides URL from initial DOM inspection)
-        function initPlayer() {{
-            const videoId = atob(encodedVideoId);
-            const iframe = document.createElement('iframe');
-            iframe.style.width = '100%';
-            iframe.style.height = '100%';
-            iframe.style.border = 'none';
-            iframe.style.position = 'absolute';
-            iframe.style.top = '0';
-            iframe.style.left = '0';
-            iframe.setAttribute('allowfullscreen', '');
-            iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
-            
-            // Set src immediately for proper loading
-            iframe.src = `https://www.youtube.com/embed/${{videoId}}?autoplay=1&rel=0&modestbranding=1&playsinline=1`;
-            
-            document.getElementById('player-container').appendChild(iframe);
-            
-            // After iframe is added, obscure the src property to make URL harder to extract
-            setTimeout(() => {{
-                try {{
-                    Object.defineProperty(iframe, 'src', {{
-                        get: function() {{ return 'about:blank'; }},
-                        configurable: false
-                    }});
-                }} catch(e) {{
-                    // Silently fail if property can't be overridden
-                }}
-            }}, 500);
-            
-            // Clear encoded data from memory
-            setTimeout(() => {{
-                try {{
-                    delete window.encodedVideoId;
-                }} catch(e) {{}}
-            }}, 1000);
-        }}
-
-        // Initialize player
-        if (document.readyState === 'loading') {{
-            document.addEventListener('DOMContentLoaded', initPlayer);
-        }} else {{
-            initPlayer();
-        }}
-
-        // Prevent inspect element on iframe
-        document.addEventListener('mousedown', (e) => {{
-            if (e.button === 2) {{ // Right click
-                e.preventDefault();
-                e.stopPropagation();
-                return false;
-            }}
-        }}, true);
+        
+        // Obscure iframe src after load
+        setTimeout(() => {{
+            try {{
+                const iframe = document.getElementById('video-player');
+                Object.defineProperty(iframe, 'src', {{
+                    get: () => 'about:blank',
+                    configurable: false
+                }});
+            }} catch(e) {{}}
+        }}, 1000);
 </body>
 </html>'''
     
