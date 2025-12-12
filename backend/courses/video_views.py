@@ -139,7 +139,6 @@ def generate_simple_embed_html(lesson):
         document.body.style.webkitTouchCallout = 'none';
 
         // Dynamically create iframe at runtime (hides URL from initial DOM inspection)
-        // Dynamically create iframe at runtime (hides URL from initial DOM inspection)
         function initPlayer() {{
             const videoId = atob(encodedVideoId);
             const iframe = document.createElement('iframe');
@@ -151,25 +150,30 @@ def generate_simple_embed_html(lesson):
             iframe.style.left = '0';
             iframe.setAttribute('allowfullscreen', '');
             iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
-            iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts allow-presentation allow-forms');
             
-            // Set src after small delay to avoid easy inspection
-            setTimeout(() => {{
-                iframe.src = `https://www.youtube.com/embed/${{videoId}}?autoplay=1&rel=0&modestbranding=1&playsinline=1`;
-            }}, 100);
+            // Set src immediately for proper loading
+            iframe.src = `https://www.youtube.com/embed/${{videoId}}?autoplay=1&rel=0&modestbranding=1&playsinline=1`;
             
             document.getElementById('player-container').appendChild(iframe);
             
-            // Prevent iframe src inspection
-            Object.defineProperty(iframe, 'src', {{
-                get: function() {{ return 'about:blank'; }},
-                set: function() {{ }}
-            }});
+            // After iframe is added, obscure the src property to make URL harder to extract
+            setTimeout(() => {{
+                try {{
+                    Object.defineProperty(iframe, 'src', {{
+                        get: function() {{ return 'about:blank'; }},
+                        configurable: false
+                    }});
+                }} catch(e) {{
+                    // Silently fail if property can't be overridden
+                }}
+            }}, 500);
             
             // Clear encoded data from memory
             setTimeout(() => {{
-                delete window.encodedVideoId;
-            }}, 200);
+                try {{
+                    delete window.encodedVideoId;
+                }} catch(e) {{}}
+            }}, 1000);
         }}
 
         // Initialize player
