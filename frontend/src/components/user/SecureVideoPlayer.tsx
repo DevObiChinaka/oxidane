@@ -20,24 +20,13 @@ export default function SecureVideoPlayer({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [embedHtml, setEmbedHtml] = useState<string>('');
-  const [isUnmounting, setIsUnmounting] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
-    // Properly unmount old video before loading new one
-    setIsUnmounting(true);
-    setEmbedHtml('');
-    
-    // Give time for iframe to fully unmount and cleanup
-    const unmountTimer = setTimeout(() => {
-      setIsUnmounting(false);
-      setLoading(true);
-      loadVideoEmbed();
-    }, 100);
-
-    return () => {
-      clearTimeout(unmountTimer);
-    };
+    console.log('[VIDEO_PLAYER] Loading video for lesson:', lessonId);
+    setLoading(true);
+    setError(null);
+    loadVideoEmbed();
   }, [lessonId]);
 
   useEffect(() => {
@@ -112,7 +101,7 @@ export default function SecureVideoPlayer({
     }
   };
 
-  if (isUnmounting || loading) {
+  if (loading) {
     return (
       <div className={`flex items-center justify-center bg-gray-900 ${className}`}>
         <div className="text-center">
@@ -149,7 +138,7 @@ export default function SecureVideoPlayer({
     <div className={`relative ${className}`} style={{ userSelect: 'none' }}>
       {/* Main Video Container */}
       <div className="relative w-full h-full bg-black">
-        {embedHtml && !isUnmounting && (
+        {embedHtml && (
           <iframe
             key={lessonId}
             ref={iframeRef}
@@ -169,7 +158,7 @@ export default function SecureVideoPlayer({
         )}
         
         {/* Invisible overlay to prevent direct iframe manipulation */}
-        {embedHtml && !isUnmounting && (
+        {embedHtml && (
           <div 
             className="absolute inset-0 pointer-events-none"
             style={{ zIndex: 1 }}
