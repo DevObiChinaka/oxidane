@@ -214,7 +214,10 @@ export default function VideoPlayerPage() {
   };
 
   const selectLesson = (lesson: Lesson) => {
-    // Don't set state here - let the URL change trigger the useEffect
+    console.log('[WATCH] selectLesson called for:', lesson.title);
+    // Update state immediately AND change URL
+    setCurrentLesson(lesson);
+    setVideoKey(prev => prev + 1);
     router.push(`/courses/${slug}/watch?lesson=${lesson.id}`, { scroll: false });
   };
 
