@@ -24,19 +24,7 @@ export default function SecureVideoPlayer({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [embedHtml, setEmbedHtml] = useState<string>('');
-  const [blobUrl, setBlobUrl] = useState<string>('');
   const iframeRef = useRef<HTMLIFrameElement>(null);
-
-  useEffect(() => {
-    console.log('[VIDEO_PLAYER] Loading video for lesson:', lessonId);
-    
-    // Cleanup previous blob URL
-    return () => {
-      if (blobUrl) {
-        URL.revokeObjectURL(blobUrl);
-      }
-    };
-  }, [lessonId]);
 
   useEffect(() => {
     // If we have a preloaded embed, use it immediately
@@ -44,11 +32,7 @@ export default function SecureVideoPlayer({
       console.log('[VIDEO_PLAYER] Using pre-loaded embed');
       setEmbedHtml(preloadedEmbed);
       
-      // Convert HTML to Blob URL for proper iframe loading
-      const blob = new Blob([preloadedEmbed], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      setBlobUrl(url);
-      
+      // Use srcdoc for immediate display (better compatibility than Blob)
       setLoading(false);
       setError(null);
     } else if (!isPreloading) {
@@ -123,12 +107,6 @@ export default function SecureVideoPlayer({
       console.log('[VIDEO_PLAYER] Video loaded successfully');
 
       setEmbedHtml(data.embed_html);
-      
-      // Convert HTML to Blob URL
-      const blob = new Blob([data.embed_html], { type: 'text/html' });
-      const blobObjectUrl = URL.createObjectURL(blob);
-      setBlobUrl(blobObjectUrl);
-      
       setLoading(false);
 
     } catch (err: any) {
@@ -179,9 +157,15 @@ export default function SecureVideoPlayer({
       <div className="relative w-full h-full bg-black">
         {blobUrl && (
           <iframe
+  return (
+    <div className={`relative ${className}`} style={{ userSelect: 'none' }}>
+      {/* Main Video Container */}
+      <div className="relative w-full h-full bg-black">
+        {embedHtml && (
+          <iframe
             key={`video-${lessonId}`}
             ref={iframeRef}
-            src={blobUrl}
+            srcDoc={embedHtml}
             className="w-full h-full border-0"
             allowFullScreen
             allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
@@ -196,14 +180,10 @@ export default function SecureVideoPlayer({
         )}
         
         {/* Invisible overlay to prevent direct iframe manipulation */}
-        {blobUrl && (
+        {embedHtml && (
           <div 
             className="absolute inset-0 pointer-events-none"
             style={{ zIndex: 1 }}
             onContextMenu={(e) => e.preventDefault()}
           />
         )}
-      </div>
-    </div>
-  );
-}

@@ -73,10 +73,7 @@ def generate_simple_embed_html(lesson):
         if not video_id:
             return generate_error_html("YouTube video ID not found")
         
-        # Encode video ID in base64 for obfuscation
-        encoded_id = base64.b64encode(video_id.encode()).decode()
-        
-        # Simpler secure approach: iframe in HTML with obfuscated ID loaded via JS
+        # Direct YouTube embed - works reliably in srcDoc
         return f'''<!DOCTYPE html>
 <html>
 <head>
@@ -101,19 +98,12 @@ def generate_simple_embed_html(lesson):
 </head>
 <body>
     <iframe 
-        id="video-player"
+        src="https://www.youtube.com/embed/{video_id}?autoplay=1&rel=0&modestbranding=1&playsinline=1"
         allowfullscreen
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture">
     </iframe>
 
     <script>
-        // Obfuscated video ID
-        const v = atob('{encoded_id}');
-        
-        // Load video immediately
-        document.getElementById('video-player').src = 
-            `https://www.youtube.com/embed/${{v}}?autoplay=1&rel=0&modestbranding=1&playsinline=1`;
-        
         // Security: Disable right-click
         document.addEventListener('contextmenu', e => {{
             e.preventDefault();
@@ -134,17 +124,6 @@ def generate_simple_embed_html(lesson):
         // Prevent text selection
         document.body.style.userSelect = 'none';
         document.body.style.webkitUserSelect = 'none';
-        
-        // Obscure iframe src after load
-        setTimeout(() => {{
-            try {{
-                const iframe = document.getElementById('video-player');
-                Object.defineProperty(iframe, 'src', {{
-                    get: () => 'about:blank',
-                    configurable: false
-                }});
-            }} catch(e) {{}}
-        }}, 1000);
 </body>
 </html>'''
     
