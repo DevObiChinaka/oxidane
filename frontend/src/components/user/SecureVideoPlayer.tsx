@@ -27,20 +27,22 @@ export default function SecureVideoPlayer({
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
+    // Reset state when lessonId changes
+    setLoading(true);
+    setError(null);
+    
     // If we have a preloaded embed, use it immediately
     if (preloadedEmbed) {
-      console.log('[VIDEO_PLAYER] Using pre-loaded embed');
+      console.log('[VIDEO_PLAYER] Using pre-loaded embed for lesson:', lessonId);
       setEmbedHtml(preloadedEmbed);
-      
-      // Use srcdoc for immediate display (better compatibility than Blob)
-      setLoading(false);
-      setError(null);
+      // Loading will be set to false by iframe onLoad event
     } else if (!isPreloading) {
       // Fallback: fetch if not preloaded and not currently preloading
-      console.log('[VIDEO_PLAYER] Fetching embed (not cached)');
-      setLoading(true);
-      setError(null);
+      console.log('[VIDEO_PLAYER] Fetching embed (not cached) for lesson:', lessonId);
       loadVideoEmbed();
+    } else {
+      // Still preloading, show loading state
+      console.log('[VIDEO_PLAYER] Waiting for preload to complete...');
     }
   }, [lessonId, preloadedEmbed, isPreloading]);
 
@@ -155,6 +157,14 @@ export default function SecureVideoPlayer({
     <div className={`relative ${className}`} style={{ userSelect: 'none' }}>
       {/* Main Video Container */}
       <div className="relative w-full h-full bg-black">
+        {loading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-900 z-20">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-gray-700 border-t-[#00B38F] mx-auto mb-4"></div>
+              <p className="text-gray-400 text-lg">Loading video...</p>
+            </div>
+          </div>
+        )}
         {embedHtml && (
           <iframe
             key={`video-${lessonId}`}
@@ -164,6 +174,10 @@ export default function SecureVideoPlayer({
             allowFullScreen
             allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
             title={lessonTitle}
+            onLoad={() => {
+              // Hide loading indicator after iframe loads
+              setTimeout(() => setLoading(false), 500);
+            }}
             // Add mobile fullscreen support
             {...({
               'webkitallowfullscreen': 'true',
