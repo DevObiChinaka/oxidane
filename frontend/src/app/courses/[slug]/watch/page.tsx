@@ -272,55 +272,6 @@ export default function VideoPlayerPage() {
     }
   };
 
-  const preloadAllVideoEmbeds = async () => {
-    setPreloadingVideos(true);
-    const cache = new Map<string, string>();
-    const token = localStorage.getItem('user_auth_token') || localStorage.getItem('access_token');
-
-    if (!token || !course) {
-      setPreloadingVideos(false);
-      return;
-    }
-
-    try {
-      // Fetch all video embeds in parallel
-      const promises = course.lessons.map(async (lesson) => {
-        try {
-          const timestamp = new Date().getTime();
-          const response = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/lessons/${lesson.id}/video-embed/?t=${timestamp}`,
-            {
-              method: 'GET',
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              },
-              cache: 'no-store'
-            }
-          );
-
-          if (response.ok) {
-            const data = await response.json();
-            cache.set(lesson.id, data.embed_html);
-            console.log(`[WATCH] Cached video embed for: ${lesson.title}`);
-          } else {
-            console.error(`[WATCH] Failed to load embed for ${lesson.title}`);
-          }
-        } catch (err) {
-          console.error(`[WATCH] Error loading embed for ${lesson.title}:`, err);
-        }
-      });
-
-      await Promise.all(promises);
-      setVideoEmbedCache(cache);
-      console.log(`[WATCH] Pre-loaded ${cache.size} video embeds`);
-    } catch (error) {
-      console.error('[WATCH] Error pre-loading video embeds:', error);
-    } finally {
-      setPreloadingVideos(false);
-    }
-  };
-
   const selectLesson = (lesson: Lesson) => {
     console.log('[WATCH] selectLesson called for:', lesson.title);
     // Update state immediately AND change URL
