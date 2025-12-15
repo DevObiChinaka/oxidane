@@ -870,7 +870,7 @@ def update_exchange_rates(self):
         success = service.fetch_and_update_rates(
             base_currency='USD',
             use_fixer=False,  # Use free exchangerate-api.io
-            force_update=False  # Only update if stale (>24h old)
+            force_update=True  # Force update every hour (matches celery schedule)
         )
         
         if success:
