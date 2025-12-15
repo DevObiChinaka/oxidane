@@ -144,7 +144,7 @@ def check_user_lesson_access(user, lesson):
         return True
     
     # Check course access
-    return course.user_has_access(user)
+    return course.is_accessible_by_user(user)
 
 
 def get_client_ip(request):
