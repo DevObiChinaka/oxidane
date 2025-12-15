@@ -247,6 +247,7 @@ class Subscription(models.Model):
         indexes = [
             models.Index(fields=['billing_profile', 'status']),
             models.Index(fields=['end_date']),
+            models.Index(fields=['status', 'end_date']),  # Composite index for expiration checks
         ]
     
     def __str__(self):

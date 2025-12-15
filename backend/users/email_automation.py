@@ -405,6 +405,52 @@ def send_subscription_renewal_reminder(user, subscription_details=None, test_mod
     else:
         return automation_service.trigger_subscription_renewal_reminder(user, subscription_details)
 
+def send_subscription_expired_email(user, subscription_details=None, test_mode=False):
+    """
+    Send subscription expiration notification email
+    
+    Args:
+        user: User whose subscription expired
+        subscription_details: Dict with subscription info (plan_name, days_remaining, etc.)
+        test_mode: Whether to send in test mode
+    
+    Returns:
+        Email sending result
+    """
+    if test_mode:
+        custom_vars = {
+            'plan_name': 'Premium Signals',
+            'days_remaining': 0,
+            'subscription_end': 'December 15, 2025',
+            'renewal_url': 'https://oxidane.com/pricing',
+            'support_email': 'support@oxidane.com'
+        }
+        return EmailTemplateService().send_email(
+            template_type='subscription_expiry',
+            recipient_email=user.email,
+            user=user,
+            custom_vars=custom_vars,
+            test_mode=True
+        )
+    else:
+        custom_vars = {}
+        if subscription_details:
+            custom_vars.update({
+                'plan_name': subscription_details.get('plan_name', 'Your Plan'),
+                'days_remaining': subscription_details.get('days_remaining', 0),
+                'subscription_end': subscription_details.get('subscription_end', 'recently'),
+                'renewal_url': subscription_details.get('renewal_url', 'https://oxidane.com/pricing'),
+                'support_email': subscription_details.get('support_email', 'support@oxidane.com')
+            })
+        
+        return EmailTemplateService().send_email(
+            template_type='subscription_expiry',
+            recipient_email=user.email,
+            user=user,
+            custom_vars=custom_vars,
+            test_mode=False
+        )
+
 # ==============================
 # MENTORSHIP EMAIL FUNCTIONS
 # ==============================

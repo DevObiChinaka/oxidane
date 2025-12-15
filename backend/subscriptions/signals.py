@@ -227,6 +227,57 @@ def revoke_expired_subscription_access(sender, subscription, user, **kwargs):
         logger.error(f"Failed to revoke subscription access: {str(e)}")
 
 
+@receiver(subscription_expired)
+def send_subscription_expired_email(sender, subscription, user, **kwargs):
+    """
+    Send email notification when subscription expires.
+    
+    This notifies the user that their subscription has ended and they've
+    lost access to premium features.
+    
+    Args:
+        sender: The model class that sent the signal
+        subscription: The Subscription instance that expired
+        user: The user whose subscription expired
+    """
+    try:
+        from users.email_automation import send_subscription_expired_email as send_email
+        
+        # Prepare subscription details for email
+        # Note: The template expects these specific variable names
+        subscription_details = {
+            'plan_name': subscription.plan.name if subscription.plan else 'Your Plan',
+            'days_remaining': 0,  # Already expired
+            'subscription_end': subscription.end_date.strftime("%B %d, %Y") if subscription.end_date else 'recently',
+            'renewal_url': 'https://oxidane.com/pricing',  # Resubscribe URL
+            'support_email': 'support@oxidane.com'
+        }
+        
+        # Send email
+        result = send_email(
+            user=user,
+            subscription_details=subscription_details,
+            test_mode=False
+        )
+        
+        if result and result.get('success'):
+            logger.info(
+                f"Subscription expiry email sent to {user.email} "
+                f"(Subscription {subscription.id})"
+            )
+        else:
+            logger.warning(
+                f"Failed to send subscription expiry email to {user.email}: "
+                f"{result.get('error') if result else 'Unknown error'}"
+            )
+    
+    except Exception as e:
+        logger.error(
+            f"Error sending subscription expiry email to {user.email}: {str(e)}",
+            exc_info=True
+        )
+
+
 @receiver(subscription_upgraded)
 def log_subscription_upgraded(sender, old_subscription, new_subscription, user, **kwargs):
     """

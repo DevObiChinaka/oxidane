@@ -778,18 +778,23 @@ def check_expired_subscriptions():
     
     Runs: Daily at midnight (configured in celery.py)
     
+    Grace Period: 24 hours after end_date before expiration
+    
     Actions:
-        1. Find subscriptions past their end_date
+        1. Find subscriptions past their end_date + 24 hour grace period
         2. Mark as expired
         3. Remove users from Telegram groups
         4. Update user status
     """
-    logger.info("Checking for expired subscriptions")
+    logger.info("Checking for expired subscriptions (with 24-hour grace period)")
     
-    # Get subscriptions that expired
+    # Grace period: subscriptions expire 24 hours AFTER end_date
+    grace_cutoff = timezone.now() - timedelta(hours=24)
+    
+    # Get subscriptions that expired (past grace period)
     expired_subscriptions = Subscription.objects.filter(
         status='active',
-        end_date__lt=timezone.now()
+        end_date__lt=grace_cutoff  # Must be 24+ hours past end_date
     ).select_related('billing_profile__user', 'plan')
     
     count = 0
