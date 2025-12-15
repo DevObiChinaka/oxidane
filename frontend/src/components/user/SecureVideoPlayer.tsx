@@ -159,9 +159,9 @@ export default function SecureVideoPlayer({
   }
 
   return (
-    <div className={`relative ${className}`} style={{ userSelect: 'none' }}>
+    <div className={`relative ${className}`} style={{ userSelect: 'none', position: 'relative', width: '100%', height: '100%' }}>
       {/* Main Video Container */}
-      <div className="relative w-full h-full bg-black">
+      <div className="relative w-full h-full bg-black" style={{ position: 'relative' }}>
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-900 z-20">
             <div className="text-center">
@@ -179,11 +179,20 @@ export default function SecureVideoPlayer({
             allowFullScreen
             allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
             title={lessonTitle}
-            // Add mobile fullscreen support
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%'
+            }}
+            // Add comprehensive fullscreen support for all browsers including Safari
             {...({
               'webkitallowfullscreen': 'true',
               'mozallowfullscreen': 'true',
-              'allowfullscreen': 'true'
+              'allowfullscreen': 'true',
+              'webkit-playsinline': 'true',
+              'playsinline': 'true'
             } as any)}
           />
         )}

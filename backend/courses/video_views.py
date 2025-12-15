@@ -184,7 +184,7 @@ def generate_simple_embed_html(lesson):
             border-radius: 50%;
             cursor: pointer;
         }}
-        #center-play {{
+        #center-play {
             position: absolute;
             top: 50%;
             left: 50%;
@@ -195,14 +195,18 @@ def generate_simple_embed_html(lesson):
             border-radius: 50%;
             display: flex;
             align-items: center;
-            justify-center: center;
+            justify-content: center;
             opacity: 0;
             transition: opacity 0.3s;
             pointer-events: none;
-        }}
-        #center-play.show {{
+            z-index: 5;
+        }
+        #center-play.show {
             opacity: 1;
-        }}
+        }
+        #center-play svg {
+            margin-left: 4px;
+        }
     </style>
 </head>
 <body>
@@ -433,6 +437,7 @@ def generate_simple_embed_html(lesson):
             const elem = container;
 
             if (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement) {{
+                // Exit fullscreen
                 if (document.exitFullscreen) {{
                     document.exitFullscreen();
                 }} else if (document.webkitExitFullscreen) {{
@@ -443,11 +448,13 @@ def generate_simple_embed_html(lesson):
                     document.msExitFullscreen();
                 }}
             }} else {{
+                // Enter fullscreen - Safari needs special handling
                 if (elem.requestFullscreen) {{
-                    elem.requestFullscreen();
+                    elem.requestFullscreen().catch(err => console.log('Fullscreen error:', err));
                 }} else if (elem.webkitRequestFullscreen) {{
                     elem.webkitRequestFullscreen();
                 }} else if (elem.webkitEnterFullscreen) {{
+                    // iOS Safari fallback
                     elem.webkitEnterFullscreen();
                 }} else if (elem.mozRequestFullScreen) {{
                     elem.mozRequestFullScreen();
