@@ -361,14 +361,17 @@ CELERY_BROKER_POOL_LIMIT = 1  # Only 1 connection per worker to broker
 CELERY_REDIS_MAX_CONNECTIONS = 3  # Max 3 connections total per worker
 
 # Connection recycling - close connections after each task
+import socket
 CELERY_BROKER_TRANSPORT_OPTIONS = {
     'max_connections': 3,  # Limit pool size
     'socket_keepalive': True,
     'socket_keepalive_options': {
-        1: 1,  # TCP_KEEPIDLE
-        2: 2,  # TCP_KEEPINTVL
-        3: 2,  # TCP_KEEPCNT
-    },
+        socket.TCP_KEEPIDLE: 60,  # Start keepalives after 60 seconds of idle
+        socket.TCP_KEEPINTVL: 10,  # Interval between keepalives
+        socket.TCP_KEEPCNT: 5,     # Number of keepalives before dropping connection
+    } if hasattr(socket, 'TCP_KEEPIDLE') else {},  # Only use if supported on this platform
+    'socket_timeout': 10,  # 10 second socket timeout
+    'socket_connect_timeout': 10,  # 10 second connection timeout
 }
 
 # Result backend connection pooling

@@ -879,11 +879,14 @@ class VerifyPaymentView(APIView):
                         
                         logger.info(f"Subscription activated for user {request.user.id}: {plan.name}")
                         
-                        # Trigger Celery tasks
+                        # Trigger Celery tasks (wrap in try-except to prevent Redis errors from failing response)
                         # NOTE: Don't trigger add_user_to_telegram_groups here - webhook will handle it
                         # to avoid duplicate invite links
-                        activate_subscription.delay(payment.id)
-                        send_payment_receipt_email.delay(payment.id)
+                        try:
+                            activate_subscription.delay(payment.id)
+                            send_payment_receipt_email.delay(payment.id)
+                        except Exception as task_error:
+                            logger.error(f"Failed to queue background tasks in verify: {str(task_error)}", exc_info=True)
                         
                     except SubscriptionPlan.DoesNotExist:
                         logger.error(f"Plan {plan_id} not found for payment {payment.id}")
