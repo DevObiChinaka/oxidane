@@ -137,6 +137,12 @@ def generate_simple_embed_html(lesson):
         #controls.show {{
             opacity: 1;
         }}
+        /* Show controls in fullscreen mode initially */
+        #video-container:fullscreen #controls,
+        #video-container:-webkit-full-screen #controls,
+        #video-container:-moz-full-screen #controls {{
+            opacity: 1;
+        }}
         #progress-container {{
             width: 100%;
             height: 5px;
@@ -459,9 +465,7 @@ def generate_simple_embed_html(lesson):
         }});
 
         document.getElementById('fullscreen').addEventListener('click', () => {{
-            if (!player || !player.getIframe) return;
-            
-            const iframe = player.getIframe();
+            const container = document.getElementById('video-container');
             
             // Check if already in fullscreen
             const isFullscreen = document.fullscreenElement || 
@@ -481,18 +485,25 @@ def generate_simple_embed_html(lesson):
                     document.msExitFullscreen();
                 }}
             }} else {{
-                // Enter fullscreen on the iframe directly
+                // Enter fullscreen on container (includes controls)
                 try {{
-                    if (iframe.requestFullscreen) {{
-                        iframe.requestFullscreen();
-                    }} else if (iframe.webkitRequestFullscreen) {{
-                        iframe.webkitRequestFullscreen();
-                    }} else if (iframe.webkitEnterFullscreen) {{
-                        iframe.webkitEnterFullscreen();
-                    }} else if (iframe.mozRequestFullScreen) {{
-                        iframe.mozRequestFullScreen();
-                    }} else if (iframe.msRequestFullscreen) {{
-                        iframe.msRequestFullscreen();
+                    if (container.requestFullscreen) {{
+                        container.requestFullscreen();
+                    }} else if (container.webkitRequestFullscreen) {{
+                        container.webkitRequestFullscreen();
+                    }} else if (container.webkitEnterFullscreen) {{
+                        container.webkitEnterFullscreen();
+                    }} else if (container.mozRequestFullScreen) {{
+                        container.mozRequestFullScreen();
+                    }} else if (container.msRequestFullscreen) {{
+                        container.msRequestFullscreen();
+                    }}
+                    
+                    // Try to lock orientation to landscape on mobile
+                    if (screen.orientation && screen.orientation.lock) {{
+                        screen.orientation.lock('landscape').catch(() => {{
+                            // Ignore if not supported
+                        }});
                     }}
                 }} catch (err) {{
                     console.error('Fullscreen error:', err);
@@ -500,9 +511,10 @@ def generate_simple_embed_html(lesson):
             }}
         }});
 
-        // Auto-hide controls
+        // Auto-hide controls - works for mouse and touch
         let hideControlsTimeout;
-        document.getElementById('controls-overlay').addEventListener('mousemove', () => {{
+        
+        function showControls() {{
             document.getElementById('controls').classList.add('show');
             clearTimeout(hideControlsTimeout);
             hideControlsTimeout = setTimeout(() => {{
@@ -510,6 +522,48 @@ def generate_simple_embed_html(lesson):
                     document.getElementById('controls').classList.remove('show');
                 }}
             }}, 3000);
+        }}
+        
+        // Show controls on mouse move (desktop)
+        document.getElementById('controls-overlay').addEventListener('mousemove', showControls);
+        
+        // Show controls on tap/click (mobile/touch and desktop fullscreen)
+        document.getElementById('controls-overlay').addEventListener('click', (e) => {{
+            // Don't toggle if clicking a button
+            if (e.target.closest('button') || e.target.closest('#progress-container')) {{
+                return;
+            }}
+            showControls();
+        }});
+        
+        // Show controls on touch (mobile)
+        document.getElementById('controls-overlay').addEventListener('touchstart', (e) => {{
+            if (e.target.closest('button') || e.target.closest('#progress-container')) {{
+                return;
+            }}
+            showControls();
+        }}, {{ passive: true }});
+        
+        // Handle fullscreen changes
+        document.addEventListener('fullscreenchange', () => {{
+            if (document.fullscreenElement) {{
+                // Entering fullscreen - show controls initially
+                showControls();
+            }} else {{
+                // Exiting fullscreen - unlock orientation
+                if (screen.orientation && screen.orientation.unlock) {{
+                    screen.orientation.unlock();
+                }}
+            }}
+        }});
+        
+        // Handle webkit fullscreen changes (Safari)
+        document.addEventListener('webkitfullscreenchange', () => {{
+            if (document.webkitFullscreenElement) {{
+                showControls();
+            }} else if (screen.orientation && screen.orientation.unlock) {{
+                screen.orientation.unlock();
+            }}
         }});
 
         // Initialize player - check if YT API is already loaded
