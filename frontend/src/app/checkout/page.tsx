@@ -381,12 +381,6 @@ function CheckoutContent() {
 
   return (
     <>
-      {/* Load Paystack Inline Script */}
-      <Script 
-        src="https://js.paystack.co/v1/inline.js" 
-        strategy="lazyOnload"
-      />
-      
       <div className="min-h-screen bg-gradient-to-br from-[#000856] via-[#002A5C] to-[#004A42]">
         <Navigation />
         
