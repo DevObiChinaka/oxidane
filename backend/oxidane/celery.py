@@ -25,11 +25,9 @@ app.autodiscover_tasks()
 
 # Configure periodic tasks (Celery Beat)
 app.conf.beat_schedule = {
-    # Telegram bot update polling (every 5 seconds)
-    'process-telegram-updates': {
-        'task': 'subscriptions.tasks.process_telegram_updates',
-        'schedule': 5.0,  # Every 5 seconds
-    },
+    # NOTE: Telegram polling moved to separate telegram_poller.py script
+    # Running it as a Beat task every few seconds was causing Beat to crash
+    # Use: python telegram_poller.py & (in backend directory)
     
     # Check expired subscriptions every day at midnight
     'check-expired-subscriptions': {
