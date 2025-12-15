@@ -591,75 +591,97 @@ def charge_with_saved_card(request):
         
         if charge_result.get('success'):
             # Payment successful - wrap in atomic transaction
-            with transaction.atomic():
-                # Update payment with Paystack's reference
-                payment.status = 'verified'
-                payment.gateway_reference = charge_result.get('reference')
-                payment.gateway_response = charge_result
-                payment.log_event('payment_successful', charge_result)
-                payment.save()
+            try:
+                with transaction.atomic():
+                    # Update payment with Paystack's reference
+                    payment.status = 'verified'
+                    payment.gateway_reference = charge_result.get('reference')
+                    payment.gateway_response = charge_result
+                    payment.log_event('payment_successful', charge_result)
+                    payment.save()
+                    
+                    # Create subscription
+                    subscription_start = timezone.now()
+                    if plan.billing_period == 'weekly':
+                        subscription_end = subscription_start + timedelta(days=7)
+                        next_billing_date = subscription_start + timedelta(days=7)
+                    elif plan.billing_period == 'monthly':
+                        subscription_end = subscription_start + timedelta(days=30)
+                        next_billing_date = subscription_start + timedelta(days=30)
+                    elif plan.billing_period == 'quarterly':
+                        subscription_end = subscription_start + timedelta(days=90)
+                        next_billing_date = subscription_start + timedelta(days=90)
+                    elif plan.billing_period == 'yearly':
+                        subscription_end = subscription_start + timedelta(days=365)
+                        next_billing_date = subscription_start + timedelta(days=365)
+                    elif plan.billing_period == 'lifetime':
+                        subscription_end = subscription_start + timedelta(days=36500)
+                        next_billing_date = None
+                    else:
+                        subscription_end = subscription_start + timedelta(days=30)
+                        next_billing_date = subscription_start + timedelta(days=30)
+                    
+                    # Create or update subscription (match on billing_profile AND plan)
+                    subscription, created = Subscription.objects.update_or_create(
+                        billing_profile=billing_profile,
+                        plan=plan,
+                        defaults={
+                            'status': 'active',
+                            'start_date': subscription_start,
+                            'end_date': subscription_end,
+                            'amount_paid': amount - discount_amount,
+                            'currency': currency,
+                            'auto_renew': True,
+                            'payment_method': payment_method,
+                            'next_billing_date': next_billing_date,
+                        }
+                    )
+                    
+                    # Link payment to subscription
+                    payment.subscription = subscription
+                    payment.save()
+                    
+                    # Update user subscription fields
+                    user.current_plan = plan
+                    user.subscription_status = 'active'
+                    user.save()
                 
-                # Create subscription
-                subscription_start = timezone.now()
-                if plan.billing_period == 'weekly':
-                    subscription_end = subscription_start + timedelta(days=7)
-                    next_billing_date = subscription_start + timedelta(days=7)
-                elif plan.billing_period == 'monthly':
-                    subscription_end = subscription_start + timedelta(days=30)
-                    next_billing_date = subscription_start + timedelta(days=30)
-                elif plan.billing_period == 'quarterly':
-                    subscription_end = subscription_start + timedelta(days=90)
-                    next_billing_date = subscription_start + timedelta(days=90)
-                elif plan.billing_period == 'yearly':
-                    subscription_end = subscription_start + timedelta(days=365)
-                    next_billing_date = subscription_start + timedelta(days=365)
-                elif plan.billing_period == 'lifetime':
-                    subscription_end = subscription_start + timedelta(days=36500)
-                    next_billing_date = None
-                else:
-                    subscription_end = subscription_start + timedelta(days=30)
-                    next_billing_date = subscription_start + timedelta(days=30)
+                # Queue Celery tasks AFTER database commit (capture variables to avoid closure issues)
+                payment_id_captured = payment.id
+                user_id_captured = user.id
+                plan_id_captured = str(plan.id)
+                subscription_id_captured = str(subscription.id)
+                reference_captured = charge_result.get('reference')
                 
-                # Create or update subscription (match on billing_profile AND plan)
-                subscription, created = Subscription.objects.update_or_create(
-                    billing_profile=billing_profile,
-                    plan=plan,
-                    defaults={
-                        'status': 'active',
-                        'start_date': subscription_start,
-                        'end_date': subscription_end,
-                        'amount_paid': amount - discount_amount,
-                        'currency': currency,
-                        'auto_renew': True,
-                        'payment_method': payment_method,
-                        'next_billing_date': next_billing_date,
-                    }
-                )
+                try:
+                    transaction.on_commit(lambda: activate_subscription.delay(payment_id_captured))
+                    transaction.on_commit(lambda: add_user_to_telegram_groups.delay(user_id_captured, plan_id_captured))
+                    transaction.on_commit(lambda: send_payment_receipt_email.delay(payment_id_captured))
+                except Exception as task_error:
+                    # Log task queueing errors but don't fail the payment
+                    logger.error(f"Failed to queue background tasks: {str(task_error)}", exc_info=True)
                 
-                # Link payment to subscription
-                payment.subscription = subscription
-                payment.save()
+                logger.info(f"Charged saved card for user {user.email}: {currency} {total_amount}")
                 
-                # Update user subscription fields
-                user.current_plan = plan
-                user.subscription_status = 'active'
-                user.save()
-            
-            # Queue Celery tasks AFTER database commit
-            transaction.on_commit(lambda: activate_subscription.delay(payment.id))
-            transaction.on_commit(lambda: add_user_to_telegram_groups.delay(user.id, str(plan.id)))
-            transaction.on_commit(lambda: send_payment_receipt_email.delay(payment.id))
-            
-            logger.info(f"Charged saved card for user {user.email}: {currency} {total_amount}")
-            
-            return Response({
-                'success': True,
-                'reference': charge_result.get('reference'),  # Return Paystack's reference
-                'subscription_id': str(subscription.id),
-                'message': 'Payment processed successfully',
-                'amount': float(total_amount),
-                'currency': currency
-            }, status=status.HTTP_200_OK)
+                return Response({
+                    'success': True,
+                    'reference': reference_captured,
+                    'subscription_id': subscription_id_captured,
+                    'message': 'Payment processed successfully',
+                    'amount': float(total_amount),
+                    'currency': currency
+                }, status=status.HTTP_200_OK)
+                
+            except Exception as transaction_error:
+                # If transaction fails, log it with details
+                logger.error(f"Transaction error in charge_with_saved_card: {str(transaction_error)}", exc_info=True)
+                # Payment was charged but subscription creation failed - needs manual review
+                return Response({
+                    'success': False,
+                    'error': 'Payment was processed but subscription activation failed. Please contact support.',
+                    'reference': charge_result.get('reference'),
+                    'requires_manual_review': True
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
             # Payment failed
             payment.status = 'failed'
