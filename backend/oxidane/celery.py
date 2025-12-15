@@ -53,10 +53,10 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour=3, minute=0),  # Daily at 3 AM
     },
     
-    # Example: Update exchange rates
+    # Update exchange rates hourly for fresh pricing
     'update-exchange-rates': {
         'task': 'subscriptions.tasks.update_exchange_rates',
-        'schedule': crontab(hour='*/6'),  # Every 6 hours
+        'schedule': crontab(minute=0),  # Every hour (top of the hour)
     },
 }
 

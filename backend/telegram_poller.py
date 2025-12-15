@@ -20,11 +20,17 @@ print("Press Ctrl+C to stop\n")
 try:
     while True:
         try:
-            # Queue the task asynchronously
-            result = process_telegram_updates.delay()
-            print(f"✅ Task queued: {result.id}")
+            # Run the task directly (synchronously) - no Redis needed
+            # This is fine since we have a dedicated poller process
+            result = process_telegram_updates()
+            if result:
+                print(f"✅ Processed updates: {result}")
+            else:
+                print("✓ No new messages")
         except Exception as e:
             print(f"❌ Error: {e}")
+            # On error, wait a bit longer before retrying
+            time.sleep(5)
         
         # Wait 10 seconds before next poll
         time.sleep(10)
