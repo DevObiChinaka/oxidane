@@ -334,7 +334,7 @@ def generate_simple_embed_html(lesson):
                     'controls': 0,
                     'rel': 0,
                     'modestbranding': 1,
-                    'fs': 0,
+                    'fs': 1,  // Enable fullscreen capability
                     'iv_load_policy': 3,
                     'disablekb': 1,
                     'playsinline': 1
@@ -347,6 +347,14 @@ def generate_simple_embed_html(lesson):
         }}
 
         function onPlayerReady(event) {{
+            // Add fullscreen attributes to iframe
+            const iframe = player.getIframe();
+            if (iframe) {{
+                iframe.setAttribute('allowfullscreen', '');
+                iframe.setAttribute('webkitallowfullscreen', '');
+                iframe.setAttribute('mozallowfullscreen', '');
+            }}
+            
             updateProgressBar();
             setInterval(updateProgressBar, 100);
         }}
@@ -451,15 +459,15 @@ def generate_simple_embed_html(lesson):
         }});
 
         document.getElementById('fullscreen').addEventListener('click', () => {{
-            const container = document.getElementById('video-container');
+            if (!player || !player.getIframe) return;
+            
+            const iframe = player.getIframe();
             
             // Check if already in fullscreen
             const isFullscreen = document.fullscreenElement || 
                                document.webkitFullscreenElement || 
                                document.mozFullScreenElement || 
-                               document.msFullscreenElement ||
-                               document.webkitIsFullScreen ||
-                               document.fullScreen;
+                               document.msFullscreenElement;
 
             if (isFullscreen) {{
                 // Exit fullscreen
@@ -467,30 +475,24 @@ def generate_simple_embed_html(lesson):
                     document.exitFullscreen();
                 }} else if (document.webkitExitFullscreen) {{
                     document.webkitExitFullscreen();
-                }} else if (document.webkitCancelFullScreen) {{
-                    document.webkitCancelFullScreen();
                 }} else if (document.mozCancelFullScreen) {{
                     document.mozCancelFullScreen();
                 }} else if (document.msExitFullscreen) {{
                     document.msExitFullscreen();
                 }}
             }} else {{
-                // Enter fullscreen - use container for better control
-                const elem = container;
-                
+                // Enter fullscreen on the iframe directly
                 try {{
-                    if (elem.requestFullscreen) {{
-                        elem.requestFullscreen();
-                    }} else if (elem.webkitRequestFullscreen) {{
-                        // Safari desktop
-                        elem.webkitRequestFullscreen();
-                    }} else if (elem.webkitEnterFullscreen) {{
-                        // iOS Safari
-                        elem.webkitEnterFullscreen();
-                    }} else if (elem.mozRequestFullScreen) {{
-                        elem.mozRequestFullScreen();
-                    }} else if (elem.msRequestFullscreen) {{
-                        elem.msRequestFullscreen();
+                    if (iframe.requestFullscreen) {{
+                        iframe.requestFullscreen();
+                    }} else if (iframe.webkitRequestFullscreen) {{
+                        iframe.webkitRequestFullscreen();
+                    }} else if (iframe.webkitEnterFullscreen) {{
+                        iframe.webkitEnterFullscreen();
+                    }} else if (iframe.mozRequestFullScreen) {{
+                        iframe.mozRequestFullScreen();
+                    }} else if (iframe.msRequestFullscreen) {{
+                        iframe.msRequestFullscreen();
                     }}
                 }} catch (err) {{
                     console.error('Fullscreen error:', err);
