@@ -201,7 +201,7 @@ def generate_simple_embed_html(lesson):
             border-radius: 50%;
             cursor: pointer;
         }}
-        #center-play {
+        #center-play {{
             position: absolute;
             top: 50%;
             left: 50%;
@@ -217,14 +217,14 @@ def generate_simple_embed_html(lesson):
             transition: opacity 0.3s;
             pointer-events: none;
             z-index: 5;
-        }
-        #center-play.show {
+        }}
+        #center-play.show {{
             opacity: 1;
-        }
-        #center-play svg {
+        }}
+        #center-play svg {{
             margin-left: 6px;
             margin-top: 2px;
-        }
+        }}
     </style>
 </head>
 <body>
