@@ -552,7 +552,7 @@ export interface CheckConflictResponse {
 export async function checkSubscriptionConflict(planId: string): Promise<CheckConflictResponse> {
   try {
     const response = await fetch(
-      `${API_BASE_URL}/v1/payments/check-conflict/?plan_id=${planId}`,
+      `${API_BASE_URL}/payments/check-conflict/?plan_id=${planId}`,
       {
         method: 'GET',
         headers: getAuthHeaders(),

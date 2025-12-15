@@ -136,12 +136,15 @@ export function useCurrencyConverter({
   const convert = useCallback(
     (amount: number): number => {
       if (rate === null) {
-        console.warn(`No exchange rate available for ${fromCurrency}→${toCurrency}, returning original amount`);
+        // Only warn if not loading (to avoid spam during initial fetch)
+        if (!loading) {
+          console.warn(`No exchange rate available for ${fromCurrency}→${toCurrency}, returning original amount`);
+        }
         return amount;
       }
       return amount * rate;
     },
-    [rate, fromCurrency, toCurrency]
+    [rate, fromCurrency, toCurrency, loading]
   );
 
   // Auto-fetch on mount or when currencies change
