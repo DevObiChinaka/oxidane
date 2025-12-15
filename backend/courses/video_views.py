@@ -87,28 +87,28 @@ def generate_simple_embed_html(lesson):
             background: #000;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }}
-        #video-container {
+        #video-container {{
             position: relative;
             width: 100%;
             height: 100%;
-        }
+        }}
         /* Fullscreen mode styling */
-        #video-container:-webkit-full-screen {
+        #video-container:-webkit-full-screen {{
             width: 100%;
             height: 100%;
-        }
-        #video-container:-moz-full-screen {
+        }}
+        #video-container:-moz-full-screen {{
             width: 100%;
             height: 100%;
-        }
-        #video-container:-ms-fullscreen {
+        }}
+        #video-container:-ms-fullscreen {{
             width: 100%;
             height: 100%;
-        }
-        #video-container:fullscreen {
+        }}
+        #video-container:fullscreen {{
             width: 100%;
             height: 100%;
-        }
+        }}
         #player {{
             width: 100%;
             height: 100%;
