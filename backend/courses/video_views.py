@@ -87,11 +87,28 @@ def generate_simple_embed_html(lesson):
             background: #000;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }}
-        #video-container {{
+        #video-container {
             position: relative;
             width: 100%;
             height: 100%;
-        }}
+        }
+        /* Fullscreen mode styling */
+        #video-container:-webkit-full-screen {
+            width: 100%;
+            height: 100%;
+        }
+        #video-container:-moz-full-screen {
+            width: 100%;
+            height: 100%;
+        }
+        #video-container:-ms-fullscreen {
+            width: 100%;
+            height: 100%;
+        }
+        #video-container:fullscreen {
+            width: 100%;
+            height: 100%;
+        }
         #player {{
             width: 100%;
             height: 100%;
@@ -205,7 +222,8 @@ def generate_simple_embed_html(lesson):
             opacity: 1;
         }
         #center-play svg {
-            margin-left: 4px;
+            margin-left: 6px;
+            margin-top: 2px;
         }
     </style>
 </head>
@@ -434,32 +452,48 @@ def generate_simple_embed_html(lesson):
 
         document.getElementById('fullscreen').addEventListener('click', () => {{
             const container = document.getElementById('video-container');
-            const elem = container;
+            
+            // Check if already in fullscreen
+            const isFullscreen = document.fullscreenElement || 
+                               document.webkitFullscreenElement || 
+                               document.mozFullScreenElement || 
+                               document.msFullscreenElement ||
+                               document.webkitIsFullScreen ||
+                               document.fullScreen;
 
-            if (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement) {{
+            if (isFullscreen) {{
                 // Exit fullscreen
                 if (document.exitFullscreen) {{
                     document.exitFullscreen();
                 }} else if (document.webkitExitFullscreen) {{
                     document.webkitExitFullscreen();
+                }} else if (document.webkitCancelFullScreen) {{
+                    document.webkitCancelFullScreen();
                 }} else if (document.mozCancelFullScreen) {{
                     document.mozCancelFullScreen();
                 }} else if (document.msExitFullscreen) {{
                     document.msExitFullscreen();
                 }}
             }} else {{
-                // Enter fullscreen - Safari needs special handling
-                if (elem.requestFullscreen) {{
-                    elem.requestFullscreen().catch(err => console.log('Fullscreen error:', err));
-                }} else if (elem.webkitRequestFullscreen) {{
-                    elem.webkitRequestFullscreen();
-                }} else if (elem.webkitEnterFullscreen) {{
-                    // iOS Safari fallback
-                    elem.webkitEnterFullscreen();
-                }} else if (elem.mozRequestFullScreen) {{
-                    elem.mozRequestFullScreen();
-                }} else if (elem.msRequestFullscreen) {{
-                    elem.msRequestFullscreen();
+                // Enter fullscreen - use container for better control
+                const elem = container;
+                
+                try {{
+                    if (elem.requestFullscreen) {{
+                        elem.requestFullscreen();
+                    }} else if (elem.webkitRequestFullscreen) {{
+                        // Safari desktop
+                        elem.webkitRequestFullscreen();
+                    }} else if (elem.webkitEnterFullscreen) {{
+                        // iOS Safari
+                        elem.webkitEnterFullscreen();
+                    }} else if (elem.mozRequestFullScreen) {{
+                        elem.mozRequestFullScreen();
+                    }} else if (elem.msRequestFullscreen) {{
+                        elem.msRequestFullscreen();
+                    }}
+                }} catch (err) {{
+                    console.error('Fullscreen error:', err);
                 }}
             }}
         }});
