@@ -150,16 +150,16 @@ export default function CoursesPage() {
               {/* Search and Filters Container */}
               <div className="space-y-4">
                 {/* Search Bar */}
-                <div className="relative max-w-2xl">
+                <div className="relative">
                   <input
                     type="text"
-                    placeholder="Search courses by title or description..."
+                    placeholder="Search courses..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full px-4 py-3 pl-11 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#00B38F] focus:border-transparent transition-all"
+                    className="w-full px-3 py-2 pl-9 sm:px-4 sm:py-2.5 sm:pl-11 bg-gray-50 border border-gray-200 rounded-full text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#00B38F] focus:border-transparent transition-all"
                   />
                   <svg 
-                    className="w-5 h-5 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" 
+                    className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 absolute left-2.5 sm:left-3.5 top-1/2 -translate-y-1/2" 
                     fill="none" 
                     stroke="currentColor" 
                     viewBox="0 0 24 24"
@@ -178,91 +178,38 @@ export default function CoursesPage() {
                   )}
                 </div>
 
-                {/* Filters Row */}
-                <div className="flex flex-col sm:flex-row gap-3">
-                  {/* Difficulty Filter */}
-                  <div className="flex-1">
-                    <label className="block text-xs font-medium text-gray-700 mb-2">Difficulty Level</label>
-                    <div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
-                      <button 
-                        onClick={() => setDifficultyFilter('all')} 
-                        className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
-                          difficultyFilter === 'all' 
-                            ? 'bg-[#00B38F] text-white shadow-sm' 
-                            : 'bg-white text-gray-600 border border-gray-200 hover:border-[#00B38F]'
-                        }`}
-                      >
-                        All Levels
-                      </button>
-                      <button 
-                        onClick={() => setDifficultyFilter('beginner')} 
-                        className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
-                          difficultyFilter === 'beginner' 
-                            ? 'bg-[#00B38F] text-white shadow-sm' 
-                            : 'bg-white text-gray-600 border border-gray-200 hover:border-[#00B38F]'
-                        }`}
-                      >
-                        Beginner
-                      </button>
-                      <button 
-                        onClick={() => setDifficultyFilter('intermediate')} 
-                        className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
-                          difficultyFilter === 'intermediate' 
-                            ? 'bg-[#00B38F] text-white shadow-sm' 
-                            : 'bg-white text-gray-600 border border-gray-200 hover:border-[#00B38F]'
-                        }`}
-                      >
-                        Intermediate
-                      </button>
-                      <button 
-                        onClick={() => setDifficultyFilter('advanced')} 
-                        className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
-                          difficultyFilter === 'advanced' 
-                            ? 'bg-[#00B38F] text-white shadow-sm' 
-                            : 'bg-white text-gray-600 border border-gray-200 hover:border-[#00B38F]'
-                        }`}
-                      >
-                        Advanced
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Type Filter */}
-                  <div className="flex-1">
-                    <label className="block text-xs font-medium text-gray-700 mb-2">Course Type</label>
-                    <div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
-                      <button 
-                        onClick={() => setTypeFilter('all')} 
-                        className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
-                          typeFilter === 'all' 
-                            ? 'bg-[#00B38F] text-white shadow-sm' 
-                            : 'bg-white text-gray-600 border border-gray-200 hover:border-[#00B38F]'
-                        }`}
-                      >
-                        All Courses
-                      </button>
-                      <button 
-                        onClick={() => setTypeFilter('free')} 
-                        className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
-                          typeFilter === 'free' 
-                            ? 'bg-[#00B38F] text-white shadow-sm' 
-                            : 'bg-white text-gray-600 border border-gray-200 hover:border-[#00B38F]'
-                        }`}
-                      >
-                        Free
-                      </button>
-                      <button 
-                        onClick={() => setTypeFilter('premium')} 
-                        className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
-                          typeFilter === 'premium' 
-                            ? 'bg-[#00B38F] text-white shadow-sm' 
-                            : 'bg-white text-gray-600 border border-gray-200 hover:border-[#00B38F]'
-                        }`}
-                      >
-                        Premium
-                      </button>
-                    </div>
-                  </div>
+                {/* Filter Pills */}
+                <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
+                  <button 
+                    onClick={() => setTypeFilter('all')} 
+                    className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${
+                      typeFilter === 'all' 
+                        ? 'bg-gray-900 text-white' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    All
+                  </button>
+                  <button 
+                    onClick={() => setTypeFilter('free')} 
+                    className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${
+                      typeFilter === 'free' 
+                        ? 'bg-gray-900 text-white' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Free
+                  </button>
+                  <button 
+                    onClick={() => setTypeFilter('premium')} 
+                    className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${
+                      typeFilter === 'premium' 
+                        ? 'bg-gray-900 text-white' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Premium
+                  </button>
                 </div>
               </div>
             </div>
@@ -271,7 +218,7 @@ export default function CoursesPage() {
 
         {/* Courses Grid */}
         <div className="p-4 sm:p-6 lg:p-8">
-          <div className="max-w-7xl mx-auto">
+          <div className="max-w-[2000px] mx-auto">
           {filteredCourses.length === 0 ? (
             <div className="max-w-md mx-auto bg-white border border-gray-200 rounded-xl p-8 sm:p-12 text-center">
               <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
@@ -295,15 +242,15 @@ export default function CoursesPage() {
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-5 lg:gap-6">
               {filteredCourses.map((course) => (
                 <div
                   key={course.id}
                   onClick={() => handleCourseClick(course)}
                   className="group bg-white rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-200 hover:border-[#00B38F]/30 flex flex-col"
                 >
-                  {/* Thumbnail - Fixed Height */}
-                  <div className="relative w-full h-48 sm:h-52 bg-gradient-to-br from-gray-100 to-gray-200 flex-shrink-0">
+                  {/* Thumbnail - 16:9 Aspect Ratio */}
+                  <div className="relative w-full aspect-video bg-gradient-to-br from-gray-100 to-gray-200 flex-shrink-0">
                     {getCourseThumbnail(course) ? (
                       <img 
                         src={getCourseThumbnail(course)!} 
@@ -340,77 +287,62 @@ export default function CoursesPage() {
                       </div>
                     )}
 
-                    {/* Badges Row */}
-                    <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
-                      {/* Type Badge */}
-                      <span className={`px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm ${
-                        course.course_type === 'free' 
-                          ? 'bg-white/95 text-gray-800 backdrop-blur-sm' 
-                          : 'bg-gray-900/90 text-white backdrop-blur-sm'
-                      }`}>
-                        {course.course_type === 'free' ? 'Free' : 'Premium'}
-                      </span>
-
-                      {/* Difficulty Badge */}
-                      <span className="px-3 py-1.5 bg-white/95 backdrop-blur-sm text-gray-700 text-xs font-medium rounded-lg shadow-sm capitalize">
-                        {course.difficulty_level}
+                    {/* Duration Badge */}
+                    <div className="absolute bottom-2 right-2">
+                      <span className="px-2 py-0.5 bg-black/80 backdrop-blur-sm text-white text-xs font-medium rounded">
+                        {course.estimated_duration}m
                       </span>
                     </div>
+                    
+                    {/* Type Badge */}
+                    {course.course_type === 'premium' && (
+                      <div className="absolute top-2 left-2">
+                        <span className="px-2 py-1 bg-gray-900/90 backdrop-blur-sm text-white text-xs font-semibold rounded">
+                          Premium
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Content - Structured Height */}
-                  <div className="p-4 sm:p-5 flex flex-col flex-grow">
+                  <div className="p-4 flex flex-col flex-grow">
                     {/* Title - Fixed Height with Clamp */}
-                    <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-[#00B38F] transition-colors h-12 sm:h-14">
+                    <h3 className="text-sm sm:text-base font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-[#00B38F] transition-colors min-h-[2.5rem]">
                       {course.title}
                     </h3>
 
                     {/* Description - Fixed Height with Clamp */}
-                    <p className="text-sm text-gray-600 mb-4 line-clamp-2 h-10 sm:h-11">
+                    <p className="text-xs sm:text-sm text-gray-600 mb-3 line-clamp-2 min-h-[2.5rem]">
                       {course.short_description}
                     </p>
 
                     {/* Footer - Always at Bottom */}
-                    <div className="mt-auto pt-4 border-t border-gray-100">
-                      {/* Stats Row */}
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3 text-xs text-gray-500">
-                          <span className="flex items-center gap-1.5">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            {course.estimated_duration}m
-                          </span>
-                          <span className="flex items-center gap-1.5">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            {course.total_lessons} {course.total_lessons === 1 ? 'lesson' : 'lessons'}
-                          </span>
-                        </div>
+                    <div className="mt-auto pt-3 border-t border-gray-100">
+                      {/* Metadata Row */}
+                      <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
+                        <span>{course.total_lessons} {course.total_lessons === 1 ? 'lesson' : 'lessons'}</span>
+                        <span>•</span>
+                        <span className="capitalize">{course.difficulty_level}</span>
                       </div>
 
-                      {/* Status Button */}
-                      {course.is_enrolled ? (
-                        <div className="flex items-center gap-2 text-[#00B38F] font-semibold text-sm bg-[#00B38F]/10 px-3 py-2 rounded-lg">
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                          </svg>
-                          <span>{course.progress_percentage > 0 ? `${course.progress_percentage}% Complete` : 'Enrolled'}</span>
+                      {/* Status */}
+                      {course.is_enrolled && course.progress_percentage > 0 && (
+                        <div className="text-xs text-gray-600">
+                          <div className="flex items-center justify-between mb-1">
+                            <span>Progress</span>
+                            <span className="font-medium">{course.progress_percentage}%</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-1">
+                            <div className="bg-[#00B38F] h-1 rounded-full" style={{ width: `${course.progress_percentage}%` }}></div>
+                          </div>
                         </div>
-                      ) : course.requires_subscription ? (
-                        <div className="flex items-center gap-2 text-gray-700 font-medium text-sm bg-gray-100 px-3 py-2 rounded-lg">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      )}
+                      {course.requires_subscription && !course.is_enrolled && (
+                        <div className="text-xs text-gray-600 flex items-center gap-1">
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                           </svg>
-                          <span>Requires Premium</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-between text-[#00B38F] font-semibold text-sm group-hover:gap-2 transition-all">
-                          <span>Start Learning</span>
-                          <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                          </svg>
+                          <span>Premium</span>
                         </div>
                       )}
                     </div>
