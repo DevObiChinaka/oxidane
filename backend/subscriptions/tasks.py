@@ -12,9 +12,10 @@ from django.utils import timezone
 from django.conf import settings
 from celery import shared_task
 import requests
+from django.contrib.auth import get_user_model
 
 from .models import (
-    Payment, Subscription, SubscriptionPlan, User,
+    Payment, Subscription, SubscriptionPlan,
     TelegramGroup, TelegramConfiguration, EmailConfiguration,
     ExchangeRate, BillingProfile
 )
@@ -281,6 +282,7 @@ def add_user_to_telegram_groups(self, user_id, plan_id):
         
         logger.info(f"Adding user {user_id} to Telegram groups for plan {plan_id}")
         
+        User = get_user_model()
         # Get user and plan
         try:
             user = User.objects.select_related('billing_profile').get(id=user_id)
@@ -533,6 +535,7 @@ def remove_user_from_telegram_groups(self, user_id, plan_id):
     try:
         logger.info(f"Removing user {user_id} from Telegram groups for plan {plan_id}")
         
+        User = get_user_model()
         # Get user and plan
         try:
             user = User.objects.select_related('billing_profile').get(id=user_id)
@@ -1297,14 +1300,18 @@ def process_auto_renewals():
         logger.info("Processing auto-renewals for subscriptions ending today")
         
         from django.utils import timezone
+        from datetime import timedelta
         
-        # Get subscriptions ending today with auto-renewal enabled
-        today = timezone.now().date()
+        # Get subscriptions that need renewal (expired or expiring soon)
+        # Include subscriptions ending in the past 24 hours to catch any missed renewals
+        now = timezone.now()
+        yesterday = now - timedelta(days=1)
         
         renewing_subscriptions = Subscription.objects.filter(
             status='active',
             auto_renew=True,
-            next_billing_date__date=today
+            end_date__lte=now,  # Already expired or expiring now
+            end_date__gte=yesterday  # Within last 24 hours
         ).select_related('billing_profile__user', 'plan', 'payment_method')
         
         total_count = renewing_subscriptions.count()
@@ -1404,25 +1411,45 @@ def process_single_renewal(self, subscription_id):
                 'action': 'auto_renew_disabled'
             }
         
-        # Calculate amount
-        amount = subscription.plan.base_price
+        # Calculate amount using current plan price in user's currency
+        # This ensures renewals use current pricing and exchange rates
         currency = subscription.currency or 'USD'
+        base_amount = subscription.plan.get_price_in_currency(currency)
         
-        # Charge payment method
-        logger.info(f"Charging {currency} {amount} for renewal of {subscription_id}")
+        if base_amount is None:
+            # Currency not supported, fallback to USD
+            logger.warning(f"Currency {currency} not supported for subscription {subscription_id}, using USD")
+            currency = 'USD'
+            base_amount = subscription.plan.base_price
+        
+        # Calculate processing fees (pass to customer)
+        from subscriptions.payment_calculator import PaymentCalculator
+        calculation = PaymentCalculator.calculate_total_with_fees(
+            base_amount=base_amount,
+            currency=currency,
+            pass_fee_to_customer=True
+        )
+        
+        processing_fee = calculation['processing_fee']
+        total_amount = calculation['total_to_charge']
+        
+        # Charge payment method (total includes fees)
+        logger.info(f"Charging {currency} {total_amount} ({base_amount} + {processing_fee} fee) for renewal of {subscription_id}")
         
         paystack_service = PaystackService()
         
         charge_result = paystack_service.charge_authorization(
             authorization_code=auth_code,
             email=user.email,
-            amount=amount,
+            amount=total_amount,  # Charge total including fees
             currency=currency,
             metadata={
                 'subscription_id': str(subscription.id),
                 'plan_id': str(subscription.plan.id),
                 'renewal': True,
-                'user_email': user.email
+                'user_email': user.email,
+                'base_amount': float(base_amount),
+                'processing_fee': float(processing_fee)
             }
         )
         
@@ -1454,10 +1481,10 @@ def process_single_renewal(self, subscription_id):
                 billing_profile=subscription.billing_profile,
                 subscription=subscription,
                 payment_method=payment_method,
-                amount=amount,
+                amount=base_amount,  # Base subscription price
                 currency=currency,
-                processing_fee=Decimal('0.00'),
-                total_amount=amount,
+                processing_fee=processing_fee,  # Gateway fees
+                total_amount=total_amount,  # Total charged to customer
                 status='success',
                 gateway='paystack',
                 gateway_reference=charge_result.get('reference'),
@@ -1470,7 +1497,9 @@ def process_single_renewal(self, subscription_id):
             return {
                 'success': True,
                 'subscription_id': str(subscription.id),
-                'amount_charged': float(amount),
+                'base_amount': float(base_amount),
+                'processing_fee': float(processing_fee),
+                'total_charged': float(total_amount),
                 'currency': currency,
                 'reference': charge_result.get('reference'),
                 'next_billing_date': subscription.next_billing_date.isoformat()

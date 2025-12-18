@@ -35,7 +35,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour=0, minute=0),  # Daily at midnight
     },
     
-    # Process auto-renewals every day at 2 AM
+    # Process auto-renewals every day at 2:00 AM
     'process-auto-renewals': {
         'task': 'subscriptions.tasks.process_auto_renewals',
         'schedule': crontab(hour=2, minute=0),  # Daily at 2 AM

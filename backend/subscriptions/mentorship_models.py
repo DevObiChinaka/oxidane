@@ -1,12 +1,10 @@
 # Mentorship System Models
 from django.db import models
-from django.contrib.auth import get_user_model
+from django.conf import settings
 from django.utils import timezone
 from decimal import Decimal
 import uuid
 from datetime import timedelta
-
-User = get_user_model()
 
 class MentorshipPlan(models.Model):
     """Mentorship subscription plans with premium content access"""
@@ -77,7 +75,7 @@ class MentorshipSubscription(models.Model):
     ]
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='mentorship_subscriptions')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='mentorship_subscriptions')
     
     # Plan details
     mentorship_plan = models.ForeignKey(MentorshipPlan, on_delete=models.PROTECT)
@@ -321,7 +319,7 @@ class MentorshipTelegramTask(models.Model):
     
     created_at = models.DateTimeField(auto_now_add=True)
     processed_at = models.DateTimeField(null=True, blank=True)
-    processed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='mentorship_telegram_tasks')
+    processed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='mentorship_telegram_tasks')
     
     class Meta:
         ordering = ['scheduled_for', 'created_at']

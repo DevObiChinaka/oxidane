@@ -85,7 +85,7 @@ const handler = NextAuth({
             console.log('[NextAuth JWT] Calling backend OAuth endpoint...');
             console.log('[NextAuth JWT] User info:', userInfo);
 
-            const backendUrl = `${apiUrl}/api/auth/oauth/`;
+            const backendUrl = `${apiUrl}/auth/oauth/`;
             console.log('[NextAuth JWT] Full URL:', backendUrl);
 
             const response = await fetch(backendUrl, {

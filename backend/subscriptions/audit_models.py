@@ -1,11 +1,9 @@
 # Audit and logging models for subscription management
 from django.db import models
-from django.contrib.auth import get_user_model
+from django.conf import settings
 from django.utils import timezone
 import uuid
 import json
-
-User = get_user_model()
 
 class AdminActionLog(models.Model):
     """Comprehensive audit log for all admin actions"""
@@ -212,7 +210,7 @@ class DataAccessLog(models.Model):
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     
-    admin_user = models.ForeignKey(User, on_delete=models.PROTECT)
+    admin_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
     access_type = models.CharField(max_length=30, choices=ACCESS_TYPES)
     
     # What data was accessed

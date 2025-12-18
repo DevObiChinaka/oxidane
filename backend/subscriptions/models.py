@@ -1,6 +1,6 @@
 # Pricing and subscription management models
 from django.db import models
-from django.contrib.auth import get_user_model
+from django.conf import settings
 from django.utils import timezone
 from decimal import Decimal
 from datetime import timedelta
@@ -9,8 +9,6 @@ import json
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from oxidane.encryption import encrypt_field, decrypt_field
-
-User = get_user_model()
 
 # ============================================================================
 # DEPRECATED MODELS REMOVED (Phase 0.5 Cleanup - November 2, 2025)
@@ -54,7 +52,7 @@ User = get_user_model()
 class BillingProfile(models.Model):
     """Central billing profile for each user with Telegram verification"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='billing_profile')
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='billing_profile')
     
     # Telegram Verification
     telegram_user_id = models.CharField(max_length=50, blank=True, null=True, unique=True, 
@@ -1051,7 +1049,7 @@ class Coupon(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
