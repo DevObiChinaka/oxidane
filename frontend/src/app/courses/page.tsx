@@ -1,6 +1,6 @@
 'use client';
 
-// Force Vercel rebuild - YouTube thumbnails deployed 2025-12-09
+// Force Vercel rebuild - Courses page redesign deployed 2025-12-18
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
