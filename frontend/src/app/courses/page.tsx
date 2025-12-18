@@ -184,7 +184,7 @@ export default function CoursesPage() {
                     onClick={() => setTypeFilter('all')} 
                     className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${
                       typeFilter === 'all' 
-                        ? 'bg-gray-900 text-white' 
+                        ? 'bg-[#00B38F] text-white' 
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
@@ -194,7 +194,7 @@ export default function CoursesPage() {
                     onClick={() => setTypeFilter('free')} 
                     className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${
                       typeFilter === 'free' 
-                        ? 'bg-gray-900 text-white' 
+                        ? 'bg-[#00B38F] text-white' 
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
@@ -204,7 +204,7 @@ export default function CoursesPage() {
                     onClick={() => setTypeFilter('premium')} 
                     className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${
                       typeFilter === 'premium' 
-                        ? 'bg-gray-900 text-white' 
+                        ? 'bg-[#00B38F] text-white' 
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
@@ -306,13 +306,13 @@ export default function CoursesPage() {
 
                   {/* Content - Structured Height */}
                   <div className="p-4 flex flex-col flex-grow">
-                    {/* Title - Fixed Height with Clamp */}
-                    <h3 className="text-sm sm:text-base font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-[#00B38F] transition-colors min-h-[2.5rem]">
+                    {/* Title */}
+                    <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-[#00B38F] transition-colors">
                       {course.title}
                     </h3>
 
-                    {/* Description - Fixed Height with Clamp */}
-                    <p className="text-xs sm:text-sm text-gray-600 mb-3 line-clamp-2 min-h-[2.5rem]">
+                    {/* Description */}
+                    <p className="text-xs text-gray-600 mb-3 line-clamp-2 leading-relaxed">
                       {course.short_description}
                     </p>
 
