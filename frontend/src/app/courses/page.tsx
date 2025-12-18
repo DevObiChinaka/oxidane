@@ -137,7 +137,8 @@ export default function CoursesPage() {
               {/* Title and Count */}
               <div className="mb-6">
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Discover Courses</h1>
-                <div className="flex items-center gap-2 mt-2">
+                <p className="text-sm text-gray-600 mt-1 mb-3">Explore our comprehensive collection of forex trading courses</p>
+                <div className="flex items-center gap-2">
                   <span className="text-sm text-gray-500">Found</span>
                   <span className="px-2.5 py-0.5 bg-[#00B38F]/10 text-[#00B38F] rounded-full font-semibold text-sm">
                     {filteredCourses.length}

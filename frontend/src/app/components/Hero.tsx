@@ -85,7 +85,7 @@ export default function Hero() {
                 </span>
               </h1>
               <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-300 leading-relaxed">
-                Learn proven trading strategies from a professional forex trader. Join thousands of students mastering SMC, ALGO, and advanced techniques to become consistently profitable traders.
+                Learn proven trading strategies from a professional forex trader. Join thousands of students mastering SMC, ALGO, MSNR, CRT and advanced techniques to become consistently profitable traders.
               </p>
             </div>
 
