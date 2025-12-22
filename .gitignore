@@ -19,6 +19,35 @@ db.sqlite3
 __pycache__/
 local_settings.py
 
-# Environment variables
+# Environment variables - CRITICAL: NEVER COMMIT THESE
 .env
-.env.local
+.env.*
+*.env
+backend/.env
+backend/.env.*
+production.env
+server_backup.env
+
+# Production & Deployment files
+production_data.json
+*production_data*
+production_setup.sh
+*production*.sh
+deploy*.sh
+*_production.py
+
+# Test files
+test_*.py
+test_*.ps1
+*_test.py
+setup_*_test.py
+
+# Documentation (keep only README.md in root and frontend)
+*.md
+!README.md
+!frontend/README.md
+
+# Sensitive configuration
+nginx*.conf
+*.service
+set_production_webhook.py
