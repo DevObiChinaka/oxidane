@@ -1,6 +1,6 @@
 """
 Check and fix admin user permissions
-Run this to ensure your admin account has proper staff/superuser permissions
+Run this to ensure admin accounts have proper staff/superuser permissions
 """
 
 import os

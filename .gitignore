@@ -20,6 +20,7 @@ backend/data_backup*.json
 *.pyc
 __pycache__/
 local_settings.py
+db.sqlite3-journal
 
 # Environment variables - CRITICAL: NEVER COMMIT THESE
 .env
