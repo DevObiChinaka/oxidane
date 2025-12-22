@@ -37,6 +37,13 @@ production_setup.sh
 *production*.sh
 deploy*.sh
 *_production.py
+*_setup.sh
+*_deploy*.sh
+*_guide.sh
+setup_webhook.py
+gmail_setup.py
+email_integration_guide.py
+redis_connection_guide.py
 
 # Test files
 test_*.py
