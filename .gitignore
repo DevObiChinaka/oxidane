@@ -11,6 +11,8 @@ backend/lesson_videos/
 *.sqlite3
 *.db
 db.sqlite3
+*data_backup*.json
+backend/data_backup*.json
 
 # Django stuff
 *.log
@@ -41,6 +43,9 @@ test_*.py
 test_*.ps1
 *_test.py
 setup_*_test.py
+verify_*.py
+setup_*.py
+complete_*.py
 
 # Documentation (keep only README.md in root and frontend)
 *.md

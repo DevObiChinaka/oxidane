@@ -308,9 +308,9 @@ GOOGLE_OAUTH_REDIRECT_URI = os.getenv('GOOGLE_OAUTH_REDIRECT_URI', 'http://local
 # TELEGRAM BOT CONFIGURATION
 # ========================================
 # Read from environment variables (will be moved to database in Phase 0.5)
-TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '8386662254:AAFwqfss8wXc6SULYyX73yVvJ6OV686JI1I')
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')  # REQUIRED: Set in .env file
 TELEGRAM_BOT_USERNAME = os.getenv('TELEGRAM_BOT_USERNAME', 'oxiworld_bot')
-TELEGRAM_ADMIN_USER_ID = os.getenv('TELEGRAM_ADMIN_USER_ID', '1741840281')
+TELEGRAM_ADMIN_USER_ID = os.getenv('TELEGRAM_ADMIN_USER_ID')  # REQUIRED: Set in .env file
 
 # Telegram Groups Configuration (fallback, will be moved to database)
 TELEGRAM_GROUPS = {
