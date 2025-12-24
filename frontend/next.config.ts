@@ -9,6 +9,12 @@ const nextConfig: NextConfig = {
     // Disable TypeScript errors during production builds (warnings only)
     ignoreBuildErrors: true,
   },
+  compiler: {
+    // Remove console.log in production
+    removeConsole: process.env.NODE_ENV === 'production' ? {
+      exclude: ['error', 'warn'], // Keep console.error and console.warn
+    } : false,
+  },
 };
 
 export default nextConfig;
