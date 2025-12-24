@@ -10,6 +10,8 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white overflow-x-hidden">
       <Navigation />
+      {/* Spacer for fixed navbar - matches navbar height (h-20 = 80px) */}
+      <div className="h-20"></div>
       <Hero />
       <EducationalValue />
       <Features />
