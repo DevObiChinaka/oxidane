@@ -67,8 +67,7 @@ export default function ProfilePage() {
         last_name: data.last_name || '',
       });
     } catch (error) {
-      console.error('Profile fetch failed:', error);
-      showNotification('error', 'Failed to load profile data');
+            showNotification('error', 'Failed to load profile data');
     } finally {
       setLoading(false);
     }

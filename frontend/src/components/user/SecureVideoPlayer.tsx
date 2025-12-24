@@ -33,21 +33,17 @@ export default function SecureVideoPlayer({
     
     // If we have a preloaded embed, use it immediately
     if (preloadedEmbed) {
-      console.log('[VIDEO_PLAYER] Using pre-loaded embed for lesson:', lessonId);
       setEmbedHtml(preloadedEmbed);
       
       // Give YouTube IFrame API time to initialize (it loads async inside srcDoc)
       setTimeout(() => {
-        console.log('[VIDEO_PLAYER] Hiding loading indicator');
         setLoading(false);
       }, 1500);
     } else if (!isPreloading) {
       // Fallback: fetch if not preloaded and not currently preloading
-      console.log('[VIDEO_PLAYER] Fetching embed (not cached) for lesson:', lessonId);
       loadVideoEmbed();
     } else {
       // Still preloading, show loading state
-      console.log('[VIDEO_PLAYER] Waiting for preload to complete...');
     }
   }, [lessonId, preloadedEmbed, isPreloading]);
 
@@ -111,13 +107,11 @@ export default function SecureVideoPlayer({
       }
 
       const data = await response.json();
-      console.log('[VIDEO_PLAYER] Video loaded successfully');
 
       setEmbedHtml(data.embed_html);
       setLoading(false);
 
     } catch (err: any) {
-      console.error('[VIDEO_PLAYER] Error:', err);
       setError(err.message || 'Failed to load video');
       setLoading(false);
     }

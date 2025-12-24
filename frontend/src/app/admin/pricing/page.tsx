@@ -385,8 +385,7 @@ export default function PricingManagement() {
       await planActions.toggleActive(planId);
       triggerRefresh();
     } catch (error) {
-      console.error('Failed to toggle plan status:', error);
-    }
+          }
   };
 
   const handleTogglePlanFeatured = async (planId: string) => {
@@ -394,8 +393,7 @@ export default function PricingManagement() {
       await planActions.toggleFeatured(planId);
       triggerRefresh();
     } catch (error) {
-      console.error('Failed to toggle featured status:', error);
-    }
+          }
   };
 
   const handleDeletePlan = async (planId: string) => {
@@ -404,8 +402,7 @@ export default function PricingManagement() {
         await planActions.deletePlan(planId);
         triggerRefresh();
       } catch (error) {
-        console.error('Failed to delete plan:', error);
-      }
+              }
     }
   };
 
@@ -414,8 +411,7 @@ export default function PricingManagement() {
       await planActions.createPlan(planData);
       triggerRefresh();
     } catch (error) {
-      console.error('Failed to create plan:', error);
-      throw error;
+            throw error;
     }
   };
 
@@ -426,8 +422,7 @@ export default function PricingManagement() {
       setSelectedPlan(null);
       triggerRefresh();
     } catch (error) {
-      console.error('Failed to update plan:', error);
-      throw error;
+            throw error;
     }
   };
 
@@ -437,8 +432,7 @@ export default function PricingManagement() {
       await couponActions.toggleActive(couponId);
       triggerRefresh();
     } catch (error) {
-      console.error('Failed to toggle coupon status:', error);
-    }
+          }
   };
 
   const handleDeleteCoupon = async (couponId: string) => {
@@ -457,8 +451,7 @@ export default function PricingManagement() {
         setCouponToDelete(null);
         triggerRefresh();
       } catch (error) {
-        console.error('Failed to delete coupon:', error);
-      }
+              }
     }
   };
 
@@ -472,8 +465,7 @@ export default function PricingManagement() {
       await couponActions.createCoupon(couponData);
       triggerRefresh();
     } catch (error) {
-      console.error('Failed to create coupon:', error);
-      throw error;
+            throw error;
     }
   };
 
@@ -484,8 +476,7 @@ export default function PricingManagement() {
       setSelectedCoupon(null);
       triggerRefresh();
     } catch (error) {
-      console.error('Failed to update coupon:', error);
-      throw error;
+            throw error;
     }
   };
 

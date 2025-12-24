@@ -33,8 +33,7 @@ export default function DeleteConfirmationModal({
       await onConfirm();
       onClose();
     } catch (error) {
-      console.error('Delete failed:', error);
-      // Keep modal open on error so user can try again
+            // Keep modal open on error so user can try again
     } finally {
       setDeleting(false);
     }

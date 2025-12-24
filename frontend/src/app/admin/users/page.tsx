@@ -690,8 +690,7 @@ export default function UsersPage() {
           setSubscriptionPlans(data.plans || []);
         }
       } catch (error) {
-        console.error('Failed to fetch subscription plans:', error);
-      }
+              }
     };
     
     if (isAuthenticated) {
@@ -712,8 +711,7 @@ export default function UsersPage() {
       refetchAnalytics();
 
     } catch (error) {
-      console.error('Action failed:', error);
-    }
+          }
   };
 
   // Handle CSV export
@@ -758,8 +756,7 @@ export default function UsersPage() {
       document.body.removeChild(a);
       
     } catch (error) {
-      console.error('Export failed:', error);
-      alert('Failed to export users. Please try again.');
+            alert('Failed to export users. Please try again.');
     } finally {
       setIsExporting(false);
     }
@@ -776,8 +773,7 @@ export default function UsersPage() {
       refetchAnalytics();
       
     } catch (error) {
-      console.error('Bulk action failed:', error);
-    }
+          }
   };
 
   // Handle delete user
@@ -793,8 +789,7 @@ export default function UsersPage() {
       refetchAnalytics();
       
     } catch (error) {
-      console.error('Delete failed:', error);
-    }
+          }
   };
 
   // Toggle user selection

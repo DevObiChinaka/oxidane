@@ -105,8 +105,7 @@ export default function PaymentConfigPage() {
         });
       }
     } catch (error) {
-      console.error('Error loading payment config:', error);
-      setMessage({ type: 'error', text: 'Failed to load payment configuration' });
+            setMessage({ type: 'error', text: 'Failed to load payment configuration' });
     } finally {
       setLoading(false);
     }
@@ -156,8 +155,7 @@ export default function PaymentConfigPage() {
         setMessage({ type: 'error', text: errorMessage });
       }
     } catch (error: any) {
-      console.error('Error saving payment config:', error);
-      setMessage({ type: 'error', text: error.message || 'Failed to save payment configuration' });
+            setMessage({ type: 'error', text: error.message || 'Failed to save payment configuration' });
     } finally {
       setSaving(false);
     }
@@ -194,8 +192,7 @@ export default function PaymentConfigPage() {
         });
       }
     } catch (error: any) {
-      console.error(`Error testing ${provider}:`, error);
-      setMessage({ 
+            setMessage({ 
         type: 'error', 
         text: `Failed to test ${provider} connection: ${error.message}` 
       });

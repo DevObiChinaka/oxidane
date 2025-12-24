@@ -62,8 +62,7 @@ export function AdminAuthProvider({ children }: AdminAuthProviderProps) {
       try {
         data = JSON.parse(responseText);
       } catch (parseError) {
-        console.error('Failed to parse auth response as JSON');
-        return false;
+                return false;
       }
 
       if (data.authenticated) {
@@ -79,8 +78,7 @@ export function AdminAuthProvider({ children }: AdminAuthProviderProps) {
         return false;
       }
     } catch (error) {
-      console.error('Auth check failed:', error instanceof Error ? error.message : error);
-      localStorage.removeItem('admin_token');
+            localStorage.removeItem('admin_token');
       localStorage.removeItem('admin_user');
       setIsAuthenticated(false);
       setUser(null);
@@ -109,8 +107,7 @@ export function AdminAuthProvider({ children }: AdminAuthProviderProps) {
           },
         });
       } catch (error) {
-        console.error('Logout request failed:', error);
-      }
+              }
     }
 
     localStorage.removeItem('admin_token');
@@ -135,8 +132,7 @@ export function AdminAuthProvider({ children }: AdminAuthProviderProps) {
           setUser(userData);
           
         } catch (e) {
-          console.error('Failed to parse stored user data:', e);
-          localStorage.removeItem('admin_token');
+                    localStorage.removeItem('admin_token');
           localStorage.removeItem('admin_user');
           setIsAuthenticated(false);
           setUser(null);

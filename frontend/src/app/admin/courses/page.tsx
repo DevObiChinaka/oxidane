@@ -68,8 +68,7 @@ function CourseCard({ course, onEdit, onDelete, onStatusChange }: CourseCardProp
     try {
       await onStatusChange(course.id, newStatus);
     } catch (error) {
-      console.error('Error updating course status:', error);
-    } finally {
+          } finally {
       setIsUpdatingStatus(false);
     }
   };
@@ -230,16 +229,7 @@ export default function CoursesPage() {
   // Debug: Log courses when data changes
   React.useEffect(() => {
     if (coursesData?.courses) {
-      console.log('📚 Available courses:', coursesData.courses.map(c => ({
-        id: c.id,
-        title: c.title,
-        idType: typeof c.id,
-        idLength: c.id?.length,
-        updated_at: c.updated_at,
-        updated_at_type: typeof c.updated_at,
-        created_at: c.created_at,
-        created_at_type: typeof c.created_at
-      })));
+
     }
   }, [coursesData]);
 
@@ -255,8 +245,7 @@ export default function CoursesPage() {
       setSelectedCourse(completeOneData);
       setShowEditModal(true);
     } catch (error) {
-      console.error('❌ Failed to fetch complete course data:', error);
-      // Fallback to using list data if detail fetch fails
+            // Fallback to using list data if detail fetch fails
       setSelectedCourse(course);
       setShowEditModal(true);
     }
@@ -296,8 +285,7 @@ export default function CoursesPage() {
       await refetch();
 
     } catch (error) {
-      console.error('❌ Error saving course:', error);
-      // Error is already handled in the hook and displayed in the modal
+            // Error is already handled in the hook and displayed in the modal
     }
   };
 
@@ -312,8 +300,7 @@ export default function CoursesPage() {
       // Refresh the courses list
       await refetch();
     } catch (error) {
-      console.error('Error deleting course:', error);
-      // Error is already handled in the hook
+            // Error is already handled in the hook
     }
   };
 
@@ -323,8 +310,7 @@ export default function CoursesPage() {
       // Refresh the courses list
       await refetch();
     } catch (error) {
-      console.error('Error updating course status:', error);
-      throw error;
+            throw error;
     }
   };
 

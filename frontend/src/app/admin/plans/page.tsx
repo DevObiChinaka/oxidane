@@ -172,8 +172,7 @@ export default function PlansPage() {
       }
 
     } catch (err: any) {
-      console.error('Failed to load data:', err);
-      setError(err.message || 'Failed to load plans');
+            setError(err.message || 'Failed to load plans');
     } finally {
       setLoading(false);
     }
@@ -293,8 +292,7 @@ export default function PlansPage() {
       await loadData();
       handleCloseModal();
     } catch (err: any) {
-      console.error('Failed to save plan:', err);
-      setError(err.message || 'Failed to save plan');
+            setError(err.message || 'Failed to save plan');
     } finally {
       setSaving(false);
     }
@@ -335,8 +333,7 @@ export default function PlansPage() {
       await loadData();
       handleCloseDeleteModal();
     } catch (err: any) {
-      console.error('Failed to delete plan:', err);
-      setError(err.message || 'Failed to delete plan');
+            setError(err.message || 'Failed to delete plan');
     } finally {
       setDeleting(false);
     }
@@ -362,8 +359,7 @@ export default function PlansPage() {
 
       await loadData();
     } catch (err: any) {
-      console.error('Failed to toggle plan status:', err);
-      setError(err.message || 'Failed to toggle plan status');
+            setError(err.message || 'Failed to toggle plan status');
     }
   };
 
@@ -391,8 +387,7 @@ export default function PlansPage() {
 
       await loadData();
     } catch (err: any) {
-      console.error('Failed to clone plan:', err);
-      setError(err.message || 'Failed to clone plan');
+            setError(err.message || 'Failed to clone plan');
     }
   };
 

@@ -75,12 +75,10 @@ export default function AdminLayoutWrapper({ children }: AdminLayoutWrapperProps
           }
         } else {
           // If check fails, allow access (fail open to prevent lockout)
-          console.warn('Setup status check failed, allowing access');
-          setSetupComplete(true);
+                    setSetupComplete(true);
         }
       } catch (error) {
-        console.error('Setup status check error:', error);
-        // Allow access on error to prevent lockout
+                // Allow access on error to prevent lockout
         setSetupComplete(true);
       } finally {
         setSetupChecked(true);

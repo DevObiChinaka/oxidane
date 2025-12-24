@@ -108,8 +108,7 @@ export default function SubscriptionsManagementPage() {
         setPlans(data.plans || []);
       }
     } catch (err) {
-      console.error('Failed to fetch plans:', err);
-    }
+          }
   };
 
   const fetchSubscriptions = async () => {
@@ -144,8 +143,7 @@ export default function SubscriptionsManagementPage() {
       }
     } catch (err) {
       setError('Network error');
-      console.error(err);
-    } finally {
+          } finally {
       setLoading(false);
     }
   };
@@ -186,8 +184,7 @@ export default function SubscriptionsManagementPage() {
       }
     } catch (err) {
       alert('Network error');
-      console.error(err);
-    }
+          }
   };
 
   const formatDate = (dateStr: string | null) => {

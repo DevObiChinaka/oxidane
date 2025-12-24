@@ -59,8 +59,7 @@ export default function SettingsPage() {
       const data = await response.json();
       setUser(data);
     } catch (error) {
-      console.error('Profile fetch failed:', error);
-      showNotification('error', 'Failed to load profile data');
+            showNotification('error', 'Failed to load profile data');
     } finally {
       setLoading(false);
     }

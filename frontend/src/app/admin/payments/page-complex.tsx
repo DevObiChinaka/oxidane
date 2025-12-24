@@ -84,8 +84,7 @@ export default function PaymentsManagement() {
       setModalOpen(false);
 
     } catch (err) {
-      console.error('Payment verification error:', err);
-    }
+          }
   };
 
   // Handle refund processing
@@ -96,8 +95,7 @@ export default function PaymentsManagement() {
       setModalOpen(false);
 
     } catch (err) {
-      console.error('Refund processing error:', err);
-    }
+          }
   };
 
   // Quick stats from analytics

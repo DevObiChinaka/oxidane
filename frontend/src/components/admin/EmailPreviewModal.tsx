@@ -80,11 +80,9 @@ export default function EmailPreviewModal({ template, isOpen, onClose }: EmailPr
       if (response.success) {
         setPreviewData(response);
       } else {
-        console.error('Failed to load preview:', response);
-      }
+              }
     } catch (error) {
-      console.error('Failed to load preview:', error);
-    } finally {
+          } finally {
       setLoading(false);
     }
   };

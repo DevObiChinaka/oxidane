@@ -159,8 +159,7 @@ export default function SetupDashboardPage() {
         localStorage.setItem('admin_setup_completed', 'true');
       }
     } catch (err: any) {
-      console.error('Setup status error:', err);
-      setError(err.message || 'Failed to load setup status');
+            setError(err.message || 'Failed to load setup status');
     } finally {
       setLoading(false);
     }

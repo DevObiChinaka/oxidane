@@ -133,8 +133,7 @@ export default function EmailTemplatesPage() {
         setTotalPages(response.pagination.total_pages);
       }
     } catch (error) {
-      console.error('Failed to load templates:', error);
-    }
+          }
   };
 
   const loadTemplateTypes = async () => {
@@ -144,8 +143,7 @@ export default function EmailTemplatesPage() {
         setTemplateTypes(response.types);
       }
     } catch (error) {
-      console.error('Failed to load template types:', error);
-    }
+          }
   };
 
   const loadAnalytics = async () => {
@@ -155,8 +153,7 @@ export default function EmailTemplatesPage() {
         setAnalytics(response.analytics);
       }
     } catch (error) {
-      console.error('Failed to load analytics:', error);
-    } finally {
+          } finally {
       setLoading(false);
     }
   };
@@ -239,8 +236,7 @@ export default function EmailTemplatesPage() {
         // Optionally show success message
       }
     } catch (error) {
-      console.error('Failed to duplicate template:', error);
-      // Show error message
+            // Show error message
     }
   };
 
@@ -259,8 +255,7 @@ export default function EmailTemplatesPage() {
         handleCloseModals();
       }
     } catch (error) {
-      console.error('Failed to delete template:', error);
-      // Show error message
+            // Show error message
     }
   };
 
@@ -715,8 +710,7 @@ export default function EmailTemplatesPage() {
         onSend={async (sendData) => {
           try {
             if (!templateToSend?.id) {
-              console.error('No template selected for sending');
-              return;
+                            return;
             }
 
             const response = await adminAPI.sendBulkEmail(templateToSend.id, sendData);
@@ -739,8 +733,7 @@ export default function EmailTemplatesPage() {
               // Refresh analytics to show updated numbers
               await loadAnalytics();
             } else {
-              console.error('Failed to send bulk email:', response.error);
-              setNotification({
+                            setNotification({
                 show: true,
                 type: 'error',
                 title: 'Failed to Send Email Campaign',
@@ -751,8 +744,7 @@ export default function EmailTemplatesPage() {
             setShowSendModal(false);
             setTemplateToSend(null);
           } catch (error) {
-            console.error('Error sending bulk email:', error);
-            setNotification({
+                        setNotification({
               show: true,
               type: 'error',
               title: 'Email Sending Error',
@@ -785,8 +777,7 @@ export default function EmailTemplatesPage() {
             setShowDeleteConfirm(false);
             setTemplateToDelete(null);
           } catch (error) {
-            console.error('Error deleting template:', error);
-          }
+                      }
         }}
       />
 

@@ -149,8 +149,7 @@ export function UserAuthProvider({ children }: UserAuthProviderProps) {
         setLoading(false);
         return;
       } catch (err) {
-        console.error('Failed to fetch user profile:', err);
-        removeAuthToken();
+                removeAuthToken();
       }
     }
     
@@ -220,8 +219,7 @@ export function UserAuthProvider({ children }: UserAuthProviderProps) {
       throw new Error('Invalid response from server');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Login failed';
-      console.error('💥 [UserAuthContext] Login error:', errorMessage, err);
-      setError(errorMessage);
+            setError(errorMessage);
       setLoading(false);
       throw err;
     }
@@ -300,8 +298,7 @@ export function UserAuthProvider({ children }: UserAuthProviderProps) {
       // Redirect to home
       router.push('/');
     } catch (err) {
-      console.error('Logout error:', err);
-    } finally {
+          } finally {
       setLoading(false);
     }
   };

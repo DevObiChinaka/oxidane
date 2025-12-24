@@ -70,28 +70,21 @@ export default function SubscriptionsPage() {
         `${API_ENDPOINTS.user.currencyConvert}?from=USD&to=NGN&amount=1`
       );
       
-      console.log('Currency conversion response status:', response.status);
-      
+            
       if (response.ok) {
         const data = await response.json();
-        console.log('Currency conversion data:', data);
-        // API returns 'to_amount', not 'converted_amount'
+                // API returns 'to_amount', not 'converted_amount'
         const rate = data.to_amount || data.converted_amount || 1;
-        console.log('Setting conversion rate to:', rate);
-        setConversionRate(rate);
+                setConversionRate(rate);
       } else {
-        console.error('Failed to fetch conversion rate:', response.statusText);
-        // Use fallback rate if API fails
+                // Use fallback rate if API fails
         const fallbackRate = 1650;
-        console.log('Using fallback rate:', fallbackRate);
-        setConversionRate(fallbackRate);
+                setConversionRate(fallbackRate);
       }
     } catch (error) {
-      console.error('Error fetching conversion rate:', error);
-      // Use fallback rate: approximate NGN/USD rate
+            // Use fallback rate: approximate NGN/USD rate
       const fallbackRate = displayCurrency === 'NGN' ? 1650 : 1;
-      console.log('Using fallback rate (error):', fallbackRate);
-      setConversionRate(fallbackRate);
+            setConversionRate(fallbackRate);
     }
   };
 
@@ -142,8 +135,7 @@ export default function SubscriptionsPage() {
 
       await fetchSubscriptions();
     } catch (error) {
-      console.error('Auth check failed:', error);
-      router.push('/auth');
+            router.push('/auth');
     }
   };
 
@@ -157,8 +149,7 @@ export default function SubscriptionsPage() {
         setStats(data.stats || null);
       }
     } catch (error) {
-      console.error('Error fetching subscriptions:', error);
-    } finally {
+          } finally {
       setLoading(false);
     }
   };
@@ -183,8 +174,7 @@ export default function SubscriptionsPage() {
         alert('Failed to cancel subscription. Please try again or contact support.');
       }
     } catch (error) {
-      console.error('Error cancelling subscription:', error);
-      alert('An error occurred. Please try again.');
+            alert('An error occurred. Please try again.');
     } finally {
       setCancellingId(null);
       setSubscriptionToCancel(null);
@@ -209,8 +199,7 @@ export default function SubscriptionsPage() {
         );
       }
     } catch (error) {
-      console.error('Error toggling auto-renewal:', error);
-    }
+          }
   };
 
   const getStatusBadge = (status: string, daysRemaining?: number | null, isLifetime?: boolean, autoRenew?: boolean, billingCycle?: string) => {

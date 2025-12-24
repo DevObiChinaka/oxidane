@@ -53,8 +53,7 @@ export default function MyCoursesPage() {
       setIsAuthenticated(true);
       await fetchEnrolledCourses();
     } catch (error) {
-      console.error('Auth check failed:', error);
-    }
+          }
   };
 
   const fetchEnrolledCourses = async () => {
@@ -69,8 +68,7 @@ export default function MyCoursesPage() {
 
       setCourses(data.courses || []);
     } catch (error) {
-      console.error('Courses fetch failed:', error);
-      // Keep empty array on error
+            // Keep empty array on error
       setCourses([]);
     } finally {
       setLoading(false);

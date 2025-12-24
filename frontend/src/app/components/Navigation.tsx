@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useUserAuth } from '../contexts/UserAuthContext';
+import { useSmartNavbar } from '../hooks/useSmartNavbar';
 import Image from 'next/image';
 
 export default function Navigation() {
@@ -11,6 +12,7 @@ export default function Navigation() {
   const { user, isAuthenticated } = useUserAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const showNavbar = useSmartNavbar();
 
   // Smart navigation handler for hash links
   const handleHashNavigation = (hash: string) => {
@@ -27,7 +29,9 @@ export default function Navigation() {
   };
 
   return (
-    <nav className="bg-[#000856]/90 backdrop-blur-2xl border-b border-white/15 sticky top-0 z-50 shadow-2xl">
+    <nav className={`bg-[#000856]/90 backdrop-blur-2xl border-b border-white/15 fixed top-0 left-0 right-0 z-50 shadow-2xl transition-transform duration-300 ${
+      showNavbar ? 'translate-y-0' : '-translate-y-full'
+    }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           {/* Logo */}

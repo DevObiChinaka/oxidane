@@ -58,23 +58,18 @@ export default function TelegramVerification({
           if (token) {
             // Auto-migrate
             localStorage.setItem('user_auth_token', token);
-            console.log('🔧 Auto-migrated access_token to user_auth_token');
           }
         }
         
-        console.log('Token check:', token ? 'Token exists' : 'No token');
         if (!token) {
           throw new Error('Please log in to verify your Telegram account');
         }
       }
       
-      console.log('Calling generateTelegramCode...');
       const data = await generateTelegramCode();
-      console.log('Telegram code generated:', data);
       
       // Check if already verified (success response)
       if (data.already_verified || data.telegram_verified) {
-        console.log('✅ Telegram already verified');
         setIsVerified(true);
         onVerified?.();
         setLoading(false);
@@ -102,7 +97,6 @@ export default function TelegramVerification({
       // Check if already verified (case-insensitive) - treat as SUCCESS, not error
       if (errorMessage.toLowerCase().includes('already verified') || 
           errorMessage.toLowerCase().includes('telegram already verified')) {
-        console.log('✅ Telegram already verified, showing success state');
         // User is already verified, just check status and show success
         try {
           const status = await checkTelegramStatus();
@@ -121,8 +115,7 @@ export default function TelegramVerification({
         }
       }
       
-      // Only log as error if it's NOT the "already verified" case
-      console.error('Telegram verification error:', err);
+      // Only show error if it's NOT the "already verified" case
       
       // Check if token expired
       if (errorMessage.includes('token') && errorMessage.includes('expired')) {
@@ -225,7 +218,7 @@ export default function TelegramVerification({
         onVerified?.();
       }
     } catch (err) {
-      console.error('Error checking Telegram status:', err);
+      // Silent fail
     } finally {
       setChecking(false);
     }
@@ -256,7 +249,7 @@ export default function TelegramVerification({
           // Not verified yet, generate code
           generateCode();
         } catch (err) {
-          console.log('Status check failed:', err);
+          // Continue checking
           // If status check fails, still try to generate code
           // The generate endpoint will return the proper error if already verified
           generateCode();
@@ -309,8 +302,7 @@ export default function TelegramVerification({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000); // Reset after 2 seconds
     } catch (err) {
-      console.error('Failed to copy:', err);
-    }
+          }
   };
 
   if (isVerified) {

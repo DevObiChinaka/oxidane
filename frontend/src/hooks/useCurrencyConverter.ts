@@ -116,8 +116,7 @@ export function useCurrencyConverter({
       
       // Fallback: If converting from USD, set rate to null (will return original amount)
       // If converting to USD, we can't provide a fallback
-      console.warn(`Currency conversion failed (${fromCurrency}→${toCurrency}):`, errorMessage);
-    } finally {
+          } finally {
       setLoading(false);
     }
   }, [fromCurrency, toCurrency]);
@@ -138,8 +137,7 @@ export function useCurrencyConverter({
       if (rate === null) {
         // Only warn if not loading (to avoid spam during initial fetch)
         if (!loading) {
-          console.warn(`No exchange rate available for ${fromCurrency}→${toCurrency}, returning original amount`);
-        }
+                  }
         return amount;
       }
       return amount * rate;
@@ -214,8 +212,7 @@ export function useExchangeRates({
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch exchange rates';
       setError(errorMessage);
       setRates(null);
-      console.error(`Failed to fetch rates for ${baseCurrency}:`, errorMessage);
-    } finally {
+          } finally {
       setLoading(false);
     }
   }, [baseCurrency]);

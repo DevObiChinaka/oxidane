@@ -33,8 +33,7 @@ function useAPI<T>(
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred';
       setError(errorMessage);
-      console.error('API Error:', err);
-    } finally {
+          } finally {
       setLoading(false);
     }
   }, dependencies); // eslint-disable-line react-hooks/exhaustive-deps

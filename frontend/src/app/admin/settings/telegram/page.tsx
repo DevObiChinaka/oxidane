@@ -163,8 +163,7 @@ export default function TelegramConfigurationPage() {
       setConfig(configData);
       setEditedConfig(configData);
     } catch (error) {
-      console.error('Failed to load Telegram configuration:', error);
-      setMessage({ type: 'error', text: 'Failed to load Telegram configuration' });
+            setMessage({ type: 'error', text: 'Failed to load Telegram configuration' });
     } finally {
       setLoading(false);
     }
@@ -205,8 +204,7 @@ export default function TelegramConfigurationPage() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
-        console.error('Save failed:', errorData);
-        
+                
         // Extract validation errors if present
         let errorMessage = 'Failed to save configuration';
         if (errorData) {
@@ -239,8 +237,7 @@ export default function TelegramConfigurationPage() {
       setIsEditingToken(false);  // Exit token editing mode
       setMessage({ type: 'success', text: 'Telegram configuration saved successfully' });
     } catch (error: any) {
-      console.error('Failed to save configuration:', error);
-      setMessage({ type: 'error', text: error.message || 'Failed to save configuration' });
+            setMessage({ type: 'error', text: error.message || 'Failed to save configuration' });
     } finally {
       setSaving(false);
     }
@@ -262,8 +259,7 @@ export default function TelegramConfigurationPage() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
-        console.error('Test connection failed:', errorData);
-        
+                
         let errorMessage = 'Connection test failed';
         if (errorData) {
           if (errorData.message) {
@@ -293,8 +289,7 @@ export default function TelegramConfigurationPage() {
         setMessage({ type: 'error', text: data.message || data.error || 'Connection test failed' });
       }
     } catch (error: any) {
-      console.error('Connection test failed:', error);
-      setMessage({ type: 'error', text: error.message || 'Failed to test connection' });
+            setMessage({ type: 'error', text: error.message || 'Failed to test connection' });
     } finally {
       setTesting(false);
     }
@@ -330,8 +325,7 @@ export default function TelegramConfigurationPage() {
         setGroups(data.results || data);
       }
     } catch (error) {
-      console.error('Failed to load groups:', error);
-    }
+          }
   };
 
   const handleOpenGroupModal = (group?: TelegramGroup) => {
@@ -435,8 +429,7 @@ export default function TelegramConfigurationPage() {
       setSyncingGroupId(groupId);
       const token = localStorage.getItem('access_token');
       
-      console.log('Syncing members for group:', groupId);
-      
+            
       const response = await fetch(`${API_ENDPOINTS.admin.telegram.groups}${groupId}/sync-members/`, {
         method: 'POST',
         headers: {
@@ -445,12 +438,10 @@ export default function TelegramConfigurationPage() {
         }
       });
 
-      console.log('Response status:', response.status);
-      
+            
       const data = await response.json();
       
-      console.log('Sync response data:', data);
-      
+            
       if (response.ok && data.success) {
         setMessage({ 
           type: 'success', 
@@ -461,8 +452,7 @@ export default function TelegramConfigurationPage() {
         // Show detailed error message from backend
         const errorMsg = data.message || 'Failed to sync members';
         
-        console.error('Sync failed:', errorMsg);
-        
+                
         // Provide helpful error messages
         if (errorMsg.includes('Bot token not configured')) {
           setMessage({ 
@@ -494,8 +484,7 @@ export default function TelegramConfigurationPage() {
         }
       }
     } catch (error: any) {
-      console.error('Sync error:', error);
-      setMessage({ 
+            setMessage({ 
         type: 'error', 
         text: `❌ Network error: ${error.message || 'Failed to connect to server. Please check your connection.'}` 
       });

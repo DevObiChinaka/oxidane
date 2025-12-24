@@ -134,7 +134,6 @@ const getAuthToken = (): string | null => {
     const accessToken = localStorage.getItem('access_token');
     if (accessToken) {
       localStorage.setItem('user_auth_token', accessToken);
-      console.log('🔧 Auto-migrated access_token to user_auth_token');
     }
   }
   
@@ -377,12 +376,6 @@ export async function generateTelegramCode(): Promise<{
   telegram_user_id?: string;
   message?: string;
 }> {
-  console.log('🔐 Generating Telegram code...');
-  console.log('API URL:', `${API_BASE_URL}/billing/telegram/generate-code/`);
-  
-  const token = getAuthToken();
-  console.log('Auth token:', token ? `${token.substring(0, 20)}...` : 'NO TOKEN');
-  
   const response = await fetch(
     `${API_BASE_URL}/billing/telegram/generate-code/`,
     {
@@ -391,12 +384,8 @@ export async function generateTelegramCode(): Promise<{
     }
   );
 
-  console.log('Response status:', response.status);
-  console.log('Response ok:', response.ok);
-
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Error response:', errorText);
     
     // Parse error and throw with proper message
     let errorMessage = 'Failed to generate verification code';
@@ -411,7 +400,6 @@ export async function generateTelegramCode(): Promise<{
   }
 
   const data = await response.json();
-  console.log('Success data:', data);
   return data;
 }
 
@@ -561,14 +549,12 @@ export async function checkSubscriptionConflict(planId: string): Promise<CheckCo
 
     if (!response.ok) {
       // If endpoint doesn't exist or returns error, return no conflict
-      console.warn('Conflict check endpoint unavailable, skipping');
       return { has_conflict: false, conflict_type: null, message: null };
     }
 
     return response.json();
   } catch (error) {
     // If any error occurs, assume no conflict to allow purchase
-    console.warn('Conflict check failed, allowing purchase:', error);
     return { has_conflict: false, conflict_type: null, message: null };
   }
 }

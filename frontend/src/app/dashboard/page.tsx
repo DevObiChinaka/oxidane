@@ -57,8 +57,7 @@ export default function UserDashboard() {
       // Fetch subscription data
       await fetchSubscriptionData();
     } catch (error) {
-      console.error('Auth check failed:', error);
-    } finally {
+          } finally {
       setLoading(false);
     }
   };
@@ -82,8 +81,7 @@ export default function UserDashboard() {
         });
       }
     } catch (error) {
-      console.error('Failed to fetch subscription data:', error);
-      // Set default empty subscription data
+            // Set default empty subscription data
       setSubscriptionData({
         active_count: 0,
         total_monthly_cost: 0,
@@ -107,13 +105,10 @@ export default function UserDashboard() {
 
         setCoursesCount(coursesArray.length || 0);
       } else {
-        console.error('Failed to fetch enrolled courses, status:', response.status);
-        const errorText = await response.text();
-        console.error('Error response:', errorText);
-      }
+                const errorText = await response.text();
+              }
     } catch (error) {
-      console.error('Failed to fetch courses count:', error);
-    }
+          }
   };
 
   const handleLogout = () => {

@@ -58,11 +58,6 @@ export default function CourseDetailPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [expandedLessons, setExpandedLessons] = useState(true); // For collapsible lesson list
 
-  // DEBUG: Log when component loads
-  useEffect(() => {
-    console.log('🎯 Course Detail Page Component Mounted - VERSION: Dec 9 4:20pm with debug logging');
-  }, []);
-
   useEffect(() => {
     if (slug) {
       checkAuthAndFetchCourse();
@@ -81,7 +76,7 @@ export default function CourseDetailPage() {
       setIsAuthenticated(true);
       await fetchCourseDetail();
     } catch (error) {
-      console.error('Auth check failed:', error);
+      // Silent auth check failure
     }
   };
 
@@ -115,7 +110,6 @@ export default function CourseDetailPage() {
         setError('Failed to load course details');
       }
     } catch (err) {
-      console.error('Error fetching course:', err);
       setError('Failed to load course details');
     } finally {
       setLoading(false);
@@ -123,57 +117,32 @@ export default function CourseDetailPage() {
   };
 
   const handleEnroll = async () => {
-    console.log('🚀 ENROLL BUTTON CLICKED - handleEnroll function called');
-    console.log('📍 Current URL:', window.location.href);
-    console.log('🔍 Checking localStorage...');
-    
     const userAuthToken = localStorage.getItem('user_auth_token');
     const accessToken = localStorage.getItem('access_token');
     const token = userAuthToken || accessToken;
     
-    console.log('🔐 user_auth_token:', userAuthToken ? `EXISTS (${userAuthToken.substring(0, 20)}...)` : 'NULL');
-    console.log('🔐 access_token:', accessToken ? `EXISTS (${accessToken.substring(0, 20)}...)` : 'NULL');
-    console.log('🔐 Final token used:', token ? 'FOUND' : 'NOT FOUND');
-    
     if (!token) {
-      console.log('❌ NO TOKEN - Redirecting to /auth');
       alert('No authentication token found. Redirecting to login...');
       router.push('/auth');
       return;
     }
-    
-    console.log('✅ Token exists, proceeding with enrollment...');
-
-    console.log('✅ Token exists, proceeding with enrollment...');
 
     if (course?.course_type === 'premium' && course?.requires_subscription) {
-      console.log('💳 Premium course detected - requires_subscription:', course.requires_subscription);
-      console.log('💳 Redirecting to /pricing');
       alert('This is a premium course. Redirecting to pricing...');
       router.push('/pricing');
       return;
     }
-    
-    console.log('📦 Course type:', course?.course_type);
-    console.log('🔓 Requires subscription:', course?.requires_subscription);
 
     try {
       setEnrolling(true);
       setError(null);
       
       const enrollUrl = `/courses/${slug}/enroll/`;
-      console.log('📤 Making POST request to:', enrollUrl);
-      console.log('📤 Using apiPost function...');
       
       const response = await apiPost(enrollUrl);
-      
-      console.log('📥 Response received!');
-      console.log('📥 Status:', response.status);
-      console.log('📥 OK:', response.ok);
 
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Enrollment successful:', data);
 
         setSuccessMessage(data.message || 'Successfully enrolled in course!');
         setTimeout(() => setSuccessMessage(null), 1500);
@@ -181,11 +150,9 @@ export default function CourseDetailPage() {
         setTimeout(() => router.push('/my-courses'), 1600);
       } else {
         const data = await response.json();
-        console.error('❌ Enrollment failed:', data);
         setError(data.error || 'Failed to enroll in course');
       }
     } catch (err) {
-      console.error('💥 Enrollment exception:', err);
       setError('Failed to enroll in course. Please try again.');
     } finally {
       setEnrolling(false);
@@ -193,22 +160,15 @@ export default function CourseDetailPage() {
   };
 
   const handleStartLearning = () => {
-    console.log('🎓 START LEARNING clicked');
-    console.log('📚 Course:', course?.title);
-    console.log('📝 Total lessons:', course?.lessons?.length);
-    
     if (course && course.lessons.length > 0) {
       // Find the first incomplete lesson, or default to the first lesson
       const firstIncomplete = course.lessons.find(l => !l.is_completed);
       const targetLesson = firstIncomplete || course.lessons[0];
       
       const watchUrl = `/courses/${course.slug}/watch?lesson=${targetLesson.id}`;
-      console.log('🎯 Redirecting to:', watchUrl);
-      console.log('🎯 Target lesson:', targetLesson.title);
       
       router.push(watchUrl);
     } else {
-      console.log('❌ No lessons available or course is null');
       alert('No lessons available for this course');
     }
   };

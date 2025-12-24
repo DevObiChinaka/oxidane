@@ -146,8 +146,7 @@ export async function fetchRealForexData(apiKey?: string) {
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('Error fetching real forex data:', error);
-    throw error;
+        throw error;
   }
 }
 

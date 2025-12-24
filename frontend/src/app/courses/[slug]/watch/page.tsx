@@ -66,7 +66,6 @@ export default function VideoPlayerPage() {
     if (course && course.lessons.length > 0 && lessonIdParam) {
       const lesson = course.lessons.find(l => l.id === lessonIdParam);
       if (lesson && lesson.id !== currentLesson?.id) {
-        console.log('[WATCH] Switching to lesson:', lesson.title);
         setCurrentLesson(lesson);
         // Force video player to remount
         setVideoKey(prev => prev + 1);
@@ -77,7 +76,6 @@ export default function VideoPlayerPage() {
   // Pre-load all video embeds when course loads
   useEffect(() => {
     if (course && course.lessons.length > 0 && videoEmbedCache.size === 0) {
-      console.log('[WATCH] Pre-loading all video embeds...');
       preloadAllVideoEmbeds();
     }
   }, [course]);
@@ -107,7 +105,6 @@ export default function VideoPlayerPage() {
     if (!course || preloadingVideos) return;
 
     setPreloadingVideos(true);
-    console.log('[WATCH] Starting pre-load of', course.lessons.length, 'videos');
 
     try {
       const token = localStorage.getItem('user_auth_token') || localStorage.getItem('access_token');
@@ -133,19 +130,17 @@ export default function VideoPlayerPage() {
           if (response.ok) {
             const data = await response.json();
             cache.set(lesson.id, data.embed_html);
-            console.log('[WATCH] Pre-loaded:', lesson.title);
           }
         } catch (error) {
-          console.error('[WATCH] Failed to pre-load:', lesson.title, error);
+          // Silent fail for individual videos
         }
       });
 
       await Promise.all(promises);
       
       setVideoEmbedCache(cache);
-      console.log('[WATCH] Pre-loaded', cache.size, 'video embeds');
     } catch (error) {
-      console.error('[WATCH] Pre-load error:', error);
+      // Silent fail
     } finally {
       setPreloadingVideos(false);
     }
@@ -163,7 +158,7 @@ export default function VideoPlayerPage() {
       setIsAuthenticated(true);
       await fetchCourseAndLessons();
     } catch (error) {
-      console.error('Auth check failed:', error);
+      // Silent fail
     }
   };
 
@@ -203,7 +198,6 @@ export default function VideoPlayerPage() {
         setError('Failed to load course');
       }
     } catch (err) {
-      console.error('Error fetching course:', err);
       setError('Failed to load course');
     } finally {
       setLoading(false);
@@ -262,18 +256,16 @@ export default function VideoPlayerPage() {
         }
       } else {
         const errorData = await response.json().catch(() => ({}));
-        console.error('Failed to mark lesson as complete:', errorData);
         alert('Failed to mark lesson as complete. Please try again.');
       }
     } catch (err) {
-      console.error('Error marking lesson complete:', err);
+      // Silent fail
     } finally {
       setMarking(false);
     }
   };
 
   const selectLesson = (lesson: Lesson) => {
-    console.log('[WATCH] selectLesson called for:', lesson.title);
     // Update state immediately AND change URL
     setCurrentLesson(lesson);
     setVideoKey(prev => prev + 1);

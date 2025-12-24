@@ -74,7 +74,6 @@ class AdminAPIClient {
         data,
       };
     } catch (error) {
-      console.error('API Request failed:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Network error',

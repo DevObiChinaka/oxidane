@@ -231,8 +231,7 @@ export default function AnalyticsPage() {
 
       setLastUpdate(new Date().toLocaleTimeString());
     } catch (err) {
-      console.error('Failed to fetch analytics:', err);
-      setError('Failed to load analytics data. Please try again.');
+            setError('Failed to load analytics data. Please try again.');
     } finally {
       setLoading(false);
       setRefreshing(false);

@@ -57,8 +57,7 @@ export default function CouponCodeModal({
       await onSubmit(couponData);
       onClose();
     } catch (error) {
-      console.error('Failed to submit coupon:', error);
-    }
+          }
   };
 
   const generateCouponCode = () => {

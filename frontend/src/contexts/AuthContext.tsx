@@ -102,8 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
       } catch (error) {
-        console.error('Setup status check failed:', error);
-        // Continue to dashboard if check fails
+                // Continue to dashboard if check fails
       }
       
       router.push('/admin/dashboard');

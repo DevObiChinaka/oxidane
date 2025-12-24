@@ -111,13 +111,10 @@ export default function EnhancedAuthForm({ initialIsLogin = true }: EnhancedAuth
       }
     } catch (err) {
       // Enhanced error handling
-      console.error('💥 [EnhancedAuthForm] Error caught:', err);
-      if (err instanceof Error) {
-        console.error('💥 [EnhancedAuthForm] Error message:', err.message);
-        setError(err.message);
+            if (err instanceof Error) {
+                setError(err.message);
       } else {
-        console.error('💥 [EnhancedAuthForm] Unknown error type');
-        setError('An unexpected error occurred. Please try again.');
+                setError('An unexpected error occurred. Please try again.');
       }
     } finally {
       setLoading(false);

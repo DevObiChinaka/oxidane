@@ -107,16 +107,6 @@ export default function LessonFormModal({ lesson, courses, onClose, onSave }: Le
         uploadFormData.append('lesson_notes', formData.lesson_notes.trim());
         uploadFormData.append('video_file', selectedFile);
 
-        console.log('📤 Uploading lesson with file:', {
-          title: formData.title,
-          fileName: selectedFile.name,
-          fileSize: selectedFile.size,
-          fileType: selectedFile.type,
-          duration: formData.duration,
-          order: formData.order,
-          course: formData.course,
-        });
-
         if (lesson) {
           // Update existing lesson with file
           response = await adminAPI.updateLessonWithFile(lesson.id, uploadFormData);
@@ -125,8 +115,7 @@ export default function LessonFormModal({ lesson, courses, onClose, onSave }: Le
           response = await adminAPI.createLessonWithFile(formData.course, uploadFormData);
         }
         
-        console.log('✅ File upload successful:', response);
-      } else {
+              } else {
         // Prepare regular lesson data (no file)
         const lessonData = {
           title: formData.title.trim(),
@@ -141,30 +130,18 @@ export default function LessonFormModal({ lesson, courses, onClose, onSave }: Le
           lesson_notes: formData.lesson_notes.trim(),
         };
 
-        console.log('📤 Saving lesson without file upload:', lessonData);
-
-        if (lesson) {
+                if (lesson) {
           // Update existing lesson
           response = await adminAPI.updateLesson(lesson.id, lessonData);
-          console.log('✅ Lesson updated:', response);
-        } else {
+                  } else {
           // Create new lesson
           response = await adminAPI.createLesson(formData.course, lessonData);
-          console.log('✅ Lesson created:', response);
-        }
+                  }
       }
-
-      console.log('📊 Final response data:', {
-        hasVideoFile: !!response.video_file,
-        hasVideoFileUrl: !!response.video_file_url,
-        videoSource: response.video_source,
-        video_file_url: response.video_file_url,
-      });
 
       onSave();
     } catch (err: any) {
-      console.error('Failed to save lesson:', err);
-      setError(err.message || 'Failed to save lesson. Please try again.');
+            setError(err.message || 'Failed to save lesson. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -221,14 +198,12 @@ export default function LessonFormModal({ lesson, courses, onClose, onSave }: Le
       if (video.duration && !isNaN(video.duration)) {
         // Convert seconds to minutes and round
         const durationInMinutes = Math.round(video.duration / 60);
-        console.log(`📹 Video duration: ${Math.round(video.duration)}s = ${durationInMinutes} minutes`);
-        handleInputChange('duration', durationInMinutes);
+                handleInputChange('duration', durationInMinutes);
       }
     };
     video.onerror = () => {
       window.URL.revokeObjectURL(video.src);
-      console.warn('Could not extract video duration');
-    };
+          };
     video.src = URL.createObjectURL(file);
   };
 

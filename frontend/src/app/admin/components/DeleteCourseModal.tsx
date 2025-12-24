@@ -32,8 +32,7 @@ export default function DeleteCourseModal({
       onClose();
       setConfirmText('');
     } catch (error) {
-      console.error('Error deleting course:', error);
-    } finally {
+          } finally {
       setIsDeleting(false);
     }
   };

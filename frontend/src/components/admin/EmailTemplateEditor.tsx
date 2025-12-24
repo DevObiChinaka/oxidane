@@ -104,8 +104,7 @@ export default function EmailTemplateEditor({
         await adminAPI.deleteEmailTemplate(tempTemplate.template.id);
       }
     } catch (error) {
-      console.error('Failed to load variables:', error);
-    }
+          }
   };
 
   const handleInputChange = (field: string, value: any) => {
@@ -205,8 +204,7 @@ export default function EmailTemplateEditor({
         });
         
         if (!tempTemplate.success) {
-          console.error('Failed to create temp template for preview');
-          return;
+                    return;
         }
         
         templateId = tempTemplate.template.id;
@@ -240,8 +238,7 @@ export default function EmailTemplateEditor({
         await adminAPI.deleteEmailTemplate(templateId);
       }
     } catch (error) {
-      console.error('Failed to generate preview:', error);
-    }
+          }
   };
 
   const validateForm = () => {
@@ -292,8 +289,7 @@ export default function EmailTemplateEditor({
         setErrors({ general: 'Failed to save template' });
       }
     } catch (error) {
-      console.error('Failed to save template:', error);
-      setErrors({ general: 'Failed to save template' });
+            setErrors({ general: 'Failed to save template' });
     } finally {
       setSaving(false);
     }

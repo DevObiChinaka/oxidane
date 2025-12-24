@@ -102,9 +102,6 @@ export class AdminAPIClient {
           });
           
           const responseText = await response.text();
-
-          console.log(`🔍 ${endpoint} - Response preview:`, responseText.substring(0, 150));
-          console.log(`🔍 ${endpoint} - Is HTML:`, responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html'));
           
           // Check if this looks like a Django error page
           if (responseText.includes('Django') && responseText.includes('<!DOCTYPE')) {
@@ -112,27 +109,18 @@ export class AdminAPIClient {
           }
           
         } catch (error) {
-          console.error(`🔍 ${endpoint} failed:`, error);
+          // Silent fail
         }
       }
 
       return true; // Always return true for now, just for debugging
     } catch (error) {
-      console.error('🔍 Connection test failed:', error);
       return false;
     }
   }
 
   private async request(endpoint: string, options: RequestInit = {}) {
     const url = `${API_BASE_URL}${endpoint}`;
-
-    // Debug logging
-    console.log('🌐 API Request:', {
-      url,
-      method: options.method || 'GET',
-      endpoint,
-      timestamp: new Date().toISOString()
-    });
     
     const defaultHeaders: Record<string, string> = {};
 
@@ -204,7 +192,6 @@ export class AdminAPIClient {
           // Clone response so we can read it multiple times if needed
           const responseClone = response.clone();
           const responseText = await responseClone.text();
-          console.log('🔍 Error response text (first 200 chars):', responseText.substring(0, 200));
           
           // Check if it's HTML (which would indicate wrong endpoint)
           if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
@@ -250,15 +237,6 @@ export class AdminAPIClient {
         }
       }
     } catch (error) {
-      console.error('API Request failed:', {
-        url,
-        method: options.method || 'GET',
-        error: error instanceof Error ? error.message : error,
-        errorName: error instanceof Error ? error.name : typeof error,
-        errorStack: error instanceof Error ? error.stack : undefined,
-        endpoint
-      });
-      
       // Provide more user-friendly error messages
       if (error instanceof TypeError && error.message.includes('fetch')) {
         throw new Error(`Cannot connect to server at ${url}. Please check if the Django server is running.`);
@@ -291,8 +269,6 @@ export class AdminAPIClient {
 
   async createCourse(courseData: any) {
 
-    console.log('🌐 API: JSON stringify result:', JSON.stringify(courseData));
-
     return this.request('/admin/courses/', {
       method: 'POST',
       body: JSON.stringify(courseData),
@@ -304,14 +280,6 @@ export class AdminAPIClient {
   }
 
   async updateCourse(courseId: string, courseData: any) {
-
-    console.log('🌐 API: Course data being sent:', {
-      courseData,
-      courseDataKeys: Object.keys(courseData),
-      courseDataTypes: Object.fromEntries(
-        Object.entries(courseData).map(([key, value]) => [key, typeof value])
-      )
-    });
     
     // Validate courseId
     if (!courseId || courseId === 'undefined' || courseId === 'null') {
@@ -540,7 +508,6 @@ export class AdminAPIClient {
   }
 
   async createEmailTemplate(templateData: any) {
-    console.log('📧 Creating email template with data:', templateData);
     return this.request('/admin/email-templates/', {
       method: 'POST',
       body: JSON.stringify(templateData),

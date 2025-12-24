@@ -467,7 +467,7 @@ function PaymentMethodsSection() {
         setPaystackPublicKey(data.paystack_public_key || '');
       }
     } catch (err) {
-      console.error('Failed to fetch Paystack config:', err);
+      // Silent fail
     }
   };
 
@@ -480,7 +480,7 @@ function PaymentMethodsSection() {
         setPaymentMethods(data.payment_methods || []);
       }
     } catch (error) {
-      console.error('Error fetching payment methods:', error);
+      // Silent fail
     } finally {
       setLoading(false);
     }
@@ -496,7 +496,6 @@ function PaymentMethodsSection() {
         alert('Failed to set default payment method. Please try again.');
       }
     } catch (error) {
-      console.error('Error setting default payment method:', error);
       alert('An error occurred. Please try again.');
     } finally {
       setSettingDefaultId(null);
@@ -520,7 +519,6 @@ function PaymentMethodsSection() {
         setErrorMessage('Failed to delete payment method. Please try again.');
       }
     } catch (error) {
-      console.error('Error deleting payment method:', error);
       setErrorMessage('An error occurred. Please try again.');
     } finally {
       setDeletingMethodId(null);
@@ -581,7 +579,6 @@ function PaymentMethodsSection() {
               setErrorMessage(`Failed to save card: ${errorData.error || 'Unknown error'}`);
             }
           }).catch((error) => {
-            console.error('Error saving card:', error);
             setErrorMessage('An error occurred while saving your card. Please try again.');
           });
         }
@@ -589,7 +586,6 @@ function PaymentMethodsSection() {
 
       handler.openIframe();
     } catch (error) {
-      console.error('Error initializing Paystack:', error);
       setErrorMessage('Failed to open payment modal. Please refresh the page and try again.');
     }
   };

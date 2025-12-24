@@ -108,8 +108,7 @@ export default function CouponsPage() {
       }
 
     } catch (err: any) {
-      console.error('Failed to load data:', err);
-      setError(err.message || 'Failed to load coupons');
+            setError(err.message || 'Failed to load coupons');
     } finally {
       setLoading(false);
     }
@@ -249,8 +248,7 @@ export default function CouponsPage() {
         await loadData();
       }
     } catch (err: any) {
-      console.error('Failed to toggle coupon:', err);
-    }
+          }
   };
 
   const handleBulkAction = async (action: 'activate' | 'deactivate') => {
@@ -278,8 +276,7 @@ export default function CouponsPage() {
         await loadData();
       }
     } catch (err: any) {
-      console.error(`Failed to ${action} coupons:`, err);
-    }
+          }
   };
 
   const getDiscountDisplay = (coupon: Coupon): string => {

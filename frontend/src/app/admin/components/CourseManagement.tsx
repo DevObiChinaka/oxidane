@@ -21,8 +21,7 @@ export default function CourseManagement({ className = '' }: CourseManagementPro
         await deleteCourse(courseId);
         refetch(); // Refresh the courses list
       } catch (error) {
-        console.error('Failed to delete course:', error);
-      }
+              }
     }
   };
 

@@ -91,8 +91,7 @@ export default function AdminSidebar({ isMobileMenuOpen, setIsMobileMenuOpen }: 
         setSetupStatus(data);
       }
     } catch (error) {
-      console.error('Failed to fetch setup status:', error);
-    }
+          }
   };
 
   const handleLogout = () => {

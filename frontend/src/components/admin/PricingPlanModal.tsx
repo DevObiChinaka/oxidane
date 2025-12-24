@@ -89,8 +89,7 @@ export default function PricingPlanModal({
         onClose();
       }, 1500);
     } catch (error: any) {
-      console.error('❌ Failed to submit plan:', error);
-      
+            
       if (error?.response?.data) {
         const errorData = error.response.data;
         

@@ -765,8 +765,7 @@ export function useUserDetail(userId: string | null) {
 
       setUserDetailData(userData);
     } catch (err) {
-      console.error('❌ useUserDetail - Error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch user details');
+            setError(err instanceof Error ? err.message : 'Failed to fetch user details');
       setUserDetailData(null);
     } finally {
       setLoading(false);

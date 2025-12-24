@@ -158,8 +158,7 @@ export default function PaymentsPage() {
       const result = await response.json();
       setData(result);
     } catch (err) {
-      console.error('Error fetching transactions:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch transactions');
+            setError(err instanceof Error ? err.message : 'Failed to fetch transactions');
     } finally {
       setLoading(false);
     }

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -80,13 +80,10 @@ export default function EmailConfigPage() {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('📧 Email Config Response:', data);
-        
+                
         // Handle both single object and array response (singleton pattern)
         const configData = Array.isArray(data) ? data[0] : data;
-        console.log('📧 Processed Config Data:', configData);
-        console.log('📧 Masked Password:', configData?.masked_smtp_password);
-        
+                        
         setConfig(configData);
         
         // Always populate formData if we have config data, regardless of is_configured
@@ -109,8 +106,7 @@ export default function EmailConfigPage() {
         router.push('/admin/login');
       }
     } catch (error) {
-      console.error('Error fetching email config:', error);
-      setMessage({ type: 'error', text: 'Failed to load email configuration' });
+            setMessage({ type: 'error', text: 'Failed to load email configuration' });
     } finally {
       setLoading(false);
     }
@@ -154,8 +150,7 @@ export default function EmailConfigPage() {
         });
       }
     } catch (error) {
-      console.error('Error saving email config:', error);
-      setMessage({ type: 'error', text: 'Failed to save email configuration' });
+            setMessage({ type: 'error', text: 'Failed to save email configuration' });
     } finally {
       setSaving(false);
     }
@@ -184,7 +179,7 @@ export default function EmailConfigPage() {
       if (response.ok && data.success) {
         setMessage({ 
           type: 'success', 
-          text: `✅ Connection successful! Connected to ${data.host}:${data.port} using ${data.encryption}` 
+          text: `? Connection successful! Connected to ${data.host}:${data.port} using ${data.encryption}` 
         });
       } else {
         setMessage({ 
@@ -193,8 +188,7 @@ export default function EmailConfigPage() {
         });
       }
     } catch (error) {
-      console.error('Error testing connection:', error);
-      setMessage({ type: 'error', text: 'Failed to test SMTP connection' });
+            setMessage({ type: 'error', text: 'Failed to test SMTP connection' });
     } finally {
       setTesting(false);
     }
@@ -241,8 +235,7 @@ export default function EmailConfigPage() {
         });
       }
     } catch (error) {
-      console.error('Error sending test email:', error);
-      setMessage({ type: 'error', text: 'Failed to send test email' });
+            setMessage({ type: 'error', text: 'Failed to send test email' });
     } finally {
       setTesting(false);
     }
@@ -312,7 +305,7 @@ export default function EmailConfigPage() {
               Email Configured
             </span>
             <span className="text-sm text-gray-500">
-              · Active SMTP: {config.smtp_host}:{config.smtp_port} {config.use_tls ? '(TLS)' : config.use_ssl ? '(SSL)' : ''}
+              � Active SMTP: {config.smtp_host}:{config.smtp_port} {config.use_tls ? '(TLS)' : config.use_ssl ? '(SSL)' : ''}
             </span>
           </div>
         )}
@@ -671,8 +664,8 @@ export default function EmailConfigPage() {
               <h3 className="font-semibold text-blue-900 mb-2">Gmail Setup Instructions</h3>
               <ol className="list-decimal list-inside space-y-1 text-sm text-blue-800">
                 <li>Go to your Google Account settings</li>
-                <li>Navigate to Security → 2-Step Verification (enable if not already)</li>
-                <li>Go to Security → App passwords</li>
+                <li>Navigate to Security ? 2-Step Verification (enable if not already)</li>
+                <li>Go to Security ? App passwords</li>
                 <li>Generate a new app password for "Mail"</li>
                 <li>Use your Gmail address as username and the generated password here</li>
               </ol>

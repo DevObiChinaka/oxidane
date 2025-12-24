@@ -83,8 +83,7 @@ export default function PricingCards({
         const data = await response.json();
         setPlans(data.results || data || []);
       } catch (err) {
-        console.error('Error fetching plans:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load pricing plans');
+                setError(err instanceof Error ? err.message : 'Failed to load pricing plans');
       } finally {
         setLoading(false);
       }
@@ -110,8 +109,7 @@ export default function PricingCards({
             const result = await checkSubscriptionConflict(plan.id);
             return { planId: plan.id, result };
           } catch (err) {
-            console.error(`Error checking conflict for plan ${plan.id}:`, err);
-            return { planId: plan.id, result: null };
+                        return { planId: plan.id, result: null };
           }
         });
 
@@ -127,8 +125,7 @@ export default function PricingCards({
         
         setConflictData(newConflictData);
       } catch (err) {
-        console.error('Error checking subscription conflicts:', err);
-        setConflictError('Unable to check subscription status');
+                setConflictError('Unable to check subscription status');
       } finally {
         setConflictLoading(false);
       }

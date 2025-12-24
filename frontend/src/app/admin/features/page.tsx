@@ -150,8 +150,7 @@ export default function FeaturesPage() {
       }
 
     } catch (err: any) {
-      console.error('Failed to load features:', err);
-      setError(err.message || 'Failed to load features');
+            setError(err.message || 'Failed to load features');
     } finally {
       setLoading(false);
     }
@@ -279,8 +278,7 @@ export default function FeaturesPage() {
         await loadFeatures();
       }
     } catch (err: any) {
-      console.error('Failed to toggle feature:', err);
-    }
+          }
   };
 
   const handleBulkAction = async (action: 'activate' | 'deactivate') => {
@@ -308,8 +306,7 @@ export default function FeaturesPage() {
         await loadFeatures();
       }
     } catch (err: any) {
-      console.error(`Failed to ${action} features:`, err);
-    }
+          }
   };
 
   const getCategoryLabel = (category: string): string => {

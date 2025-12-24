@@ -85,8 +85,7 @@ export default function SendEmailModal({ template, isOpen, onClose, onSend }: Se
         setUsers(mockUsers);
       }
     } catch (error) {
-      console.error('Error loading users:', error);
-      // Fallback to mock data if API fails
+            // Fallback to mock data if API fails
       const mockUsers: User[] = [
         { id: '1', email: 'admin@oxiworld.com', first_name: 'Admin', last_name: 'User', subscription_status: 'active' },
         { id: '3', email: 'inactive@oxiworld.com', first_name: 'Inactive', last_name: 'User', subscription_status: 'inactive' }

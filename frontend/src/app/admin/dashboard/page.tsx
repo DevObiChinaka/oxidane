@@ -56,36 +56,28 @@ export default function AdminDashboard() {
         const setupResponse = await fetch(API_ENDPOINTS.admin.setupStatus, { headers });
         if (setupResponse.ok) {
           const setupData = await setupResponse.json();
-          console.log('Setup status data:', setupData);
-          setSetupStatus(setupData);
+                    setSetupStatus(setupData);
         } else {
-          console.error('Setup status failed:', setupResponse.status, setupResponse.statusText);
-        }
+                  }
 
         // Fetch subscription stats
         const subsResponse = await fetch(`${API_ENDPOINTS.admin.subscriptions}?page=1&page_size=1`, { headers });
         if (subsResponse.ok) {
           const subsData = await subsResponse.json();
-          console.log('Subscription analytics data:', subsData);
-          setSubscriptionStats(subsData.analytics);
+                    setSubscriptionStats(subsData.analytics);
         } else {
-          console.error('Subscription stats failed:', subsResponse.status, subsResponse.statusText);
-          const errorText = await subsResponse.text();
-          console.error('Response:', errorText);
-        }
+                    const errorText = await subsResponse.text();
+                  }
 
         // Fetch email stats
         const emailResponse = await fetch(API_ENDPOINTS.admin.emailAnalytics, { headers });
         if (emailResponse.ok) {
           const emailData = await emailResponse.json();
-          console.log('Email analytics data:', emailData);
-          setEmailStats(emailData.analytics);
+                    setEmailStats(emailData.analytics);
         } else {
-          console.error('Email analytics failed:', emailResponse.status, emailResponse.statusText);
-        }
+                  }
       } catch (error) {
-        console.error('Failed to fetch additional data:', error);
-      } finally {
+              } finally {
         setLoading(false);
       }
     };

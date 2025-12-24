@@ -40,8 +40,7 @@ function SuccessContent() {
           }
         }
       } catch (err) {
-        console.error('Failed to fetch subscription:', err);
-      } finally {
+              } finally {
         setLoading(false);
       }
     };

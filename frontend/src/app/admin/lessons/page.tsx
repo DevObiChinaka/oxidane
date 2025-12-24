@@ -63,16 +63,14 @@ export default function LessonsPage() {
       }
       
     } catch (err) {
-      console.error('❌ Failed to fetch lessons data:', err);
-      setError('Failed to load lessons. Please check your connection and try again.');
+            setError('Failed to load lessons. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleCreateLesson = () => {
-    console.log('🎬 Creating lesson, available courses:', Array.isArray(courses) ? courses.length : 0);
-    setSelectedLesson(null);
+        setSelectedLesson(null);
     setShowLessonModal(true);
   };
 
@@ -102,8 +100,7 @@ export default function LessonsPage() {
       await fetchData();
 
     } catch (error) {
-      console.error('❌ Failed to delete lesson:', error);
-      throw error; // Let the modal handle the error
+            throw error; // Let the modal handle the error
     } finally {
       setLessonToDelete(null);
     }

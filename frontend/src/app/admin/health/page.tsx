@@ -115,8 +115,7 @@ export default function SystemHealthPage() {
 
       setLastChecked(new Date());
     } catch (error) {
-      console.error('Failed to fetch health data:', error);
-    } finally {
+          } finally {
       setLoading(false);
       setRefreshing(false);
     }

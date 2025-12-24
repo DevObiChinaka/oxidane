@@ -73,8 +73,7 @@ export default function ProfileSettings() {
         });
       }
     } catch (error) {
-      console.error('Failed to fetch profile:', error);
-      showNotification('error', 'Failed to load profile data');
+            showNotification('error', 'Failed to load profile data');
     } finally {
       setLoading(false);
     }
@@ -111,8 +110,7 @@ export default function ProfileSettings() {
           setFormData(prev => ({ ...prev, email: originalEmail }));
         }
       } catch (error) {
-        console.error('Failed to request email change:', error);
-        showNotification('error', 'An error occurred while requesting email change');
+                showNotification('error', 'An error occurred while requesting email change');
         setFormData(prev => ({ ...prev, email: originalEmail }));
       } finally {
         setOtpSending(false);
@@ -145,8 +143,7 @@ export default function ProfileSettings() {
         showNotification('error', errorData.error || 'Failed to update profile');
       }
     } catch (error) {
-      console.error('Failed to update profile:', error);
-      showNotification('error', 'An error occurred while updating profile');
+            showNotification('error', 'An error occurred while updating profile');
     } finally {
       setSaving(false);
     }
@@ -182,8 +179,7 @@ export default function ProfileSettings() {
         showNotification('error', errorData.error || 'Invalid verification code');
       }
     } catch (error) {
-      console.error('Failed to verify OTP:', error);
-      showNotification('error', 'An error occurred while verifying code');
+            showNotification('error', 'An error occurred while verifying code');
     } finally {
       setOtpVerifying(false);
     }
@@ -217,8 +213,7 @@ export default function ProfileSettings() {
         showNotification('error', errorData.error || 'Failed to send verification code');
       }
     } catch (error) {
-      console.error('Failed to request verification:', error);
-      showNotification('error', 'An error occurred while sending verification code');
+            showNotification('error', 'An error occurred while sending verification code');
     } finally {
       setVerificationSending(false);
     }
@@ -254,8 +249,7 @@ export default function ProfileSettings() {
         showNotification('error', errorData.error || 'Invalid verification code');
       }
     } catch (error) {
-      console.error('Failed to verify email:', error);
-      showNotification('error', 'An error occurred while verifying email');
+            showNotification('error', 'An error occurred while verifying email');
     } finally {
       setVerificationVerifying(false);
     }

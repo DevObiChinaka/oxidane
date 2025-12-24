@@ -84,8 +84,7 @@ export default function EmailTemplatesPage() {
         setCustomTemplates(custom);
       }
     } catch (error) {
-      console.error('Error loading templates:', error);
-      showNotification('error', 'Error', 'Failed to load email templates');
+            showNotification('error', 'Error', 'Failed to load email templates');
     } finally {
       setLoading(false);
     }
@@ -98,8 +97,7 @@ export default function EmailTemplatesPage() {
         setAnalytics(response.analytics);
       }
     } catch (error) {
-      console.error('Error loading analytics:', error);
-    }
+          }
   };
 
   const loadTemplateTypes = async () => {
@@ -109,8 +107,7 @@ export default function EmailTemplatesPage() {
         setTemplateTypes(response.types);
       }
     } catch (error) {
-      console.error('Error loading template types:', error);
-      // Fallback to basic types if API fails
+            // Fallback to basic types if API fails
       setTemplateTypes([
         { value: 'welcome', label: 'Welcome Email', description: 'Welcome new users' },
         { value: 'verification', label: 'Email Verification', description: 'Verify email addresses' },
@@ -128,8 +125,7 @@ export default function EmailTemplatesPage() {
         setEmailLogs(response.logs);
       }
     } catch (error) {
-      console.error('Error loading email logs:', error);
-    } finally {
+          } finally {
       setLogsLoading(false);
     }
   };

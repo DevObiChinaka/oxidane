@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -89,10 +89,8 @@ export default function SystemHealthPage() {
         const healthData = await healthRes.json();
         setHealthStatus(healthData);
       } else {
-        console.error('Health check failed:', healthRes.status, healthRes.statusText);
-        const errorText = await healthRes.text();
-        console.error('Response:', errorText);
-        setHealthStatus({
+                const errorText = await healthRes.text();
+                setHealthStatus({
           status: 'error',
           message: `API returned ${healthRes.status}: ${healthRes.statusText}`,
         });
@@ -108,15 +106,12 @@ export default function SystemHealthPage() {
         const setupData = await setupRes.json();
         setSetupStatus(setupData);
       } else {
-        console.error('Setup status check failed:', setupRes.status, setupRes.statusText);
-        const errorText = await setupRes.text();
-        console.error('Response:', errorText);
-      }
+                const errorText = await setupRes.text();
+              }
 
       setLastUpdate(new Date());
     } catch (error) {
-      console.error('Failed to fetch health data:', error);
-      setHealthStatus({
+            setHealthStatus({
         status: 'error',
         message: 'Failed to connect to API',
       });
@@ -198,7 +193,7 @@ export default function SystemHealthPage() {
           {isHealthy ? 'System Operational' : 'System Error'}
         </span>
         <span className="text-sm text-gray-500">
-          · {healthStatus?.message || 'Status unknown'}
+          � {healthStatus?.message || 'Status unknown'}
         </span>
       </div>
 
@@ -393,7 +388,7 @@ export default function SystemHealthPage() {
                           </span>
                         </div>
                         <p className="text-sm text-gray-800 mb-2">{recommendation.message}</p>
-                        <p className="text-xs text-orange-600 font-medium">→ {recommendation.action}</p>
+                        <p className="text-xs text-orange-600 font-medium">? {recommendation.action}</p>
                       </div>
                     </div>
                   </li>

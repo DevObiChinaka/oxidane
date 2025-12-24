@@ -61,11 +61,7 @@ export default function CourseFormModal({
 
   // Debug logging
   React.useEffect(() => {
-    console.log('[CourseFormModal] Plans Response:', plansResponse);
-    console.log('[CourseFormModal] Plans Loading:', plansLoading);
-    console.log('[CourseFormModal] Plans Error:', plansError);
-    console.log('[CourseFormModal] Pricing Plans:', pricingPlans);
-  }, [plansResponse, plansLoading, plansError, pricingPlans]);
+                  }, [plansResponse, plansLoading, plansError, pricingPlans]);
 
   // Generate slug from title
   const generateSlug = (title: string): string => {
@@ -251,8 +247,7 @@ export default function CourseFormModal({
 
       onClose();
     } catch (error) {
-      console.error('❌ Error submitting course:', error);
-    } finally {
+          } finally {
       setIsSubmitting(false);
     }
   };

@@ -30,8 +30,7 @@ export default function AdminLoginPage() {
           router.push('/admin/dashboard');
         }
       } catch (e) {
-        console.error('Failed to parse user data:', e);
-      }
+              }
     }
   }, [router]);
 
@@ -126,8 +125,7 @@ export default function AdminLoginPage() {
           }
         }
       } catch (error) {
-        console.error('Setup status check failed:', error);
-        // Continue to dashboard if check fails
+                // Continue to dashboard if check fails
       }
       
       // Redirect to admin dashboard

@@ -123,7 +123,6 @@ function CheckoutContent() {
         setPlan(data);
         setCurrency(data.currency || 'NGN');
       } catch (err) {
-        console.error('Error fetching plan:', err);
         router.push('/pricing');
       } finally {
         setLoading(false);
@@ -155,7 +154,7 @@ function CheckoutContent() {
           }
         }
       } catch (err) {
-        console.error('Error fetching payment method:', err);
+        // Silent fail - user can still proceed with new payment
       }
     };
     
@@ -185,7 +184,7 @@ function CheckoutContent() {
           setConflict(null);
         }
       } catch (err) {
-        console.error('Error checking subscription conflict:', err);
+        // If check fails, allow purchase to proceed
         // Don't block checkout if conflict check fails - backend will handle it
       } finally {
         setConflictChecking(false);
@@ -203,7 +202,7 @@ function CheckoutContent() {
         setTelegramVerified(data.telegram_verified);
         setShowTelegramVerification(!data.telegram_verified);
       } catch (err) {
-        console.error('Error checking Telegram status:', err);
+        // If check fails, assume not verified
         // Don't show error to user - Telegram is optional
       }
     };
@@ -318,11 +317,8 @@ function CheckoutContent() {
 
       const data = await response.json();
 
-      console.log('Charge saved card response:', data);
-
       if (data.success) {
         // Payment successful - redirect to success page
-        console.log('Redirecting to success page with reference:', data.reference);
         router.push(`/payment/callback?reference=${data.reference}&status=success`);
       } else {
         // Payment failed

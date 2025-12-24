@@ -1297,52 +1297,80 @@ def process_auto_renewals():
         dict: Summary of renewals processed
     """
     try:
-        logger.info("Processing auto-renewals for subscriptions ending today")
-        
+        from django.core.cache import cache
         from django.utils import timezone
         from datetime import timedelta
         
-        # Get subscriptions that need renewal (expired or expiring soon)
-        # Include subscriptions ending in the past 24 hours to catch any missed renewals
-        now = timezone.now()
-        yesterday = now - timedelta(days=1)
+        # CRITICAL: Use distributed lock to prevent duplicate runs from multiple Beat instances
+        lock_key = 'auto_renewal_lock'
+        lock_timeout = 300  # 5 minutes - task should complete within this time
         
-        renewing_subscriptions = Subscription.objects.filter(
-            status='active',
-            auto_renew=True,
-            end_date__lte=now,  # Already expired or expiring now
-            end_date__gte=yesterday  # Within last 24 hours
-        ).select_related('billing_profile__user', 'plan', 'payment_method')
+        # Try to acquire lock
+        if not cache.add(lock_key, 'locked', lock_timeout):
+            logger.warning("⚠️ Auto-renewal task already running (locked), skipping duplicate execution")
+            return {'success': False, 'error': 'Task already running', 'duplicate_prevented': True}
         
-        total_count = renewing_subscriptions.count()
+        try:
+            logger.info("Processing auto-renewals for subscriptions ending today")
+            
+            # Get subscriptions that need renewal (expired or expiring soon)
+            # Include subscriptions ending in the past 24 hours to catch any missed renewals
+            now = timezone.now()
+            yesterday = now - timedelta(days=1)
+            today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            
+            renewing_subscriptions = Subscription.objects.filter(
+                status='active',
+                auto_renew=True,
+                end_date__lte=now,  # Already expired or expiring now
+                end_date__gte=yesterday  # Within last 24 hours
+            ).select_related('billing_profile__user', 'plan', 'payment_method')
+            
+            # CRITICAL FIX: Exclude subscriptions already processed today
+            # This prevents duplicate charges if task runs multiple times
+            renewing_subscriptions = renewing_subscriptions.exclude(
+                payment__created_at__gte=today_start,  # Already charged today
+                payment__status='success'
+            )
+            
+            total_count = renewing_subscriptions.count()
+            
+            if total_count == 0:
+                logger.info("No subscriptions to auto-renew today")
+                return {'success': True, 'renewals': 0}
+            
+            logger.info(f"Found {total_count} subscriptions to auto-renew")
+            
+            # Process each renewal
+            processed = 0
+            for subscription in renewing_subscriptions:
+                try:
+                    # Queue individual renewal task (async)
+                    process_single_renewal.delay(str(subscription.id))
+                    processed += 1
+                    logger.info(f"Queued auto-renewal for subscription {subscription.id}")
+                except Exception as e:
+                    logger.error(f"Failed to queue renewal for {subscription.id}: {str(e)}")
+            
+            logger.info(f"Queued {processed}/{total_count} auto-renewals")
+            
+            return {
+                'success': True,
+                'renewals': total_count,
+                'queued': processed
+            }
         
-        if total_count == 0:
-            logger.info("No subscriptions to auto-renew today")
-            return {'success': True, 'renewals': 0}
-        
-        logger.info(f"Found {total_count} subscriptions to auto-renew")
-        
-        # Process each renewal
-        processed = 0
-        for subscription in renewing_subscriptions:
-            try:
-                # Queue individual renewal task (async)
-                process_single_renewal.delay(str(subscription.id))
-                processed += 1
-                logger.info(f"Queued auto-renewal for subscription {subscription.id}")
-            except Exception as e:
-                logger.error(f"Failed to queue renewal for {subscription.id}: {str(e)}")
-        
-        logger.info(f"Queued {processed}/{total_count} auto-renewals")
-        
-        return {
-            'success': True,
-            'renewals': total_count,
-            'queued': processed
-        }
+        finally:
+            # Always release lock even on error
+            cache.delete(lock_key)
     
     except Exception as e:
         logger.error(f"Error in process_auto_renewals: {str(e)}", exc_info=True)
+        # Release lock on exception too
+        try:
+            cache.delete(lock_key)
+        except:
+            pass
         return {'success': False, 'error': str(e)}
 
 
@@ -1362,54 +1390,81 @@ def process_single_renewal(self, subscription_id):
         from django.utils import timezone
         from datetime import timedelta
         from subscriptions.payment_service import PaystackService
+        from django.core.cache import cache
         
-        logger.info(f"Processing auto-renewal for subscription {subscription_id}")
+        # CRITICAL: Add idempotency lock to prevent duplicate charges
+        lock_key = f'renewal_lock_{subscription_id}'
+        lock_timeout = 600  # 10 minutes
         
-        # Get subscription
+        if not cache.add(lock_key, 'processing', lock_timeout):
+            logger.warning(f"⚠️ Renewal for {subscription_id} already processing, skipping duplicate")
+            return {'success': False, 'error': 'Already processing', 'duplicate_prevented': True}
+        
         try:
-            subscription = Subscription.objects.select_related(
-                'billing_profile__user',
-                'plan',
-                'payment_method'
-            ).get(id=subscription_id)
-        except Subscription.DoesNotExist:
-            logger.error(f"Subscription {subscription_id} not found")
-            return {'success': False, 'error': 'Subscription not found'}
-        
-        # Verify auto_renew is enabled
-        if not subscription.auto_renew:
-            logger.warning(f"Auto-renew disabled for subscription {subscription_id}")
-            return {'success': False, 'error': 'Auto-renew not enabled'}
-        
-        # Check for payment method
-        if not subscription.payment_method or not subscription.payment_method.is_active:
-            logger.error(f"No active payment method for subscription {subscription_id}")
+            logger.info(f"Processing auto-renewal for subscription {subscription_id}")
             
-            # Disable auto-renew
-            subscription.auto_renew = False
-            subscription.save(update_fields=['auto_renew'])
+            # Get subscription
+            try:
+                subscription = Subscription.objects.select_related(
+                    'billing_profile__user',
+                    'plan',
+                    'payment_method'
+                ).get(id=subscription_id)
+            except Subscription.DoesNotExist:
+                logger.error(f"Subscription {subscription_id} not found")
+                return {'success': False, 'error': 'Subscription not found'}
             
-            # TODO: Send email notification about disabled auto-renewal
+            # CRITICAL: Check if already charged today (prevent duplicate charges)
+            today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            recent_payment = Payment.objects.filter(
+                subscription=subscription,
+                status='success',
+                created_at__gte=today_start,
+                gateway_response__metadata__renewal=True  # Only count renewal payments
+            ).exists()
             
-            return {
-                'success': False,
-                'error': 'No active payment method',
-                'action': 'auto_renew_disabled'
-            }
-        
-        payment_method = subscription.payment_method
-        user = subscription.billing_profile.user
-        auth_code = payment_method.gateway_authorization_code
-        
-        if not auth_code:
-            logger.error(f"Payment method {payment_method.id} has no authorization code")
-            subscription.auto_renew = False
-            subscription.save(update_fields=['auto_renew'])
-            return {
-                'success': False,
-                'error': 'No authorization code',
-                'action': 'auto_renew_disabled'
-            }
+            if recent_payment:
+                logger.warning(f"⚠️ Subscription {subscription_id} already charged today, skipping duplicate")
+                cache.delete(lock_key)  # Release lock
+                return {'success': False, 'error': 'Already charged today', 'duplicate_prevented': True}
+            
+            # Verify auto_renew is enabled
+            if not subscription.auto_renew:
+                logger.warning(f"Auto-renew disabled for subscription {subscription_id}")
+                return {'success': False, 'error': 'Auto-renew not enabled'}
+            
+            # Check for payment method
+            if not subscription.payment_method or not subscription.payment_method.is_active:
+                logger.error(f"No active payment method for subscription {subscription_id}")
+                
+                # Disable auto-renew
+                subscription.auto_renew = False
+                subscription.save(update_fields=['auto_renew'])
+                
+                # TODO: Send email notification about disabled auto-renewal
+                
+                return {
+                    'success': False,
+                    'error': 'No active payment method',
+                    'action': 'auto_renew_disabled'
+                }
+            
+            payment_method = subscription.payment_method
+            user = subscription.billing_profile.user
+            auth_code = payment_method.gateway_authorization_code
+            
+            if not auth_code:
+                logger.error(f"Payment method {payment_method.id} has no authorization code")
+                subscription.auto_renew = False
+                subscription.save(update_fields=['auto_renew'])
+                return {
+                    'success': False,
+                    'error': 'No authorization code',
+                    'action': 'auto_renew_disabled'
+                }
+        finally:
+            # Release lock after processing
+            cache.delete(lock_key)
         
         # Calculate amount using current plan price in user's currency
         # This ensures renewals use current pricing and exchange rates

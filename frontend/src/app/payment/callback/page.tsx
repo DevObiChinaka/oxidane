@@ -36,8 +36,7 @@ function CallbackContent() {
           throw new Error(data.message || 'Payment verification failed');
         }
       } catch (err) {
-        console.error('Verification error:', err);
-        setStatus('failed');
+                setStatus('failed');
         setMessage(err instanceof Error ? err.message : 'Payment verification failed');
         
         // Redirect to failed page after 2 seconds
