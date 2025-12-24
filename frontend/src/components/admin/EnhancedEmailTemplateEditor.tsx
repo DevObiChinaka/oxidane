@@ -1,4 +1,4 @@
-'use client';
+ï»¿'use client';
 
 import { useState, useEffect } from 'react';
 import { adminAPI } from '../../app/admin/utils/api';
@@ -38,10 +38,10 @@ const TEMPLATE_DESIGNS = {
       
       <div class="features">
         <h3 style="margin: 0 0 15px; color: #1F2937;">What's waiting for you:</h3>
-        <div class="feature-item"><span class="checkmark">•</span> <span>Expert-led forex trading courses</span></div>
-        <div class="feature-item"><span class="checkmark">•</span> <span>Real-time market analysis and insights</span></div>
-        <div class="feature-item"><span class="checkmark">•</span> <span>Interactive trading simulators</span></div>
-        <div class="feature-item"><span class="checkmark">•</span> <span>24/7 community support</span></div>
+        <div class="feature-item"><span class="checkmark">â€¢</span> <span>Expert-led forex trading courses</span></div>
+        <div class="feature-item"><span class="checkmark">â€¢</span> <span>Real-time market analysis and insights</span></div>
+        <div class="feature-item"><span class="checkmark">â€¢</span> <span>Interactive trading simulators</span></div>
+        <div class="feature-item"><span class="checkmark">â€¢</span> <span>24/7 community support</span></div>
       </div>
 
       <p style="font-size: 16px; line-height: 1.6; color: #374151;">Ready to start your forex mastery journey?</p>
@@ -50,7 +50,7 @@ const TEMPLATE_DESIGNS = {
       <p style="font-size: 16px; line-height: 1.6; color: #374151;">Welcome aboard!<br><strong>The OxiWorld Team</strong></p>
     </div>
     <div class="footer">
-      <p style="margin: 0;">© 2025 OxiWorld. All rights reserved.</p>
+      <p style="margin: 0;">Â© 2025 OxiWorld. All rights reserved.</p>
       <p style="margin: 10px 0 0; font-size: 12px;">You're receiving this because you created an account with us.</p>
     </div>
   </div>
@@ -64,10 +64,10 @@ Welcome to OxiWorld!
 Your account has been successfully created and you're ready to start your forex trading journey.
 
 What's waiting for you:
-• Expert-led forex trading courses
-• Real-time market analysis and insights  
-• Interactive trading simulators
-• 24/7 community support
+â€¢ Expert-led forex trading courses
+â€¢ Real-time market analysis and insights  
+â€¢ Interactive trading simulators
+â€¢ 24/7 community support
 
 Get started: {{custom.dashboard_url}}
 
@@ -76,7 +76,7 @@ Need help? Our support team is here to assist you every step of the way.
 Welcome aboard!
 The OxiWorld Team
 
-© 2025 OxiWorld. All rights reserved.`
+Â© 2025 OxiWorld. All rights reserved.`
   },
 
   verification: {
@@ -129,7 +129,7 @@ The OxiWorld Team
       <p style="font-size: 16px; line-height: 1.6; color: #374151;">Best regards,<br><strong>The OxiWorld Security Team</strong></p>
     </div>
     <div class="footer">
-      <p style="margin: 0;">© 2025 OxiWorld. All rights reserved.</p>
+      <p style="margin: 0;">Â© 2025 OxiWorld. All rights reserved.</p>
       <p style="margin: 10px 0 0; font-size: 12px;">If you didn't create an account with us, please ignore this email.</p>
     </div>
   </div>
@@ -143,9 +143,9 @@ The OxiWorld Team
 To complete your OxiWorld account setup and ensure security, please verify your email address.
 
 Why verify your email?
-• Secure account recovery options
-• Important trading alerts and notifications
-• Account security confirmations
+â€¢ Secure account recovery options
+â€¢ Important trading alerts and notifications
+â€¢ Account security confirmations
 
 Verify your email: {{custom.verification_url}}
 
@@ -154,7 +154,7 @@ Verify your email: {{custom.verification_url}}
 Best regards,
 The OxiWorld Security Team
 
-© 2025 OxiWorld. All rights reserved.
+Â© 2025 OxiWorld. All rights reserved.
 If you didn't create an account with us, please ignore this email.`
   },
 
@@ -207,7 +207,7 @@ If you didn't create an account with us, please ignore this email.`
       <p style="font-size: 16px; line-height: 1.6; color: #374151;">Stay secure,<br><strong>The OxiWorld Security Team</strong></p>
     </div>
     <div class="footer">
-      <p style="margin: 0;">© 2025 OxiWorld. All rights reserved.</p>
+      <p style="margin: 0;">Â© 2025 OxiWorld. All rights reserved.</p>
       <p style="margin: 10px 0 0; font-size: 12px;">This is an automated security email. Please do not reply.</p>
     </div>
   </div>
@@ -223,16 +223,16 @@ We received a request to reset your OxiWorld account password. If you made this 
 Reset your password: {{custom.reset_url}}
 
 Security Notice:
-• This reset link expires in 1 hour for your security
-• Only use this link if you requested the password reset  
-• Never share this link with anyone
+â€¢ This reset link expires in 1 hour for your security
+â€¢ Only use this link if you requested the password reset  
+â€¢ Never share this link with anyone
 
 Didn't request this? If you didn't request a password reset, please ignore this email or contact our security team immediately.
 
 Stay secure,
 The OxiWorld Security Team
 
-© 2025 OxiWorld. All rights reserved.`
+Â© 2025 OxiWorld. All rights reserved.`
   },
 
   notification: {
@@ -277,7 +277,7 @@ The OxiWorld Security Team
       <p style="font-size: 16px; line-height: 1.6; color: #374151;">Best regards,<br><strong>The OxiWorld Team</strong></p>
     </div>
     <div class="footer">
-      <p style="margin: 0;">© 2025 OxiWorld. All rights reserved.</p>
+      <p style="margin: 0;">Â© 2025 OxiWorld. All rights reserved.</p>
       <p style="margin: 10px 0 0; font-size: 12px;">You're receiving this because of your account settings preferences.</p>
     </div>
   </div>
@@ -301,7 +301,7 @@ If you have any questions, please contact our support team.
 Best regards,
 The OxiWorld Team
 
-© 2025 OxiWorld. All rights reserved.`
+Â© 2025 OxiWorld. All rights reserved.`
   },
 
   marketing: {
@@ -387,7 +387,7 @@ The OxiWorld Team
       <p style="font-size: 16px; line-height: 1.6; color: #374151;">To your trading success,<br><strong>The OxiWorld Team</strong></p>
     </div>
     <div class="footer">
-      <p style="margin: 0;">© 2025 OxiWorld. All rights reserved.</p>
+      <p style="margin: 0;">Â© 2025 OxiWorld. All rights reserved.</p>
       <p style="margin: 10px 0 0; font-size: 12px;"><a href="{{custom.unsubscribe_url}}" style="color: #64748B;">Unsubscribe</a> | <a href="{{custom.preferences_url}}" style="color: #64748B;">Manage Preferences</a></p>
     </div>
   </div>
@@ -401,9 +401,9 @@ The OxiWorld Team
 Ready to take your forex trading to the next level? Join thousands of successful traders who've transformed their financial future with OxiWorld.
 
 OxiWorld Success Stories:
-• 95% Success Rate
-• 10K+ Active Traders  
-• $2M+ Profits Made
+â€¢ 95% Success Rate
+â€¢ 10K+ Active Traders  
+â€¢ $2M+ Profits Made
 
 What you get:
  Expert Courses - Comprehensive trading education
@@ -421,7 +421,7 @@ Join the ranks of successful traders today. Your financial freedom is just one c
 To your trading success,
 The OxiWorld Team
 
-© 2025 OxiWorld. All rights reserved.
+Â© 2025 OxiWorld. All rights reserved.
 Unsubscribe: {{custom.unsubscribe_url}}`
   },
 
@@ -461,38 +461,38 @@ Unsubscribe: {{custom.unsubscribe_url}}`
         <h3 style="margin: 0 0 15px; color: #1F2937;"> This Week's Performance</h3>
         <div class="data-row">
           <span style="font-weight: 600;">EUR/USD</span>
-          <span style="color: #10B981;">+0.85% ?</span>
+          <span style="color: #10B981;">+0.85% â†—</span>
         </div>
         <div class="data-row">
           <span style="font-weight: 600;">GBP/USD</span>
-          <span style="color: #EF4444;">-0.32% ?</span>
+          <span style="color: #EF4444;">-0.32% â†˜</span>
         </div>
         <div class="data-row">
           <span style="font-weight: 600;">USD/JPY</span>
-          <span style="color: #10B981;">+1.12% ?</span>
+          <span style="color: #10B981;">+1.12% â†—</span>
         </div>
         <div class="data-row" style="border-bottom: none;">
           <span style="font-weight: 600;">Gold (XAU/USD)</span>
-          <span style="color: #10B981;">+2.45% ?</span>
+          <span style="color: #10B981;">+2.45% â†—</span>
         </div>
       </div>
 
       <div class="article-card">
         <h3 class="article-title"> Trade Opportunity: EUR/USD Breakout</h3>
         <p class="article-summary">The EUR/USD pair has shown strong bullish momentum this week, breaking through key resistance levels. Our technical analysis suggests potential for further upside movement.</p>
-        <a href="{{newsletter.article_1_url}}" class="read-more">Read Full Analysis ?</a>
+        <a href="{{newsletter.article_1_url}}" class="read-more">Read Full Analysis â†’</a>
       </div>
 
       <div class="article-card">
         <h3 class="article-title"> Strategy Spotlight: Risk Management</h3>
         <p class="article-summary">This week we dive deep into advanced risk management techniques that can protect your capital while maximizing profit potential in volatile markets.</p>
-        <a href="{{newsletter.article_2_url}}" class="read-more">Learn More ?</a>
+        <a href="{{newsletter.article_2_url}}" class="read-more">Learn More â†’</a>
       </div>
 
       <div class="article-card">
         <h3 class="article-title"> Next Week's Calendar</h3>
         <p class="article-summary">Key economic events to watch: Federal Reserve minutes, ECB policy decision, and non-farm payrolls. Get prepared with our event impact analysis.</p>
-        <a href="{{newsletter.calendar_url}}" class="read-more">View Calendar ?</a>
+        <a href="{{newsletter.calendar_url}}" class="read-more">View Calendar â†’</a>
       </div>
 
       <div style="background: #EDE9FE; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
@@ -504,7 +504,7 @@ Unsubscribe: {{custom.unsubscribe_url}}`
       <p style="font-size: 16px; line-height: 1.6; color: #374151;">Happy trading,<br><strong>The OxiWorld Research Team</strong></p>
     </div>
     <div class="footer">
-      <p style="margin: 0;">© 2025 OxiWorld. All rights reserved.</p>
+      <p style="margin: 0;">Â© 2025 OxiWorld. All rights reserved.</p>
       <p style="margin: 10px 0 0; font-size: 12px;"><a href="{{custom.unsubscribe_url}}" style="color: #64748B;">Unsubscribe</a> | <a href="{{custom.preferences_url}}" style="color: #64748B;">Manage Preferences</a></p>
     </div>
   </div>
@@ -518,10 +518,10 @@ Unsubscribe: {{custom.unsubscribe_url}}`
 Welcome to your weekly dose of market intelligence. Here are the key insights from this week's trading sessions.
 
  This Week's Performance:
-• EUR/USD: +0.85% ?
-• GBP/USD: -0.32% ?  
-• USD/JPY: +1.12% ?
-• Gold (XAU/USD): +2.45% ?
+â€¢ EUR/USD: +0.85% â†—
+â€¢ GBP/USD: -0.32% â†˜  
+â€¢ USD/JPY: +1.12% â†—
+â€¢ Gold (XAU/USD): +2.45% â†—
 
  Trade Opportunity: EUR/USD Breakout
 The EUR/USD pair has shown strong bullish momentum, breaking through key resistance levels.
@@ -541,7 +541,7 @@ Upgrade: {{custom.upgrade_url}}
 Happy trading,
 The OxiWorld Research Team
 
-© 2025 OxiWorld. All rights reserved.`
+Â© 2025 OxiWorld. All rights reserved.`
   },
 
   reminder: {
@@ -604,7 +604,7 @@ The OxiWorld Research Team
       <p style="font-size: 16px; line-height: 1.6; color: #374151;">We're rooting for your success,<br><strong>The OxiWorld Team</strong></p>
     </div>
     <div class="footer">
-      <p style="margin: 0;">© 2025 OxiWorld. All rights reserved.</p>
+      <p style="margin: 0;">Â© 2025 OxiWorld. All rights reserved.</p>
       <p style="margin: 10px 0 0; font-size: 12px;">Too many emails? <a href="{{custom.preferences_url}}" style="color: #64748B;">Update your preferences</a></p>
     </div>
   </div>
@@ -618,16 +618,16 @@ The OxiWorld Research Team
 We noticed you haven't been active on OxiWorld recently. Your trading education journey is important to us!
 
  Your Current Progress:
-• Course completion: {{user.course_progress}}%
-• Last login: {{user.last_login_date}}  
-• Trading level: {{user.trading_level}}
+â€¢ Course completion: {{user.course_progress}}%
+â€¢ Last login: {{user.last_login_date}}  
+â€¢ Trading level: {{user.trading_level}}
 
  Ready to Continue?
 Pick up where you left off:
-• Complete your next lesson
-• Check out new market analysis
-• Practice with trading simulators
-• Join live community discussions
+â€¢ Complete your next lesson
+â€¢ Check out new market analysis
+â€¢ Practice with trading simulators
+â€¢ Join live community discussions
 
 Continue Learning: {{custom.dashboard_url}}
 
@@ -638,7 +638,7 @@ Remember, consistent learning is the key to trading success. Even 10 minutes a d
 We're rooting for your success,
 The OxiWorld Team
 
-© 2025 OxiWorld. All rights reserved.`
+Â© 2025 OxiWorld. All rights reserved.`
   },
 
   support: {
@@ -715,7 +715,7 @@ The OxiWorld Team
       <p style="font-size: 16px; line-height: 1.6; color: #374151;">Here to help,<br><strong>The OxiWorld Support Team</strong></p>
     </div>
     <div class="footer">
-      <p style="margin: 0;">© 2025 OxiWorld. All rights reserved.</p>
+      <p style="margin: 0;">Â© 2025 OxiWorld. All rights reserved.</p>
       <p style="margin: 10px 0 0; font-size: 12px;">Support available 24/7 | <a href="{{custom.help_url}}" style="color: #64748B;">Help Center</a></p>
     </div>
   </div>
@@ -729,10 +729,10 @@ The OxiWorld Team
 {{support.message}}
 
  Ticket Information:
-• Ticket ID: {{support.ticket_id}}
-• Subject: {{support.subject}}
-• Status: {{support.status}}
-• Priority: {{support.priority}}
+â€¢ Ticket ID: {{support.ticket_id}}
+â€¢ Subject: {{support.subject}}
+â€¢ Status: {{support.status}}
+â€¢ Priority: {{support.priority}}
 
 Support Options:
  Live Chat - Instant support 24/7
@@ -749,7 +749,7 @@ Our support team is dedicated to helping you succeed!
 Here to help,
 The OxiWorld Support Team
 
-© 2025 OxiWorld. All rights reserved.`
+Â© 2025 OxiWorld. All rights reserved.`
   },
 
   subscription_success: {
@@ -814,7 +814,7 @@ The OxiWorld Support Team
       <p style="font-size: 16px; line-height: 1.6; color: #374151;">Welcome to the next level,<br><strong>The OxiWorld Team</strong></p>
     </div>
     <div class="footer">
-      <p style="margin: 0;">© 2025 OxiWorld. All rights reserved.</p>
+      <p style="margin: 0;">Â© 2025 OxiWorld. All rights reserved.</p>
       <p style="margin: 10px 0 0; font-size: 12px;">Questions about your subscription? <a href="{{custom.support_url}}" style="color: #64748B;">Contact Support</a></p>
     </div>
   </div>
@@ -830,10 +830,10 @@ Congratulations! Your subscription payment has been successfully processed and y
 Amount Paid: {{subscription.currency}} {{subscription.amount_paid}}
 
  Subscription Details:
-• Plan: {{subscription.plan_type}} Subscription
-• Billing Cycle: {{subscription.billing_cycle}}
-• Next Billing: {{subscription.next_billing_date}}
-• Payment Method: {{subscription.payment_method}}
+â€¢ Plan: {{subscription.plan_type}} Subscription
+â€¢ Billing Cycle: {{subscription.billing_cycle}}
+â€¢ Next Billing: {{subscription.next_billing_date}}
+â€¢ Payment Method: {{subscription.payment_method}}
 
  Your Premium Benefits:
  Access to all premium courses and content
@@ -852,7 +852,7 @@ Thank you for choosing OxiWorld Premium. We're excited to support your trading s
 Welcome to the next level,
 The OxiWorld Team
 
-© 2025 OxiWorld. All rights reserved.`
+Â© 2025 OxiWorld. All rights reserved.`
   },
 
   payment_failed: {
@@ -916,7 +916,7 @@ The OxiWorld Team
       <p style="font-size: 16px; line-height: 1.6; color: #374151;">Here to help,<br><strong>The OxiWorld Billing Team</strong></p>
     </div>
     <div class="footer">
-      <p style="margin: 0;">© 2025 OxiWorld. All rights reserved.</p>
+      <p style="margin: 0;">Â© 2025 OxiWorld. All rights reserved.</p>
       <p style="margin: 10px 0 0; font-size: 12px;">Questions about billing? <a href="{{custom.billing_support_url}}" style="color: #64748B;">Contact Billing Support</a></p>
     </div>
   </div>
@@ -930,20 +930,20 @@ The OxiWorld Team
 We were unable to process your recent payment for your OxiWorld subscription. Please update your payment method to continue your access.
 
  Payment Details:
-• Amount: {{subscription.currency}} {{subscription.amount_due}}
-• Plan: {{subscription.plan_type}} Subscription
-• Attempt Date: {{payment.failed_date}}
-• Reason: {{payment.failure_reason}}
+â€¢ Amount: {{subscription.currency}} {{subscription.amount_due}}
+â€¢ Plan: {{subscription.plan_type}} Subscription
+â€¢ Attempt Date: {{payment.failed_date}}
+â€¢ Reason: {{payment.failure_reason}}
 
  Time Sensitive: Please update your payment method within 7 days to avoid service interruption.
 
 Update Payment Method: {{custom.payment_url}}
 
  Common Solutions:
-• Verify your card details and expiration date
-• Ensure sufficient funds are available
-• Check with your bank for any restrictions
-• Try a different payment method
+â€¢ Verify your card details and expiration date
+â€¢ Ensure sufficient funds are available
+â€¢ Check with your bank for any restrictions
+â€¢ Try a different payment method
 
 Still having issues? Contact our support team: {{custom.support_url}}
 
@@ -952,7 +952,7 @@ We appreciate your prompt attention and look forward to continuing your trading 
 Here to help,
 The OxiWorld Billing Team
 
-© 2025 OxiWorld. All rights reserved.`
+Â© 2025 OxiWorld. All rights reserved.`
   },
 
   subscription_expiry: {
@@ -1008,7 +1008,7 @@ The OxiWorld Billing Team
       <p style="font-size: 16px; line-height: 1.6; color: #374151;">To your continued success,<br><strong>The OxiWorld Team</strong></p>
     </div>
     <div class="footer">
-      <p style="margin: 0;">© 2025 OxiWorld. All rights reserved.</p>
+      <p style="margin: 0;">Â© 2025 OxiWorld. All rights reserved.</p>
       <p style="margin: 10px 0 0; font-size: 12px;">Questions? <a href="{{custom.support_url}}" style="color: #64748B;">Contact Support</a></p>
     </div>
   </div>
@@ -1022,11 +1022,11 @@ The OxiWorld Billing Team
 Your {{subscription.plan_type}} subscription is about to expire in {{subscription.days_remaining}} days.
 
  What you'll lose access to:
-• Premium trading courses and advanced strategies
-• Daily market analysis and profitable signals
-• Live trading sessions with expert traders
-• Priority customer support
-• Exclusive community discussions
+â€¢ Premium trading courses and advanced strategies
+â€¢ Daily market analysis and profitable signals
+â€¢ Live trading sessions with expert traders
+â€¢ Priority customer support
+â€¢ Exclusive community discussions
 
  Renew now and continue your trading success!
 
@@ -1037,7 +1037,7 @@ Don't let this opportunity slip away. Keep growing your trading expertise!
 To your continued success,
 The OxiWorld Team
 
-© 2025 OxiWorld. All rights reserved.`
+Â© 2025 OxiWorld. All rights reserved.`
   },
 
   subscription_renewal: {
@@ -1093,7 +1093,7 @@ The OxiWorld Team
       <p style="font-size: 16px; line-height: 1.6; color: #374151;">Happy trading,<br><strong>The OxiWorld Team</strong></p>
     </div>
     <div class="footer">
-      <p style="margin: 0;">© 2025 OxiWorld. All rights reserved.</p>
+      <p style="margin: 0;">Â© 2025 OxiWorld. All rights reserved.</p>
       <p style="margin: 10px 0 0; font-size: 12px;">Manage your subscription: <a href="{{custom.billing_url}}" style="color: #64748B;">Billing Settings</a></p>
     </div>
   </div>
@@ -1107,16 +1107,16 @@ The OxiWorld Team
 Your {{subscription.plan_type}} subscription has been successfully renewed. Your premium access continues without interruption.
 
  Renewal Details:
-• Plan: {{subscription.plan_type}} Premium
-• Renewal Date: {{subscription.renewal_date}}
-• Next Billing: {{subscription.next_billing_date}}
-• Amount: {{subscription.currency}} {{subscription.amount}}
+â€¢ Plan: {{subscription.plan_type}} Premium
+â€¢ Renewal Date: {{subscription.renewal_date}}
+â€¢ Next Billing: {{subscription.next_billing_date}}
+â€¢ Amount: {{subscription.currency}} {{subscription.amount}}
 
  What's New This Month:
-• Advanced risk management calculator
-• New EUR/USD trading strategy course
-• Enhanced mobile trading app features
-• Weekly live Q&A sessions with pro traders
+â€¢ Advanced risk management calculator
+â€¢ New EUR/USD trading strategy course
+â€¢ Enhanced mobile trading app features
+â€¢ Weekly live Q&A sessions with pro traders
 
 Access Your Premium Dashboard: {{custom.dashboard_url}}
 
@@ -1125,7 +1125,7 @@ Thank you for continuing your journey with OxiWorld!
 Happy trading,
 The OxiWorld Team
 
-© 2025 OxiWorld. All rights reserved.`
+Â© 2025 OxiWorld. All rights reserved.`
   },
 
   payment_success: {
@@ -1178,7 +1178,7 @@ The OxiWorld Team
       <p style="font-size: 16px; line-height: 1.6; color: #374151;">Thank you for choosing OxiWorld,<br><strong>The OxiWorld Billing Team</strong></p>
     </div>
     <div class="footer">
-      <p style="margin: 0;">© 2025 OxiWorld. All rights reserved.</p>
+      <p style="margin: 0;">Â© 2025 OxiWorld. All rights reserved.</p>
       <p style="margin: 10px 0 0; font-size: 12px;">Questions about billing? <a href="{{custom.billing_support_url}}" style="color: #64748B;">Contact Support</a></p>
     </div>
   </div>
@@ -1194,11 +1194,11 @@ Your payment has been processed successfully. Thank you for your purchase!
 Amount: {{payment.currency}} {{payment.amount}}
 
  Transaction Details:
-• Transaction ID: {{payment.transaction_id}}
-• Date: {{payment.date}}
-• Payment Method: {{payment.method}}
-• Description: {{payment.description}}
-• Status: Completed
+â€¢ Transaction ID: {{payment.transaction_id}}
+â€¢ Date: {{payment.date}}
+â€¢ Payment Method: {{payment.method}}
+â€¢ Description: {{payment.description}}
+â€¢ Status: Completed
 
  Receipt: A detailed receipt has been sent to your email and is available in your account dashboard.
 
@@ -1209,7 +1209,7 @@ If you have any questions about this transaction, please contact our support tea
 Thank you for choosing OxiWorld,
 The OxiWorld Billing Team
 
-© 2025 OxiWorld. All rights reserved.`
+Â© 2025 OxiWorld. All rights reserved.`
   },
 
   payment_refunded: {
@@ -1269,7 +1269,7 @@ The OxiWorld Billing Team
       <p style="font-size: 16px; line-height: 1.6; color: #374151;">Thank you for your patience,<br><strong>The OxiWorld Billing Team</strong></p>
     </div>
     <div class="footer">
-      <p style="margin: 0;">© 2025 OxiWorld. All rights reserved.</p>
+      <p style="margin: 0;">Â© 2025 OxiWorld. All rights reserved.</p>
       <p style="margin: 10px 0 0; font-size: 12px;">Questions about your refund? <a href="{{custom.billing_support_url}}" style="color: #64748B;">Contact Support</a></p>
     </div>
   </div>
@@ -1285,16 +1285,16 @@ Your refund request has been processed successfully. The refunded amount will be
 Refund Amount: {{refund.currency}} {{refund.amount}}
 
  Refund Details:
-• Refund ID: {{refund.refund_id}}
-• Original Transaction: {{refund.original_transaction_id}}
-• Refund Date: {{refund.processed_date}}
-• Reason: {{refund.reason}}
-• Refund Method: {{refund.method}}
+â€¢ Refund ID: {{refund.refund_id}}
+â€¢ Original Transaction: {{refund.original_transaction_id}}
+â€¢ Refund Date: {{refund.processed_date}}
+â€¢ Reason: {{refund.reason}}
+â€¢ Refund Method: {{refund.method}}
 
  Processing Timeline:
-• Credit/Debit Cards: 3-5 business days
-• PayPal: 1-2 business days
-• Bank Transfer: 5-7 business days
+â€¢ Credit/Debit Cards: 3-5 business days
+â€¢ PayPal: 1-2 business days
+â€¢ Bank Transfer: 5-7 business days
 
  Track Status: You can track your refund status in your account dashboard or contact support for updates.
 
@@ -1303,7 +1303,7 @@ If you don't see the refund within the expected timeframe, please contact our su
 Thank you for your patience,
 The OxiWorld Billing Team
 
-© 2025 OxiWorld. All rights reserved.`
+Â© 2025 OxiWorld. All rights reserved.`
   },
 
   telegram_added: {
@@ -1357,7 +1357,7 @@ The OxiWorld Billing Team
       <p style="font-size: 16px; line-height: 1.6; color: #374151;">Welcome to the community!<br><strong>The OxiWorld Community Team</strong></p>
     </div>
     <div class="footer">
-      <p style="margin: 0;">© 2025 OxiWorld. All rights reserved.</p>
+      <p style="margin: 0;">Â© 2025 OxiWorld. All rights reserved.</p>
       <p style="margin: 10px 0 0; font-size: 12px;">Having issues? <a href="{{custom.support_url}}" style="color: #64748B;">Contact Support</a></p>
     </div>
   </div>
@@ -1387,7 +1387,7 @@ If you have trouble joining, make sure you have Telegram installed and try the l
 Welcome to the community!
 The OxiWorld Community Team
 
-© 2025 OxiWorld. All rights reserved.`
+Â© 2025 OxiWorld. All rights reserved.`
   },
 
   telegram_removed: {
@@ -1434,7 +1434,7 @@ The OxiWorld Community Team
       <p style="font-size: 16px; line-height: 1.6; color: #374151;">Best regards,<br><strong>The OxiWorld Community Team</strong></p>
     </div>
     <div class="footer">
-      <p style="margin: 0;">© 2025 OxiWorld. All rights reserved.</p>
+      <p style="margin: 0;">Â© 2025 OxiWorld. All rights reserved.</p>
       <p style="margin: 10px 0 0; font-size: 12px;">Questions? <a href="{{custom.support_url}}" style="color: #64748B;">Contact Support</a></p>
     </div>
   </div>
@@ -1459,7 +1459,7 @@ If you believe this was done in error or have questions, please contact our supp
 Best regards,
 The OxiWorld Community Team
 
-© 2025 OxiWorld. All rights reserved.`
+Â© 2025 OxiWorld. All rights reserved.`
   },
 
   signin_notification: {
@@ -1518,7 +1518,7 @@ The OxiWorld Community Team
       <p style="font-size: 16px; line-height: 1.6; color: #374151;">Stay secure,<br><strong>The OxiWorld Security Team</strong></p>
     </div>
     <div class="footer">
-      <p style="margin: 0;">© 2025 OxiWorld. All rights reserved.</p>
+      <p style="margin: 0;">Â© 2025 OxiWorld. All rights reserved.</p>
       <p style="margin: 10px 0 0; font-size: 12px;">Security questions? <a href="{{custom.security_support_url}}" style="color: #64748B;">Contact Security Team</a></p>
     </div>
   </div>
@@ -1532,10 +1532,10 @@ The OxiWorld Community Team
 We detected a new sign-in to your OxiWorld account. If this was you, no action is needed.
 
  Sign-in Details:
-• Date & Time: {{signin.datetime}}
-• Device: {{signin.device}}
-• Browser: {{signin.browser}}
-• IP Address: {{signin.ip_address}}
+â€¢ Date & Time: {{signin.datetime}}
+â€¢ Device: {{signin.device}}
+â€¢ Browser: {{signin.browser}}
+â€¢ IP Address: {{signin.ip_address}}
 
  Approximate Location: {{signin.location}}
 
@@ -1548,7 +1548,7 @@ Secure My Account: {{custom.security_url}}
 Stay secure,
 The OxiWorld Security Team
 
-© 2025 OxiWorld. All rights reserved.`
+Â© 2025 OxiWorld. All rights reserved.`
   },
 
   email_verification: {
@@ -1601,7 +1601,7 @@ The OxiWorld Security Team
       <p style="font-size: 16px; line-height: 1.6; color: #374151;">Best regards,<br><strong>The OxiWorld Security Team</strong></p>
     </div>
     <div class="footer">
-      <p style="margin: 0;">© 2025 OxiWorld. All rights reserved.</p>
+      <p style="margin: 0;">Â© 2025 OxiWorld. All rights reserved.</p>
       <p style="margin: 10px 0 0; font-size: 12px;">If you didn't create an account with us, please ignore this email.</p>
     </div>
   </div>
@@ -1615,9 +1615,9 @@ The OxiWorld Security Team
 To complete your OxiWorld account setup and ensure security, please verify your email address.
 
 Why verify your email?
-• Secure account recovery options
-• Important trading alerts and notifications
-• Account security confirmations
+â€¢ Secure account recovery options
+â€¢ Important trading alerts and notifications
+â€¢ Account security confirmations
 
 Verify your email: {{custom.verification_url}}
 
@@ -1626,7 +1626,7 @@ Verify your email: {{custom.verification_url}}
 Best regards,
 The OxiWorld Security Team
 
-© 2025 OxiWorld. All rights reserved.
+Â© 2025 OxiWorld. All rights reserved.
 If you didn't create an account with us, please ignore this email.`
   },
 
@@ -1671,7 +1671,7 @@ If you didn't create an account with us, please ignore this email.`
       <p style="font-size: 16px; line-height: 1.6; color: #374151;">{{custom.signature}}<br><strong>{{custom.sender_name}}</strong></p>
     </div>
     <div class="footer">
-      <p style="margin: 0;">© 2025 OxiWorld. All rights reserved.</p>
+      <p style="margin: 0;">Â© 2025 OxiWorld. All rights reserved.</p>
       <p style="margin: 10px 0 0; font-size: 12px;">{{custom.footer_text}}</p>
     </div>
   </div>
@@ -1696,7 +1696,7 @@ If you didn't create an account with us, please ignore this email.`
 {{custom.signature}}
 {{custom.sender_name}}
 
-© 2025 OxiWorld. All rights reserved.`
+Â© 2025 OxiWorld. All rights reserved.`
   }
 };
 
@@ -2011,7 +2011,8 @@ export default function EnhancedEmailTemplateEditor({
         });
         
         if (!tempTemplate.success) {
-                    return;
+          console.error('Failed to create temp template for preview');
+          return;
         }
         
         templateId = tempTemplate.template.id;
@@ -2047,7 +2048,8 @@ export default function EnhancedEmailTemplateEditor({
         await adminAPI.deleteEmailTemplate(templateId);
       }
     } catch (error) {
-          }
+      console.error('Failed to generate preview:', error);
+    }
   };
 
   const validateForm = () => {
@@ -2097,7 +2099,8 @@ export default function EnhancedEmailTemplateEditor({
         from_name: formData.from_name,
       };
       
-            
+      console.log('ðŸ’¾ Saving template with clean data:', cleanData);
+      
       if (template?.id) {
         // Update existing template
         response = await adminAPI.updateEmailTemplate(template.id, cleanData);
@@ -2113,7 +2116,8 @@ export default function EnhancedEmailTemplateEditor({
         setErrors({ general: response.error || 'Failed to save template' });
       }
     } catch (error) {
-            setErrors({ general: error instanceof Error ? error.message : 'Failed to save template' });
+      console.error('Failed to save template:', error);
+      setErrors({ general: error instanceof Error ? error.message : 'Failed to save template' });
     } finally {
       setSaving(false);
     }
