@@ -5,6 +5,7 @@ import Features from './components/Features';
 import FounderBio from './components/FounderBio';
 import TestimonialsCredibility from './components/TestimonialsCredibility';
 import Footer from './components/Footer';
+import WhatsAppSupport from './components/WhatsAppSupport';
 
 export default function Home() {
   return (
@@ -18,6 +19,7 @@ export default function Home() {
       <FounderBio />
       <TestimonialsCredibility />
       <Footer />
+      <WhatsAppSupport />
     </div>
   );
 }
