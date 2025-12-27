@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { LifebuoyIcon } from '@heroicons/react/24/solid';
 
 export default function WhatsAppSupport() {
   const [isHovered, setIsHovered] = useState(false);
@@ -45,28 +46,8 @@ export default function WhatsAppSupport() {
         {/* Pulse animation ring */}
         <div className="absolute inset-0 rounded-full bg-[#00B39F] animate-ping opacity-25"></div>
         
-        {/* Customer Support Icon - Person with Headset & Mic */}
-        <svg
-          className="w-6 h-6 text-white relative z-10"
-          fill="currentColor"
-          viewBox="0 0 24 24"
-        >
-          {/* Head/Face outline */}
-          <path d="M12 2C9.24 2 7 4.24 7 7v3c0 2.76 2.24 5 5 5s5-2.24 5-5V7c0-2.76-2.24-5-5-5z" fillOpacity="0"/>
-          <path d="M12 2C9.24 2 7 4.24 7 7v4c0 2.76 2.24 5 5 5s5-2.24 5-5V7c0-2.76-2.24-5-5-5zm0 12c-1.66 0-3-1.34-3-3V7c0-1.66 1.34-3 3-3s3 1.34 3 3v4c0 1.66-1.34 3-3 3z"/>
-          {/* Hair */}
-          <path d="M7 7c0-2.76 2.24-5 5-5s5 2.24 5 5v1c0-2.21-1.79-4-4-4h-2c-2.21 0-4 1.79-4 4V7z"/>
-          {/* Headset band */}
-          <path d="M4 11c0-4.42 3.58-8 8-8s8 3.58 8 8" fill="none" stroke="currentColor" strokeWidth="2"/>
-          {/* Left earpiece */}
-          <rect x="2" y="10" width="3" height="5" rx="1"/>
-          {/* Right earpiece */}
-          <rect x="19" y="10" width="3" height="5" rx="1"/>
-          {/* Microphone arm */}
-          <path d="M19 15c0 1.1-.9 2-2 2h-3" fill="none" stroke="currentColor" strokeWidth="1.5"/>
-          {/* Microphone */}
-          <circle cx="13" cy="17" r="2"/>
-        </svg>
+        {/* Support Icon from Heroicons */}
+        <LifebuoyIcon className="w-6 h-6 text-white relative z-10" />
       </div>
     </a>
   );
