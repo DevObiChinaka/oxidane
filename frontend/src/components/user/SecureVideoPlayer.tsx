@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { API_ENDPOINTS } from '@/config/api';
 
 interface SecureVideoPlayerProps {
@@ -11,6 +11,25 @@ interface SecureVideoPlayerProps {
   className?: string;
   preloadedEmbed?: string;  // Pre-loaded embed HTML from cache
   isPreloading?: boolean;   // Whether embeds are still being pre-loaded
+}
+
+// Hook to detect mobile devices
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768 || 
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      setIsMobile(mobile);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  return isMobile;
 }
 
 export default function SecureVideoPlayer({
@@ -24,7 +43,86 @@ export default function SecureVideoPlayer({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [embedHtml, setEmbedHtml] = useState<string>('');
+  const [isImmersive, setIsImmersive] = useState(false);
+  const [showDesktopToast, setShowDesktopToast] = useState(false);
+  const [hasShownToast, setHasShownToast] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
+
+  // Toggle immersive mode (mobile fullscreen alternative)
+  const toggleImmersive = useCallback(() => {
+    if (!isMobile) return;
+    
+    setIsImmersive(prev => {
+      const newValue = !prev;
+      
+      // Lock/unlock body scroll
+      if (newValue) {
+        document.body.style.overflow = 'hidden';
+        // Force landscape orientation hint on supported browsers
+        if (screen.orientation && (screen.orientation as any).lock) {
+          (screen.orientation as any).lock('landscape').catch(() => {
+            // Orientation lock not supported or denied
+          });
+        }
+      } else {
+        document.body.style.overflow = '';
+        if (screen.orientation && (screen.orientation as any).unlock) {
+          (screen.orientation as any).unlock();
+        }
+      }
+      
+      return newValue;
+    });
+  }, [isMobile]);
+
+  // Show desktop toast on mobile when video loads (only once per session)
+  useEffect(() => {
+    if (isMobile && !loading && embedHtml && !hasShownToast) {
+      setShowDesktopToast(true);
+      setHasShownToast(true);
+      
+      // Hide toast after 4 seconds
+      const timer = setTimeout(() => {
+        setShowDesktopToast(false);
+      }, 4000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isMobile, loading, embedHtml, hasShownToast]);
+
+  // Notify iframe when immersive mode changes (for fullscreen icon state)
+  useEffect(() => {
+    if (iframeRef.current && iframeRef.current.contentWindow) {
+      iframeRef.current.contentWindow.postMessage({
+        type: 'fullscreenChange',
+        isFullscreen: isImmersive
+      }, '*');
+    }
+  }, [isImmersive]);
+
+  // Handle back button to exit immersive mode
+  useEffect(() => {
+    if (!isImmersive) return;
+    
+    const handlePopState = (e: PopStateEvent) => {
+      e.preventDefault();
+      setIsImmersive(false);
+      document.body.style.overflow = '';
+      // Push state back so user can navigate normally after
+      window.history.pushState(null, '', window.location.href);
+    };
+    
+    // Push a state so back button triggers our handler
+    window.history.pushState(null, '', window.location.href);
+    window.addEventListener('popstate', handlePopState);
+    
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      document.body.style.overflow = '';
+    };
+  }, [isImmersive]);
 
   useEffect(() => {
     // Reset state when lessonId changes
@@ -72,6 +170,12 @@ export default function SecureVideoPlayer({
       if (event.data && event.data.type === 'toggleFullscreen') {
         const iframe = iframeRef.current;
         if (!iframe) return;
+        
+        // On mobile, use immersive mode instead of native fullscreen
+        if (isMobile) {
+          toggleImmersive();
+          return;
+        }
         
         // Check current fullscreen state
         const isFullscreen = document.fullscreenElement || 
@@ -122,7 +226,7 @@ export default function SecureVideoPlayer({
       if (iframeRef.current && iframeRef.current.contentWindow) {
         iframeRef.current.contentWindow.postMessage({
           type: 'fullscreenChange',
-          isFullscreen: isFullscreen
+          isFullscreen: isFullscreen || isImmersive
         }, '*');
       }
     };
@@ -144,7 +248,7 @@ export default function SecureVideoPlayer({
       document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
       document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
     };
-  }, []);
+  }, [isMobile, toggleImmersive, isImmersive]);
 
   const loadVideoEmbed = async () => {
     setLoading(true);
@@ -222,8 +326,69 @@ export default function SecureVideoPlayer({
     );
   }
 
+  // Immersive mode styles for mobile fullscreen alternative
+  const immersiveStyles = isImmersive ? {
+    position: 'fixed' as const,
+    top: 0,
+    left: 0,
+    width: '100vw',
+    height: '100vh',
+    zIndex: 9999,
+    backgroundColor: '#000',
+  } : {};
+
   return (
-    <div className={`relative ${className}`} style={{ userSelect: 'none', position: 'relative', width: '100%', height: '100%' }}>
+    <div 
+      ref={containerRef}
+      className={`relative ${className} ${isImmersive ? '' : ''}`} 
+      style={{ 
+        userSelect: 'none', 
+        position: isImmersive ? 'fixed' : 'relative', 
+        width: isImmersive ? '100vw' : '100%', 
+        height: isImmersive ? '100vh' : '100%',
+        ...(isImmersive ? { top: 0, left: 0, zIndex: 9999, backgroundColor: '#000' } : {})
+      }}
+    >
+      {/* Desktop recommendation toast for mobile users */}
+      {showDesktopToast && isMobile && (
+        <div 
+          className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 animate-fade-in-down"
+          style={{ animation: 'fadeInDown 0.3s ease-out' }}
+        >
+          <div className="bg-black/80 backdrop-blur-sm text-white px-4 py-2 rounded-lg shadow-lg flex items-center space-x-2 text-sm">
+            <svg className="w-4 h-4 text-[#00B38F] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            <span>For best experience, watch on desktop</span>
+          </div>
+        </div>
+      )}
+
+      {/* Exit immersive mode button (mobile only) */}
+      {isImmersive && (
+        <button
+          onClick={toggleImmersive}
+          className="absolute top-4 right-4 z-50 bg-black/60 hover:bg-black/80 text-white p-2 rounded-full transition-colors"
+          aria-label="Exit fullscreen"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      )}
+
+      {/* Rotate phone hint in immersive mode (portrait orientation) */}
+      {isImmersive && isMobile && (
+        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-50 portrait:block landscape:hidden">
+          <div className="bg-black/70 text-white/80 px-3 py-1.5 rounded-full text-xs flex items-center space-x-2">
+            <svg className="w-4 h-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span>Rotate for better view</span>
+          </div>
+        </div>
+      )}
+
       {/* Main Video Container */}
       <div className="relative w-full h-full bg-black" style={{ position: 'relative' }}>
         {loading && (
@@ -270,6 +435,20 @@ export default function SecureVideoPlayer({
           />
         )}
       </div>
+
+      {/* CSS for animations */}
+      <style jsx>{`
+        @keyframes fadeInDown {
+          from {
+            opacity: 0;
+            transform: translate(-50%, -10px);
+          }
+          to {
+            opacity: 1;
+            transform: translate(-50%, 0);
+          }
+        }
+      `}</style>
     </div>
   );
 }
