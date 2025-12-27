@@ -45,22 +45,27 @@ export default function WhatsAppSupport() {
         {/* Pulse animation ring */}
         <div className="absolute inset-0 rounded-full bg-[#00B39F] animate-ping opacity-25"></div>
         
-        {/* Customer Support Icon - Person with Headset */}
+        {/* Customer Support Icon - Person with Headset & Mic */}
         <svg
           className="w-6 h-6 text-white relative z-10"
           fill="currentColor"
           viewBox="0 0 24 24"
         >
-          {/* Headset */}
-          <path d="M12 1C7.03 1 3 5.03 3 10v5c0 1.1.9 2 2 2h1v-7H5v-1c0-3.87 3.13-7 7-7s7 3.13 7 7v1h-1v7h1c1.1 0 2-.9 2-2v-5c0-4.97-4.03-9-9-9z"/>
-          {/* Left ear cup */}
-          <path d="M5 12h2v7H5z"/>
-          {/* Right ear cup */}
-          <path d="M17 12h2v7h-2z"/>
+          {/* Head/Face outline */}
+          <path d="M12 2C9.24 2 7 4.24 7 7v3c0 2.76 2.24 5 5 5s5-2.24 5-5V7c0-2.76-2.24-5-5-5z" fillOpacity="0"/>
+          <path d="M12 2C9.24 2 7 4.24 7 7v4c0 2.76 2.24 5 5 5s5-2.24 5-5V7c0-2.76-2.24-5-5-5zm0 12c-1.66 0-3-1.34-3-3V7c0-1.66 1.34-3 3-3s3 1.34 3 3v4c0 1.66-1.34 3-3 3z"/>
+          {/* Hair */}
+          <path d="M7 7c0-2.76 2.24-5 5-5s5 2.24 5 5v1c0-2.21-1.79-4-4-4h-2c-2.21 0-4 1.79-4 4V7z"/>
+          {/* Headset band */}
+          <path d="M4 11c0-4.42 3.58-8 8-8s8 3.58 8 8" fill="none" stroke="currentColor" strokeWidth="2"/>
+          {/* Left earpiece */}
+          <rect x="2" y="10" width="3" height="5" rx="1"/>
+          {/* Right earpiece */}
+          <rect x="19" y="10" width="3" height="5" rx="1"/>
+          {/* Microphone arm */}
+          <path d="M19 15c0 1.1-.9 2-2 2h-3" fill="none" stroke="currentColor" strokeWidth="1.5"/>
           {/* Microphone */}
-          <path d="M12 19c-1.1 0-2 .9-2 2v1h4v-1c0-1.1-.9-2-2-2z"/>
-          {/* Person head (circle) */}
-          <circle cx="12" cy="10" r="3"/>
+          <circle cx="13" cy="17" r="2"/>
         </svg>
       </div>
     </a>
