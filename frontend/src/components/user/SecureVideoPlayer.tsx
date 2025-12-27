@@ -44,8 +44,6 @@ export default function SecureVideoPlayer({
   const [error, setError] = useState<string | null>(null);
   const [embedHtml, setEmbedHtml] = useState<string>('');
   const [isImmersive, setIsImmersive] = useState(false);
-  const [showDesktopToast, setShowDesktopToast] = useState(false);
-  const [hasShownToast, setHasShownToast] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
@@ -76,21 +74,6 @@ export default function SecureVideoPlayer({
       return newValue;
     });
   }, [isMobile]);
-
-  // Show desktop toast on mobile when video loads (only once per session)
-  useEffect(() => {
-    if (isMobile && !loading && embedHtml && !hasShownToast) {
-      setShowDesktopToast(true);
-      setHasShownToast(true);
-      
-      // Hide toast after 4 seconds
-      const timer = setTimeout(() => {
-        setShowDesktopToast(false);
-      }, 4000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [isMobile, loading, embedHtml, hasShownToast]);
 
   // Notify iframe when immersive mode changes (for fullscreen icon state)
   useEffect(() => {
@@ -326,17 +309,6 @@ export default function SecureVideoPlayer({
     );
   }
 
-  // Immersive mode styles for mobile fullscreen alternative
-  const immersiveStyles = isImmersive ? {
-    position: 'fixed' as const,
-    top: 0,
-    left: 0,
-    width: '100vw',
-    height: '100vh',
-    zIndex: 9999,
-    backgroundColor: '#000',
-  } : {};
-
   return (
     <div 
       ref={containerRef}
@@ -349,21 +321,6 @@ export default function SecureVideoPlayer({
         ...(isImmersive ? { top: 0, left: 0, zIndex: 9999, backgroundColor: '#000' } : {})
       }}
     >
-      {/* Desktop recommendation toast for mobile users */}
-      {showDesktopToast && isMobile && (
-        <div 
-          className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 animate-fade-in-down"
-          style={{ animation: 'fadeInDown 0.3s ease-out' }}
-        >
-          <div className="bg-black/80 backdrop-blur-sm text-white px-4 py-2 rounded-lg shadow-lg flex items-center space-x-2 text-sm">
-            <svg className="w-4 h-4 text-[#00B38F] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-            <span>For best experience, watch on desktop</span>
-          </div>
-        </div>
-      )}
-
       {/* Exit immersive mode button (mobile only) */}
       {isImmersive && (
         <button
@@ -435,20 +392,6 @@ export default function SecureVideoPlayer({
           />
         )}
       </div>
-
-      {/* CSS for animations */}
-      <style jsx>{`
-        @keyframes fadeInDown {
-          from {
-            opacity: 0;
-            transform: translate(-50%, -10px);
-          }
-          to {
-            opacity: 1;
-            transform: translate(-50%, 0);
-          }
-        }
-      `}</style>
     </div>
   );
 }
