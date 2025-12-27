@@ -66,13 +66,83 @@ export default function SecureVideoPlayer({
         return false;
       }
     };
+    
+    // Handle fullscreen requests from embedded video via PostMessage
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'toggleFullscreen') {
+        const iframe = iframeRef.current;
+        if (!iframe) return;
+        
+        // Check current fullscreen state
+        const isFullscreen = document.fullscreenElement || 
+                            (document as any).webkitFullscreenElement || 
+                            (document as any).mozFullScreenElement || 
+                            (document as any).msFullscreenElement;
+        
+        if (isFullscreen) {
+          // Exit fullscreen
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+          } else if ((document as any).webkitExitFullscreen) {
+            (document as any).webkitExitFullscreen();
+          } else if ((document as any).mozCancelFullScreen) {
+            (document as any).mozCancelFullScreen();
+          } else if ((document as any).msExitFullscreen) {
+            (document as any).msExitFullscreen();
+          }
+        } else {
+          // Enter fullscreen on the iframe element
+          try {
+            if (iframe.requestFullscreen) {
+              iframe.requestFullscreen();
+            } else if ((iframe as any).webkitRequestFullscreen) {
+              (iframe as any).webkitRequestFullscreen();
+            } else if ((iframe as any).webkitEnterFullscreen) {
+              (iframe as any).webkitEnterFullscreen();
+            } else if ((iframe as any).mozRequestFullScreen) {
+              (iframe as any).mozRequestFullScreen();
+            } else if ((iframe as any).msRequestFullscreen) {
+              (iframe as any).msRequestFullscreen();
+            }
+          } catch (err) {
+            console.error('Fullscreen error:', err);
+          }
+        }
+      }
+    };
+    
+    // Handle fullscreen change to notify the embedded video
+    const handleFullscreenChange = () => {
+      const isFullscreen = !!(document.fullscreenElement || 
+                            (document as any).webkitFullscreenElement || 
+                            (document as any).mozFullScreenElement || 
+                            (document as any).msFullscreenElement);
+      
+      // Notify the iframe about fullscreen state change
+      if (iframeRef.current && iframeRef.current.contentWindow) {
+        iframeRef.current.contentWindow.postMessage({
+          type: 'fullscreenChange',
+          isFullscreen: isFullscreen
+        }, '*');
+      }
+    };
 
     document.addEventListener('contextmenu', handleContextMenu);
     document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('message', handleMessage);
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
 
     return () => {
       document.removeEventListener('contextmenu', handleContextMenu);
       document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('message', handleMessage);
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
     };
   }, []);
 

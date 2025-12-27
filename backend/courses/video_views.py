@@ -464,51 +464,26 @@ def generate_simple_embed_html(lesson):
             }}
         }});
 
-        document.getElementById('fullscreen').addEventListener('click', () => {{
-            const container = document.getElementById('video-container');
-            
-            // Check if already in fullscreen
-            const isFullscreen = document.fullscreenElement || 
-                               document.webkitFullscreenElement || 
-                               document.mozFullScreenElement || 
-                               document.msFullscreenElement;
-
-            if (isFullscreen) {{
-                // Exit fullscreen
-                if (document.exitFullscreen) {{
-                    document.exitFullscreen();
-                }} else if (document.webkitExitFullscreen) {{
-                    document.webkitExitFullscreen();
-                }} else if (document.mozCancelFullScreen) {{
-                    document.mozCancelFullScreen();
-                }} else if (document.msExitFullscreen) {{
-                    document.msExitFullscreen();
-                }}
-            }} else {{
-                // Enter fullscreen on container (includes controls)
-                try {{
-                    if (container.requestFullscreen) {{
-                        container.requestFullscreen();
-                    }} else if (container.webkitRequestFullscreen) {{
-                        container.webkitRequestFullscreen();
-                    }} else if (container.webkitEnterFullscreen) {{
-                        container.webkitEnterFullscreen();
-                    }} else if (container.mozRequestFullScreen) {{
-                        container.mozRequestFullScreen();
-                    }} else if (container.msRequestFullscreen) {{
-                        container.msRequestFullscreen();
-                    }}
-                    
-                    // Try to lock orientation to landscape on mobile
-                    if (screen.orientation && screen.orientation.lock) {{
-                        screen.orientation.lock('landscape').catch(() => {{
-                            // Ignore if not supported
-                        }});
-                    }}
-                }} catch (err) {{
-                    console.error('Fullscreen error:', err);
+        // Track fullscreen state
+        let isCurrentlyFullscreen = false;
+        
+        // Listen for fullscreen state updates from parent
+        window.addEventListener('message', (event) => {{
+            if (event.data && event.data.type === 'fullscreenChange') {{
+                isCurrentlyFullscreen = event.data.isFullscreen;
+                if (isCurrentlyFullscreen) {{
+                    showControls();
                 }}
             }}
+        }});
+        
+        document.getElementById('fullscreen').addEventListener('click', () => {{
+            // Send message to parent to toggle fullscreen on the iframe
+            // This allows proper fullscreen that covers the entire screen
+            window.parent.postMessage({{
+                type: 'toggleFullscreen',
+                currentState: isCurrentlyFullscreen
+            }}, '*');
         }});
 
         // Auto-hide controls - works for mouse and touch
@@ -544,13 +519,13 @@ def generate_simple_embed_html(lesson):
             showControls();
         }}, {{ passive: true }});
         
-        // Handle fullscreen changes
+        // Handle fullscreen changes (for cases where fullscreen is triggered within iframe)
         document.addEventListener('fullscreenchange', () => {{
-            if (document.fullscreenElement) {{
-                // Entering fullscreen - show controls initially
+            const inFullscreen = !!document.fullscreenElement;
+            isCurrentlyFullscreen = inFullscreen;
+            if (inFullscreen) {{
                 showControls();
             }} else {{
-                // Exiting fullscreen - unlock orientation
                 if (screen.orientation && screen.orientation.unlock) {{
                     screen.orientation.unlock();
                 }}
@@ -559,7 +534,9 @@ def generate_simple_embed_html(lesson):
         
         // Handle webkit fullscreen changes (Safari)
         document.addEventListener('webkitfullscreenchange', () => {{
-            if (document.webkitFullscreenElement) {{
+            const inFullscreen = !!document.webkitFullscreenElement;
+            isCurrentlyFullscreen = inFullscreen;
+            if (inFullscreen) {{
                 showControls();
             }} else if (screen.orientation && screen.orientation.unlock) {{
                 screen.orientation.unlock();
