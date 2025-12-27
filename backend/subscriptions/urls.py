@@ -18,7 +18,7 @@ from .api_views import (
 from .views import (
     InitializePaymentView, VerifyPaymentView, PaymentHistoryView,
     InvoiceDownloadView, paystack_webhook, stripe_webhook,
-    CheckSubscriptionConflictView, charge_with_saved_card
+    CheckSubscriptionConflictView, charge_with_saved_card, check_pending_payment
 )  # Phase 2.1 - Payment API Endpoints
 from .views.payment_method_views import (
     save_payment_method, list_payment_methods, 
@@ -107,6 +107,7 @@ urlpatterns = [
     path('payments/initialize/', InitializePaymentView.as_view(), name='initialize_payment'),
     path('payments/charge-saved-card/', charge_with_saved_card, name='charge_with_saved_card'),
     path('payments/verify/', VerifyPaymentView.as_view(), name='verify_payment'),
+    path('payments/check-pending/', check_pending_payment, name='check_pending_payment'),
     path('payments/check-conflict/', CheckSubscriptionConflictView.as_view(), name='check_subscription_conflict'),
     
     # Payment Webhooks (CSRF exempt)

@@ -13,6 +13,7 @@ import {
   validateCoupon, 
   checkTelegramStatus,
   checkSubscriptionConflict,
+  checkPendingPayment,
   type InitializePaymentRequest,
   type CheckConflictResponse
 } from '@/lib/api/payment';
@@ -64,6 +65,11 @@ function CheckoutContent() {
     card_last4: string;
   } | null>(null);
   const [showNoCardModal, setShowNoCardModal] = useState(false);
+  const [pendingPayment, setPendingPayment] = useState<{
+    reference: string;
+    payment_url: string;
+    amount: number;
+  } | null>(null);
 
   // Form state
   const [currency, setCurrency] = useState<'NGN' | 'USD'>('NGN');
@@ -122,6 +128,22 @@ function CheckoutContent() {
         const data = await response.json();
         setPlan(data);
         setCurrency(data.currency || 'NGN');
+        
+        // Check for pending payment after plan is loaded
+        if (isAuthenticated) {
+          try {
+            const pendingResponse = await checkPendingPayment({ plan_id: planId });
+            if (pendingResponse.has_pending && pendingResponse.payment_url) {
+              setPendingPayment({
+                reference: pendingResponse.reference!,
+                payment_url: pendingResponse.payment_url,
+                amount: pendingResponse.amount!
+              });
+            }
+          } catch (err) {
+            console.log('No pending payment found');
+          }
+        }
       } catch (err) {
         router.push('/pricing');
       } finally {
@@ -130,7 +152,7 @@ function CheckoutContent() {
     };
 
     fetchPlan();
-  }, [planId, router]);
+  }, [planId, router, isAuthenticated]);
 
   // Fetch saved payment method
   useEffect(() => {
@@ -786,22 +808,66 @@ function CheckoutContent() {
             )}
 
             {/* Payment Button */}
-            <button
-              onClick={handleProceedToPayment}
-              disabled={processing || !agreedToTerms || !telegramVerified || (conflict?.conflict === true) || gateway === 'stripe'}
-              className="w-full py-4 px-6 bg-gradient-to-r from-[#00B38F] to-[#00B39F] text-white rounded-xl font-semibold text-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-            >
-              {processing ? (
-                <span className="flex items-center justify-center gap-2">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
-                  Processing...
-                </span>
-              ) : gateway === 'stripe' ? (
-                'Contact Support for International Payments'
-              ) : (
-                `Proceed to Payment - ${formatCurrency(totalAmount)}`
-              )}
-            </button>
+            {pendingPayment ? (
+              <div className="space-y-3">
+                {/* Pending Payment Notice */}
+                <div className="bg-amber-500/10 border-2 border-amber-500/50 rounded-xl p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-10 h-10 bg-amber-500/20 rounded-full flex items-center justify-center mt-0.5">
+                      <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-amber-300 font-semibold mb-1">Pending Payment Found</h4>
+                      <p className="text-sm text-amber-200/90">
+                        You have an incomplete payment for this plan. You can resume your previous payment or start a new one.
+                      </p>
+                      <p className="text-xs text-gray-400 mt-2">
+                        Reference: {pendingPayment.reference}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Resume Payment Button */}
+                <button
+                  onClick={() => {
+                    window.location.href = pendingPayment.payment_url;
+                  }}
+                  className="w-full py-4 px-6 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-xl font-semibold text-lg hover:opacity-90 transition-opacity shadow-lg"
+                >
+                  Resume Payment - {formatCurrency(pendingPayment.amount)}
+                </button>
+
+                {/* Start New Payment Button */}
+                <button
+                  onClick={() => {
+                    setPendingPayment(null);
+                  }}
+                  className="w-full py-3 px-6 bg-white/10 border-2 border-white/20 text-white rounded-xl font-medium text-base hover:bg-white/20 transition-colors"
+                >
+                  Start New Payment Instead
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleProceedToPayment}
+                disabled={processing || !agreedToTerms || !telegramVerified || (conflict?.conflict === true) || gateway === 'stripe'}
+                className="w-full py-4 px-6 bg-gradient-to-r from-[#00B38F] to-[#00B39F] text-white rounded-xl font-semibold text-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+              >
+                {processing ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
+                    Processing...
+                  </span>
+                ) : gateway === 'stripe' ? (
+                  'Contact Support for International Payments'
+                ) : (
+                  `Proceed to Payment - ${formatCurrency(totalAmount)}`
+                )}
+              </button>
+            )}
 
             {/* Security Badge */}
             <div className="flex items-center justify-center gap-2 text-gray-400 text-sm">

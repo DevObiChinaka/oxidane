@@ -12,6 +12,7 @@ from .payment_views import (
     paystack_webhook,
     stripe_webhook,
     charge_with_saved_card,
+    check_pending_payment,
 )
 
 __all__ = [
@@ -23,4 +24,5 @@ __all__ = [
     'paystack_webhook',
     'stripe_webhook',
     'charge_with_saved_card',
+    'check_pending_payment',
 ]

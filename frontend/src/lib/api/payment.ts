@@ -39,6 +39,20 @@ export interface VerifyPaymentRequest {
   reference: string;
 }
 
+export interface CheckPendingPaymentRequest {
+  plan_id: string;
+}
+
+export interface CheckPendingPaymentResponse {
+  has_pending: boolean;
+  reference?: string;
+  payment_url?: string;
+  amount?: number;
+  currency?: string;
+  created_at?: string;
+  payment_id?: string;
+}
+
 export interface VerifyPaymentResponse {
   success: boolean;
   message: string;
@@ -186,6 +200,30 @@ export async function initializePayment(
   request: InitializePaymentRequest
 ): Promise<InitializePaymentResponse> {
   const response = await fetch(`${API_BASE_URL}/payments/initialize/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    await handleApiError(response);
+  }
+
+  const data = await response.json();
+  return data;
+}
+
+/**
+ * Check for pending payment
+ * Prevents duplicate charges and allows resuming interrupted payments
+ * 
+ * @param request - Plan ID to check
+ * @returns Pending payment details if exists
+ */
+export async function checkPendingPayment(
+  request: CheckPendingPaymentRequest
+): Promise<CheckPendingPaymentResponse> {
+  const response = await fetch(`${API_BASE_URL}/payments/check-pending/`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(request),

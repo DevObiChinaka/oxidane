@@ -16,6 +16,7 @@ Created: November 10, 2025
 import logging
 import uuid
 import json
+import time
 from decimal import Decimal
 from datetime import timedelta
 from django.conf import settings
@@ -59,6 +60,79 @@ class PaymentPagination(PageNumberPagination):
     page_size = 20
     page_size_query_param = 'page_size'
     max_page_size = 100
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def check_pending_payment(request):
+    """
+    Check if user has a pending payment for a plan
+    Prevents duplicate payment attempts and allows resuming interrupted payments
+    
+    POST /api/payments/check-pending/
+    
+    Request Body:
+        {
+            "plan_id": "uuid-string"
+        }
+    
+    Response:
+        {
+            "has_pending": true,
+            "reference": "PAY_ABC123",
+            "payment_url": "https://checkout.paystack.com/...",
+            "amount": 5000.00,
+            "created_at": "2025-12-27T10:30:00Z"
+        }
+    """
+    try:
+        plan_id = request.data.get('plan_id')
+        
+        if not plan_id:
+            return Response({
+                'success': False,
+                'error': 'plan_id is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get user's billing profile
+        try:
+            billing_profile = BillingProfile.objects.get(user=request.user)
+        except BillingProfile.DoesNotExist:
+            return Response({
+                'has_pending': False
+            }, status=status.HTTP_200_OK)
+        
+        # Check for recent pending payment (last 30 minutes)
+        pending_payment = Payment.objects.filter(
+            billing_profile=billing_profile,
+            status__in=['pending', 'processing'],
+            created_at__gte=timezone.now() - timedelta(minutes=30),
+            gateway_response__metadata__plan_id=str(plan_id)
+        ).order_by('-created_at').first()
+        
+        if pending_payment and pending_payment.gateway_response.get('authorization_url'):
+            logger.info(f"Found pending payment {pending_payment.gateway_reference} for user {request.user.id}")
+            
+            return Response({
+                'has_pending': True,
+                'reference': pending_payment.gateway_reference,
+                'payment_url': pending_payment.gateway_response.get('authorization_url'),
+                'amount': float(pending_payment.total_amount),
+                'currency': pending_payment.currency,
+                'created_at': pending_payment.created_at.isoformat(),
+                'payment_id': str(pending_payment.id)
+            }, status=status.HTTP_200_OK)
+        
+        return Response({
+            'has_pending': False
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error checking pending payment: {str(e)}", exc_info=True)
+        return Response({
+            'success': False,
+            'error': 'Failed to check pending payment'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class InitializePaymentView(APIView):
@@ -270,22 +344,58 @@ class InitializePaymentView(APIView):
                     'error': 'Stripe is currently unavailable'
                 }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
             
-            # Generate payment reference
+            # Generate idempotency key and reference
+            idempotency_key = f"{request.user.id}_{plan.id}_{currency}_{int(timezone.now().timestamp())}"
             reference = f"PAY_{uuid.uuid4().hex[:12].upper()}"
             
-            # Create payment record
-            payment = Payment.objects.create(
+            # Check for recent pending payment (last 15 minutes) to prevent duplicates
+            recent_payment = Payment.objects.filter(
                 billing_profile=billing_profile,
-                subscription=None,  # Will be linked after verification
-                amount=amount,
-                processing_fee=processing_fee,
-                total_amount=total_amount,
+                status__in=['pending', 'processing'],
+                created_at__gte=timezone.now() - timedelta(minutes=15),
                 currency=currency,
-                payment_gateway=gateway,
-                gateway_reference=reference,
-                status='pending',
-                gateway_response={}
-            )
+                gateway_response__metadata__plan_id=str(plan.id)
+            ).first()
+            
+            if recent_payment:
+                # Reuse existing payment if initialization succeeded
+                if recent_payment.gateway_response.get('authorization_url'):
+                    logger.info(f"Reusing pending payment {recent_payment.gateway_reference} for user {request.user.id}")
+                    
+                    response_data = {
+                        'success': True,
+                        'payment_url': recent_payment.gateway_response['authorization_url'],
+                        'reference': recent_payment.gateway_reference,
+                        'amount': float(recent_payment.amount),
+                        'processing_fee': float(recent_payment.processing_fee),
+                        'total_amount': float(recent_payment.total_amount),
+                        'currency': recent_payment.currency,
+                        'gateway': recent_payment.payment_gateway,
+                        'payment_id': recent_payment.id,
+                        'paystack_public_key': config.paystack_public_key if gateway == 'paystack' else None,
+                        'existing_payment': True
+                    }
+                    return Response(response_data, status=status.HTTP_200_OK)
+                else:
+                    # Previous initialization failed, use existing payment record
+                    payment = recent_payment
+                    reference = payment.gateway_reference
+                    logger.info(f"Retrying payment initialization for {reference}")
+            else:
+                # Create new payment record
+                payment = Payment.objects.create(
+                    billing_profile=billing_profile,
+                    subscription=None,  # Will be linked after verification
+                    amount=amount,
+                    processing_fee=processing_fee,
+                    total_amount=total_amount,
+                    currency=currency,
+                    payment_gateway=gateway,
+                    gateway_reference=reference,
+                    status='pending',
+                    idempotency_key=idempotency_key,
+                    gateway_response={}
+                )
             
             # Build metadata for payment gateway
             metadata = {
@@ -745,28 +855,30 @@ class VerifyPaymentView(APIView):
                     'error': 'Payment reference or session_id required'
                 }, status=status.HTTP_400_BAD_REQUEST)
             
-            # Find payment record
+            # Find payment record with locking to prevent race conditions
             try:
-                payment = Payment.objects.get(
-                    gateway_reference=lookup_ref,
-                    billing_profile__user=request.user
-                )
+                with transaction.atomic():
+                    # SELECT FOR UPDATE prevents concurrent verification
+                    payment = Payment.objects.select_for_update().get(
+                        gateway_reference=lookup_ref,
+                        billing_profile__user=request.user
+                    )
+                    
+                    # If already verified, return success immediately
+                    if payment.status == 'success':
+                        return Response({
+                            'success': True,
+                            'verified': True,
+                            'amount': float(payment.amount),
+                            'currency': payment.currency,
+                            'subscription_id': payment.subscription.id if payment.subscription else None,
+                            'message': 'Payment already verified'
+                        }, status=status.HTTP_200_OK)
             except Payment.DoesNotExist:
                 return Response({
                     'success': False,
                     'error': 'Payment not found'
                 }, status=status.HTTP_404_NOT_FOUND)
-            
-            # If already verified, return success
-            if payment.status == 'success':
-                return Response({
-                    'success': True,
-                    'verified': True,
-                    'amount': float(payment.amount),
-                    'currency': payment.currency,
-                    'subscription_id': payment.subscription.id if payment.subscription else None,
-                    'message': 'Payment already verified'
-                }, status=status.HTTP_200_OK)
             
             # Verify with gateway
             payment_service = PaymentService(gateway=payment.payment_gateway)
@@ -975,12 +1087,33 @@ def paystack_webhook(request):
         if event == 'charge.success':
             reference = event_data.get('reference')
             
+            # Retry logic for race condition where webhook arrives before payment record is created
+            max_retries = 3
+            payment = None
+            
+            for attempt in range(max_retries):
+                try:
+                    payment = Payment.objects.get(gateway_reference=reference)
+                    break
+                except Payment.DoesNotExist:
+                    if attempt < max_retries - 1:
+                        logger.warning(f"Payment {reference} not found, retry {attempt + 1}/{max_retries}")
+                        time.sleep(2)  # Wait 2 seconds before retry
+                        continue
+                    else:
+                        logger.error(f"Payment {reference} not found after {max_retries} attempts")
+                        return JsonResponse({
+                            'success': False,
+                            'error': 'Payment not found'
+                        }, status=404)
+            
             try:
-                payment = Payment.objects.get(gateway_reference=reference)
-                
-                # Use atomic transaction for consistency
+                # Use atomic transaction with locking for consistency
                 with transaction.atomic():
-                    # Update payment status if not already paid
+                    # SELECT FOR UPDATE prevents race condition with manual verification
+                    payment = Payment.objects.select_for_update().get(id=payment.id)
+                    
+                    # Update payment status if not already paid (idempotency check)
                     if payment.status != 'success':
                         payment.mark_as_paid()
                         payment.gateway_response = event_data
