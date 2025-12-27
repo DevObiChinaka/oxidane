@@ -392,12 +392,12 @@ def add_user_to_telegram_groups(self, user_id, plan_id):
                             # Note: Escape special Markdown characters
                             username = billing_profile.telegram_username.replace('_', '\\_')
                             
-                            message = f"🎉 *Welcome to {group.name}\\!*\n\n"
-                            message += f"✅ Your exclusive access link is ready\\.\n\n"
+                            message = f"*Welcome to {group.name}!🎉*\n\n"
+                            message += f"Your exclusive access link is ready.✅\n\n"
                             message += f"Click the button below to join:\n\n"
-                            message += f"🔒 *Security:* This link:\n"
+                            message += f"*Security 🔒:* This link:\n"
                             message += f"   • Works only ONCE\n"
-                            message += f"   • Only for YOU \\(@{username}\\)\n"
+                            message += f"   • Only for YOU (@{username})\n"
                             message += f"   • Expires in 24 hours\n"
                             message += f"   • Cannot be shared or reused"
                             
@@ -467,13 +467,13 @@ def add_user_to_telegram_groups(self, user_id, plan_id):
         # Send welcome message if any groups were processed
         if groups_added:
             try:
-                welcome_message = f"🎉 *Welcome to {plan.name}!*\n\n"
+                welcome_message = f"*Welcome to {plan.name}!*🎉\n\n"
                 welcome_message += f"You now have access to {len(groups_added)} Telegram group(s):\n\n"
                 
                 for group_name in groups_added:
-                    welcome_message += f"✅ {group_name}\n"
+                    welcome_message += f"{group_name}✨\n"
                 
-                welcome_message += f"\n💡 _Check the messages above for join buttons._"
+                welcome_message += f"\n _Check the messages above for join buttons._"
                 
                 url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
                 payload = {
@@ -1212,7 +1212,7 @@ def _process_verification_code(verification_code, telegram_user_id, telegram_use
         username_display = f"@{telegram_username}" if telegram_username else f"user_{telegram_user_id}"
         _send_telegram_message(
             chat_id,
-            f"✅ Verification successful!\n\n"
+            f"Verification successful!✅\n\n"
             f"Your Telegram account is now linked to your subscription.\n"
             f"User ID: {telegram_user_id}",
             bot_token
@@ -1234,7 +1234,7 @@ def _process_verification_code(verification_code, telegram_user_id, telegram_use
 def _send_welcome_message(chat_id, username, bot_token):
     """Send welcome message when user clicks /start."""
     message = (
-        f"👋 Welcome to OxiWorld Forex Academy{', @' + username if username else ''}!\n\n"
+        f"Welcome to OxiWorld Forex Academy 👋{', @' + username if username else ''}!\n\n"
         "To verify your Telegram account:\n"
         "1. Generate a verification code on the website\n"
         "2. Send the 6-character code here\n\n"

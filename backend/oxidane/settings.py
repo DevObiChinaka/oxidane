@@ -401,6 +401,12 @@ CELERY_WORKER_DISABLE_RATE_LIMITS = True  # Disable rate limiting overhead
 CELERY_RESULT_EXPIRES = 3600  # Results expire after 1 hour
 CELERY_RESULT_PERSISTENT = False  # Don't persist results after expiry
 
+# Connection lifecycle - close idle connections
+CELERY_BROKER_HEARTBEAT = 30  # Heartbeat every 30 seconds
+CELERY_BROKER_HEARTBEAT_CHECKRATE = 2  # Check heartbeat at 2x rate
+CELERY_EVENT_QUEUE_EXPIRES = 60  # Event queue expires in 60 seconds
+CELERY_WORKER_CANCEL_LONG_RUNNING_TASKS_ON_CONNECTION_LOSS = True
+
 # Celery Beat Schedule
 # Don't define CELERY_BEAT_SCHEDULE here - it's configured in oxidane/celery.py
 # If you define it here, it will override the schedule in celery.py
@@ -421,8 +427,10 @@ CACHES = {
             'MAX_CONNECTIONS': 3,  # Further reduced to 3 for free tier
             'CONNECTION_POOL_KWARGS': {
                 'max_connections': 3,
+                'timeout': 20,  # Wait max 20s for connection from pool
             },
             'IGNORE_EXCEPTIONS': False,  # Show Redis errors to debug
+            'HEALTH_CHECK_INTERVAL': 30,  # Check connection health every 30s
         },
         'KEY_PREFIX': 'oxidane',
         'TIMEOUT': 300,  # 5 minutes default
