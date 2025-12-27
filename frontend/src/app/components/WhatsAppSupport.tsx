@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { LifebuoyIcon } from '@heroicons/react/24/solid';
+import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/solid';
 
 export default function WhatsAppSupport() {
   const [isHovered, setIsHovered] = useState(false);
@@ -47,7 +47,7 @@ export default function WhatsAppSupport() {
         <div className="absolute inset-0 rounded-full bg-[#00B39F] animate-ping opacity-25"></div>
         
         {/* Support Icon from Heroicons */}
-        <LifebuoyIcon className="w-6 h-6 text-white relative z-10" />
+        <ChatBubbleLeftRightIcon className="w-6 h-6 text-white relative z-10" />
       </div>
     </a>
   );
