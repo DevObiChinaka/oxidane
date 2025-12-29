@@ -12,7 +12,7 @@ from datetime import timedelta
 from decimal import Decimal
 import calendar
 
-from .models import Subscription, SubscriptionPlan
+from .models import Subscription, SubscriptionPlan, Payment
 from .permissions import IsAdmin
 
 
@@ -75,52 +75,79 @@ def payment_transactions_list(request):
         # Get total count
         total_count = queryset.count()
         
-        # Calculate analytics
-        all_subs = Subscription.objects.all()
+        # Calculate analytics from Payment model (includes renewals)
+        # CRITICAL FIX: Use Payment model instead of Subscription to count ALL payments
+        all_payments = Payment.objects.filter(status='success')
         
-        # Total revenue (sum all amounts, but group by currency for accuracy)
-        revenue_by_currency = all_subs.values('currency').annotate(
-            total=Sum('amount_paid')
+        # Total revenue by currency (sum all successful payments)
+        revenue_by_currency = all_payments.values('currency').annotate(
+            total=Sum('total_amount')  # Use total_amount (includes fees)
         )
         
-        # For simplicity, we'll show USD total (assuming base_price is in USD)
+        # Total revenue in USD (convert all to USD or sum USD payments)
         total_revenue_usd = float(
-            all_subs.aggregate(
-                total=Sum('plan__base_price')
+            all_payments.filter(currency='USD').aggregate(
+                total=Sum('total_amount')
             )['total'] or 0
         )
         
-        # Count by status
+        # Add non-USD revenue (approximate conversion for display)
+        # Note: For accurate multi-currency, implement proper conversion
+        ngn_revenue = float(
+            all_payments.filter(currency='NGN').aggregate(
+                total=Sum('total_amount')
+            )['total'] or 0
+        )
+        if ngn_revenue > 0:
+            # Rough conversion NGN to USD (1 USD ≈ 1650 NGN)
+            total_revenue_usd += ngn_revenue / 1650
+        
+        # Count by payment status (not subscription status)
+        all_subs = Subscription.objects.all()
         status_counts = all_subs.values('status').annotate(count=Count('id'))
         verified_count = next((s['count'] for s in status_counts if s['status'] == 'active'), 0)
         pending_count = next((s['count'] for s in status_counts if s['status'] == 'pending'), 0)
         
-        # Payment methods breakdown
-        payment_methods = all_subs.filter(
+        # Payment methods breakdown (from Payment model)
+        payment_methods = all_payments.filter(
             payment_method__isnull=False
         ).values(
             'payment_method__payment_type'
         ).annotate(
             count=Count('id'),
-            total_amount=Sum('amount_paid')
+            total_amount=Sum('total_amount')
         )
         
-        # Recent transactions (last 30 days)
+        # Recent transactions (last 30 days) - from Payment model
         thirty_days_ago = timezone.now() - timedelta(days=30)
-        recent_revenue = float(
-            all_subs.filter(
-                created_at__gte=thirty_days_ago
+        recent_revenue_usd = float(
+            all_payments.filter(
+                created_at__gte=thirty_days_ago,
+                currency='USD'
             ).aggregate(
-                total=Sum('plan__base_price')
+                total=Sum('total_amount')
             )['total'] or 0
         )
         
-        # Average transaction value
-        avg_value = float(
-            all_subs.aggregate(
-                avg=Avg('plan__base_price')
-            )['avg'] or 0
+        # Add NGN revenue for recent period
+        recent_ngn = float(
+            all_payments.filter(
+                created_at__gte=thirty_days_ago,
+                currency='NGN'
+            ).aggregate(
+                total=Sum('total_amount')
+            )['total'] or 0
         )
+        recent_revenue = recent_revenue_usd + (recent_ngn / 1650)
+        
+        # Average transaction value (from all successful payments)
+        avg_value_data = all_payments.aggregate(
+            avg_usd=Avg('total_amount', filter=Q(currency='USD')),
+            avg_ngn=Avg('total_amount', filter=Q(currency='NGN'))
+        )
+        avg_value_usd = float(avg_value_data['avg_usd'] or 0)
+        avg_value_ngn = float(avg_value_data['avg_ngn'] or 0)
+        avg_value = avg_value_usd if avg_value_usd > 0 else (avg_value_ngn / 1650)
         
         # Get paginated results
         transactions = queryset.order_by('-created_at')[offset:offset + page_size]
@@ -212,13 +239,15 @@ def revenue_analytics(request):
         # Get last 12 months of data
         twelve_months_ago = timezone.now() - timedelta(days=365)
         
-        # Group subscriptions by month and sum revenue
-        monthly_revenue = Subscription.objects.filter(
+        # CRITICAL FIX: Group PAYMENTS (not subscriptions) by month
+        # This includes initial payments AND renewals
+        monthly_revenue = Payment.objects.filter(
+            status='success',
             created_at__gte=twelve_months_ago
         ).annotate(
             month=TruncMonth('created_at')
         ).values('month').annotate(
-            revenue=Sum('amount_paid'),
+            revenue=Sum('total_amount'),
             count=Count('id')
         ).order_by('month')
         

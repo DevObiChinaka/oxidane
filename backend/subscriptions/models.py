@@ -224,6 +224,11 @@ class Subscription(models.Model):
     # Auto-renewal
     auto_renew = models.BooleanField(default=True)
     next_billing_date = models.DateTimeField(null=True, blank=True)
+    last_renewed_at = models.DateTimeField(
+        null=True, 
+        blank=True,
+        help_text='Timestamp of the most recent renewal (auto or manual). NULL for never renewed subscriptions.'
+    )
     
     # Cancellation
     cancelled_at = models.DateTimeField(null=True, blank=True)

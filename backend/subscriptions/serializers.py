@@ -427,7 +427,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             # Payment info
             'payment_method', 'amount_paid', 'currency',
             # Auto-renewal
-            'auto_renew', 'next_billing_date',
+            'auto_renew', 'next_billing_date', 'last_renewed_at',
             # Cancellation
             'cancelled_at', 'cancellation_reason',
             # Computed fields

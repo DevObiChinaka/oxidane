@@ -21,6 +21,7 @@ interface Subscription {
   start_date: string;
   end_date: string | null;
   auto_renew: boolean;
+  last_renewed_at?: string | null;  // New field - optional for backwards compatibility
   features: string[];
   telegram_username?: string;
   days_remaining?: number | null;
@@ -429,6 +430,14 @@ export default function SubscriptionsPage() {
                           <span className="text-gray-600">Started</span>
                           <span className="font-medium text-gray-900">{formatDate(subscription.start_date)}</span>
                         </div>
+                        
+                        {/* Show last renewed date if available */}
+                        {subscription.last_renewed_at && (
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-gray-600">Last Renewed</span>
+                            <span className="font-medium text-gray-900">{formatDate(subscription.last_renewed_at)}</span>
+                          </div>
+                        )}
                         
                         {!subscription.is_lifetime && subscription.end_date && (
                           <div className="flex items-center justify-between text-sm">

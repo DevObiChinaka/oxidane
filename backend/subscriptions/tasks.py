@@ -1512,23 +1512,26 @@ def process_single_renewal(self, subscription_id):
             # Renewal successful
             logger.info(f"✅ Auto-renewal successful for {subscription_id}")
             
-            # Extend subscription
+            # Extend subscription and record renewal timestamp
+            current_time = timezone.now()
             if subscription.plan.billing_period == 'weekly':
-                subscription.next_billing_date = timezone.now() + timedelta(days=7)
-                subscription.end_date = timezone.now() + timedelta(days=7)
+                subscription.next_billing_date = current_time + timedelta(days=7)
+                subscription.end_date = current_time + timedelta(days=7)
             elif subscription.plan.billing_period == 'monthly':
-                subscription.next_billing_date = timezone.now() + timedelta(days=30)
-                subscription.end_date = timezone.now() + timedelta(days=30)
+                subscription.next_billing_date = current_time + timedelta(days=30)
+                subscription.end_date = current_time + timedelta(days=30)
             elif subscription.plan.billing_period == 'quarterly':
-                subscription.next_billing_date = timezone.now() + timedelta(days=90)
-                subscription.end_date = timezone.now() + timedelta(days=90)
+                subscription.next_billing_date = current_time + timedelta(days=90)
+                subscription.end_date = current_time + timedelta(days=90)
             elif subscription.plan.billing_period == 'yearly':
-                subscription.next_billing_date = timezone.now() + timedelta(days=365)
-                subscription.end_date = timezone.now() + timedelta(days=365)
+                subscription.next_billing_date = current_time + timedelta(days=365)
+                subscription.end_date = current_time + timedelta(days=365)
             else:
-                subscription.next_billing_date = timezone.now() + timedelta(days=30)
-                subscription.end_date = timezone.now() + timedelta(days=30)
+                subscription.next_billing_date = current_time + timedelta(days=30)
+                subscription.end_date = current_time + timedelta(days=30)
             
+            # CRITICAL: Record when this renewal happened
+            subscription.last_renewed_at = current_time
             subscription.save()
             
             # Create payment record
