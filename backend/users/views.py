@@ -10,8 +10,23 @@ from django.utils import timezone
 import json
 import requests
 import random
+import logging
 from datetime import timedelta
 from .models import User, OAuthProvider, EmailTemplate
+
+logger = logging.getLogger(__name__)
+
+# Helper function for generic error responses
+def generic_error_response(exception, context=""):
+    """
+    Log the actual error for debugging and return a user-friendly message.
+    Use this for all unexpected/technical errors to avoid exposing internals to users.
+    """
+    logger.error(f"{context} error: {str(exception)}", exc_info=True)
+    return JsonResponse({
+        'error': 'Something went wrong. Please try again later.',
+        'code': 'SERVER_ERROR'
+    }, status=500)
 
 # Import template service if available
 try:
@@ -1373,7 +1388,7 @@ def login_with_otp_request(request):
         })
         
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        return generic_error_response(e, "Login with OTP")
 
 
 @csrf_exempt
@@ -1454,9 +1469,12 @@ def verify_login_otp(request):
         })
         
     except User.DoesNotExist:
-        return JsonResponse({'error': 'User not found'}, status=404)
+        return JsonResponse({
+            'error': 'User not found',
+            'code': 'USER_NOT_FOUND'
+        }, status=404)
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        return generic_error_response(e, "Verify OTP")
 
 
 @csrf_exempt

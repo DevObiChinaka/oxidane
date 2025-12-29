@@ -427,7 +427,8 @@ CACHES = {
             'MAX_CONNECTIONS': 3,  # Further reduced to 3 for free tier
             'CONNECTION_POOL_KWARGS': {
                 'max_connections': 3,
-                'timeout': 20,  # Wait max 20s for connection from pool
+                # Removed 'timeout' parameter - not supported in redis-py 7.x
+                # Connection timeouts are handled by SOCKET_CONNECT_TIMEOUT and SOCKET_TIMEOUT above
             },
             'IGNORE_EXCEPTIONS': False,  # Show Redis errors to debug
             'HEALTH_CHECK_INTERVAL': 30,  # Check connection health every 30s

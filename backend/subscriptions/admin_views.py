@@ -15,7 +15,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from users.permissions import IsAdmin
-from django.db.models import Q
+from django.db.models import Q, Sum
 from django.utils import timezone
 from datetime import timedelta
 
@@ -182,24 +182,42 @@ def subscription_management_list(request):
         total_count = subscriptions.count()
         active_count = subscriptions.filter(status='active').count()
         
-        # Calculate total revenue (use plan base prices in USD)
-        total_revenue = sum(
-            float(sub.plan.base_price) if sub.plan else 0.0
-            for sub in subscriptions.filter(status__in=['active', 'expired', 'cancelled'])
+        # CRITICAL FIX: Calculate revenue from Payment model (includes renewals)
+        from subscriptions.models import Payment
+        all_payments = Payment.objects.filter(status='success')
+        
+        # Total revenue in USD
+        total_revenue_usd = float(
+            all_payments.filter(currency='USD').aggregate(
+                total=Sum('total_amount')
+            )['total'] or 0
         )
         
-        # Calculate recent revenue (last 30 days)
+        # Add NGN revenue converted to USD (rough conversion)
+        ngn_revenue = float(
+            all_payments.filter(currency='NGN').aggregate(
+                total=Sum('total_amount')
+            )['total'] or 0
+        )
+        if ngn_revenue > 0:
+            total_revenue_usd += ngn_revenue / 1650  # Convert NGN to USD
+        
+        # Calculate recent revenue (last 30 days) from Payment model
         thirty_days_ago = timezone.now() - timezone.timedelta(days=30)
-        recent_subs = subscriptions.filter(
-            created_at__gte=thirty_days_ago,
-            status__in=['active', 'expired', 'cancelled']
+        recent_payments = all_payments.filter(created_at__gte=thirty_days_ago)
+        recent_revenue_usd = float(
+            recent_payments.filter(currency='USD').aggregate(
+                total=Sum('total_amount')
+            )['total'] or 0
         )
-        recent_revenue_30d = sum(
-            float(sub.plan.base_price) if sub.plan else 0.0
-            for sub in recent_subs
+        recent_ngn = float(
+            recent_payments.filter(currency='NGN').aggregate(
+                total=Sum('total_amount')
+            )['total'] or 0
         )
+        recent_revenue_30d = recent_revenue_usd + (recent_ngn / 1650)
         
-        avg_value = total_revenue / total_count if total_count > 0 else 0
+        avg_value = total_revenue_usd / total_count if total_count > 0 else 0
         
         # Plan breakdown
         plan_breakdown = {}
@@ -251,7 +269,7 @@ def subscription_management_list(request):
             'analytics': {
                 'total_count': total_count,
                 'active_count': active_count,
-                'total_revenue_usd': round(total_revenue, 2),
+                'total_revenue_usd': round(total_revenue_usd, 2),
                 'recent_revenue_30d': round(recent_revenue_30d, 2),
                 'average_value_usd': round(avg_value, 2),
                 'plan_breakdown': plan_breakdown,

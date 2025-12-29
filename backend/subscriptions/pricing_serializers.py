@@ -74,7 +74,7 @@ class CouponSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'code', 'description', 'discount_type', 'discount_value',
             'minimum_amount', 'usage_limit', 'usage_count',
-            'usage_percentage', 'applicable_plans', 'valid_from', 'valid_until',
+            'usage_percentage', 'plans', 'valid_from', 'valid_until',
             'is_active', 'is_valid', 'days_remaining', 'created_at', 'updated_at'
         ]
 

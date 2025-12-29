@@ -189,10 +189,10 @@ class CouponViewSet(viewsets.ModelViewSet):
                 }, status=status.HTTP_400_BAD_REQUEST)
             
             # Check applicable plans
-            if coupon.applicable_plans:
+            if coupon.plans.exists():
                 try:
                     plan = PricingPlan.objects.get(id=plan_id)
-                    if plan.id not in coupon.applicable_plans:
+                    if not coupon.plans.filter(id=plan.id).exists():
                         return Response({
                             'valid': False,
                             'error': 'Coupon not applicable to this plan'

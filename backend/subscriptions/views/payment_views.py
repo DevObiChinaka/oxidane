@@ -637,7 +637,7 @@ def charge_with_saved_card(request):
                 )
                 
                 # Check if coupon applies to this plan
-                if coupon.applicable_plans.exists() and plan not in coupon.applicable_plans.all():
+                if coupon.plans.exists() and not coupon.plans.filter(id=plan.id).exists():
                     return Response({
                         'success': False,
                         'error': 'This coupon is not applicable to the selected plan'

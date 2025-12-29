@@ -265,10 +265,13 @@ def revenue_analytics(request):
             })
         
         # Fill in missing months with zero revenue
+        # Use proper month arithmetic instead of timedelta to avoid duplicates
+        from dateutil.relativedelta import relativedelta
         all_months = []
-        current_date = timezone.now()
+        current_date = timezone.now().replace(day=1)  # First day of current month
+        
         for i in range(12):
-            month_date = current_date - timedelta(days=30 * i)
+            month_date = current_date - relativedelta(months=i)
             month_key = month_date.strftime('%Y-%m')
             
             existing = next((r for r in revenue_data if r['month'] == month_key), None)

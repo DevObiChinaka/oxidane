@@ -742,10 +742,21 @@ class CouponSerializer(serializers.ModelSerializer):
         return data
     
     def update(self, instance, validated_data):
-        """Override update to prevent code modification"""
+        """Override update to prevent code modification and handle ManyToMany plans"""
         # Remove code from validated_data if present (code is immutable)
         validated_data.pop('code', None)
-        return super().update(instance, validated_data)
+        
+        # Extract plans for ManyToMany relationship handling
+        plans = validated_data.pop('plans', None)
+        
+        # Update scalar fields
+        instance = super().update(instance, validated_data)
+        
+        # Update ManyToMany plans field if provided
+        if plans is not None:
+            instance.plans.set(plans)
+        
+        return instance
 
 class CouponValidationSerializer(serializers.Serializer):
     """Serializer for coupon validation requests"""
