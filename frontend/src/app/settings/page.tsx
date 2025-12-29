@@ -7,6 +7,57 @@ import MobileMenuButton from '../components/MobileMenuButton';
 import { useSmartNavbar } from '../hooks/useSmartNavbar';
 import { apiGet, apiPost } from '@/lib/api';
 
+// Helper to detect browser and OS from user agent
+const getBrowserInfo = () => {
+  if (typeof window === 'undefined') return { browser: 'Unknown', os: 'Unknown' };
+  
+  const ua = window.navigator.userAgent;
+  let browser = 'Unknown';
+  let os = 'Unknown';
+  
+  // Detect Browser
+  if (ua.includes('Firefox/') && !ua.includes('Seamonkey/')) {
+    browser = 'Firefox';
+  } else if (ua.includes('Seamonkey/')) {
+    browser = 'Seamonkey';
+  } else if (ua.includes('Chrome/') && !ua.includes('Chromium/') && !ua.includes('Edg/')) {
+    browser = 'Chrome';
+  } else if (ua.includes('Chromium/')) {
+    browser = 'Chromium';
+  } else if (ua.includes('Safari/') && !ua.includes('Chrome/') && !ua.includes('Chromium/')) {
+    browser = 'Safari';
+  } else if (ua.includes('Edg/')) {
+    browser = 'Edge';
+  } else if (ua.includes('Opera/') || ua.includes('OPR/')) {
+    browser = 'Opera';
+  } else if (ua.includes('Trident/') || ua.includes('MSIE ')) {
+    browser = 'Internet Explorer';
+  }
+  
+  // Detect OS
+  if (ua.includes('Windows NT 10.0')) {
+    os = 'Windows 10/11';
+  } else if (ua.includes('Windows NT 6.3')) {
+    os = 'Windows 8.1';
+  } else if (ua.includes('Windows NT 6.2')) {
+    os = 'Windows 8';
+  } else if (ua.includes('Windows NT 6.1')) {
+    os = 'Windows 7';
+  } else if (ua.includes('Windows NT')) {
+    os = 'Windows';
+  } else if (ua.includes('Mac OS X')) {
+    os = 'macOS';
+  } else if (ua.includes('iPhone') || ua.includes('iPad')) {
+    os = 'iOS';
+  } else if (ua.includes('Android')) {
+    os = 'Android';
+  } else if (ua.includes('Linux')) {
+    os = 'Linux';
+  }
+  
+  return { browser, os };
+};
+
 interface UserData {
   id: string;
   email: string;
@@ -23,6 +74,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const showNavbar = useSmartNavbar();
+  const [browserInfo, setBrowserInfo] = useState({ browser: 'Unknown', os: 'Unknown' });
 
   // Password change state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -46,6 +98,8 @@ export default function SettingsPage() {
 
   useEffect(() => {
     fetchUserProfile();
+    // Detect browser info on client side
+    setBrowserInfo(getBrowserInfo());
   }, []);
 
   const fetchUserProfile = async () => {
@@ -389,7 +443,7 @@ export default function SettingsPage() {
                     </div>
                     <div>
                       <h4 className="text-sm font-medium text-gray-900">Current Device</h4>
-                      <p className="text-xs text-gray-600">Windows • Chrome</p>
+                      <p className="text-xs text-gray-600">{browserInfo.os} • {browserInfo.browser}</p>
                       <p className="text-xs text-gray-500 mt-1">Active now</p>
                     </div>
                   </div>
