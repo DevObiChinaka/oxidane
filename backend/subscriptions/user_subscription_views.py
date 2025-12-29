@@ -113,6 +113,7 @@ class UserSubscriptionViewSet(viewsets.ViewSet):
                 'start_date': sub.start_date.date().isoformat() if sub.start_date else sub.created_at.date().isoformat(),
                 'end_date': sub.end_date.date().isoformat() if sub.end_date else None,
                 'auto_renew': sub.auto_renew,
+                'last_renewed_at': sub.last_renewed_at.date().isoformat() if sub.last_renewed_at else None,
                 'features': features,
                 'telegram_username': billing_profile.telegram_username,
                 'days_remaining': days_remaining,
@@ -158,6 +159,7 @@ class UserSubscriptionViewSet(viewsets.ViewSet):
                 'start_date': sub.start_date.date().isoformat() if sub.start_date else sub.created_at.date().isoformat(),
                 'end_date': None,  # Lifetime access
                 'auto_renew': False,  # One-time payment
+                'last_renewed_at': None,  # Lifetime plans don't renew
                 'features': features,
                 'days_remaining': days_remaining,
                 'is_lifetime': True,
