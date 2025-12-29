@@ -7,7 +7,7 @@ export default function WhatsAppSupport() {
   const [isHovered, setIsHovered] = useState(false);
   
   // WhatsApp number (remove + and spaces for the link)
-  const whatsappNumber = '2349054565499';
+  const whatsappNumber = '2349015712869';
   const whatsappMessage = encodeURIComponent('Hello! I need help with OxiWorld Forex Academy.');
   const whatsappLink = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
 
