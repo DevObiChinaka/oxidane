@@ -15,11 +15,43 @@ const getBrowserInfo = () => {
   let browser = 'Unknown';
   let os = 'Unknown';
   
+  // Detect OS first (important for Safari detection)
+  if (ua.includes('iPhone')) {
+    os = 'iOS (iPhone)';
+  } else if (ua.includes('iPad')) {
+    os = 'iOS (iPad)';
+  } else if (ua.includes('Android')) {
+    os = 'Android';
+  } else if (ua.includes('Windows NT 10.0')) {
+    os = 'Windows 10/11';
+  } else if (ua.includes('Windows NT 6.3')) {
+    os = 'Windows 8.1';
+  } else if (ua.includes('Windows NT 6.2')) {
+    os = 'Windows 8';
+  } else if (ua.includes('Windows NT 6.1')) {
+    os = 'Windows 7';
+  } else if (ua.includes('Windows NT')) {
+    os = 'Windows';
+  } else if (ua.includes('Mac OS X')) {
+    os = 'macOS';
+  } else if (ua.includes('Linux')) {
+    os = 'Linux';
+  }
+  
   // Detect Browser
   if (ua.includes('Firefox/') && !ua.includes('Seamonkey/')) {
     browser = 'Firefox';
   } else if (ua.includes('Seamonkey/')) {
     browser = 'Seamonkey';
+  } else if (ua.includes('CriOS/')) {
+    // Chrome on iOS uses CriOS
+    browser = 'Chrome';
+  } else if (ua.includes('FxiOS/')) {
+    // Firefox on iOS uses FxiOS
+    browser = 'Firefox';
+  } else if (ua.includes('EdgiOS/')) {
+    // Edge on iOS uses EdgiOS
+    browser = 'Edge';
   } else if (ua.includes('Chrome/') && !ua.includes('Chromium/') && !ua.includes('Edg/')) {
     browser = 'Chrome';
   } else if (ua.includes('Chromium/')) {
@@ -32,27 +64,6 @@ const getBrowserInfo = () => {
     browser = 'Opera';
   } else if (ua.includes('Trident/') || ua.includes('MSIE ')) {
     browser = 'Internet Explorer';
-  }
-  
-  // Detect OS
-  if (ua.includes('Windows NT 10.0')) {
-    os = 'Windows 10/11';
-  } else if (ua.includes('Windows NT 6.3')) {
-    os = 'Windows 8.1';
-  } else if (ua.includes('Windows NT 6.2')) {
-    os = 'Windows 8';
-  } else if (ua.includes('Windows NT 6.1')) {
-    os = 'Windows 7';
-  } else if (ua.includes('Windows NT')) {
-    os = 'Windows';
-  } else if (ua.includes('Mac OS X')) {
-    os = 'macOS';
-  } else if (ua.includes('iPhone') || ua.includes('iPad')) {
-    os = 'iOS';
-  } else if (ua.includes('Android')) {
-    os = 'Android';
-  } else if (ua.includes('Linux')) {
-    os = 'Linux';
   }
   
   return { browser, os };
