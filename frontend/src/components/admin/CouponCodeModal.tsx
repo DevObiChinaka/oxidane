@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface CouponCode {
   id?: string;
@@ -35,6 +35,17 @@ export default function CouponCodeModal({
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed_amount'>(
     editingCoupon?.discount_type || 'percentage'
   );
+
+  // Sync state when editingCoupon changes
+  useEffect(() => {
+    if (editingCoupon) {
+      setSelectedPlans(editingCoupon.plans || []);
+      setDiscountType(editingCoupon.discount_type || 'percentage');
+    } else {
+      setSelectedPlans([]);
+      setDiscountType('percentage');
+    }
+  }, [editingCoupon]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
