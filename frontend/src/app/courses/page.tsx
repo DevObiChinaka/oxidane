@@ -87,17 +87,22 @@ export default function CoursesPage() {
   };
 
   const getCourseThumbnail = (course: Course) => {
-    // Priority 1: YouTube auto-generated thumbnail from first lesson
+    // Priority 1: YouTube medium quality thumbnail (more reliable than maxresdefault)
+    if (course.first_lesson_thumbnail?.medium) {
+      return course.first_lesson_thumbnail.medium;
+    }
+    
+    // Priority 2: YouTube high quality thumbnail
     if (course.first_lesson_thumbnail?.high) {
       return course.first_lesson_thumbnail.high;
     }
     
-    // Priority 2: Manually uploaded thumbnail
+    // Priority 3: Manually uploaded thumbnail
     if (course.thumbnail) {
       return course.thumbnail;
     }
     
-    // Priority 3: No thumbnail - will show placeholder
+    // Priority 4: No thumbnail - will show placeholder
     return null;
   };
 
@@ -251,24 +256,38 @@ export default function CoursesPage() {
                   {/* Thumbnail - 16:9 Aspect Ratio */}
                   <div className="relative w-full aspect-video bg-gradient-to-br from-gray-100 to-gray-200 flex-shrink-0">
                     {getCourseThumbnail(course) ? (
-                      <img 
-                        src={getCourseThumbnail(course)!} 
-                        alt={course.title} 
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        onError={(e) => {
-                          if (course.first_lesson_thumbnail?.medium && e.currentTarget.src !== course.first_lesson_thumbnail.medium) {
-                            e.currentTarget.src = course.first_lesson_thumbnail.medium;
-                          } else if (course.thumbnail && e.currentTarget.src !== course.thumbnail) {
-                            e.currentTarget.src = course.thumbnail;
-                          } else {
-                            e.currentTarget.style.display = 'none';
-                            const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
-                            if (placeholder) placeholder.style.display = 'flex';
-                          }
-                        }}
-                      />
-                    ) : null}
-                    {!getCourseThumbnail(course) && (
+                      <>
+                        <img 
+                          src={getCourseThumbnail(course)!} 
+                          alt={course.title} 
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          onError={(e) => {
+                            // Try fallbacks in order
+                            const currentSrc = e.currentTarget.src;
+                            
+                            // If high quality failed, try medium
+                            if (course.first_lesson_thumbnail?.high && currentSrc.includes(course.first_lesson_thumbnail.high) && course.first_lesson_thumbnail.medium) {
+                              e.currentTarget.src = course.first_lesson_thumbnail.medium;
+                            }
+                            // If medium failed or doesn't exist, try uploaded thumbnail
+                            else if (course.thumbnail && currentSrc !== course.thumbnail) {
+                              e.currentTarget.src = course.thumbnail;
+                            }
+                            // All failed - show placeholder
+                            else {
+                              e.currentTarget.style.display = 'none';
+                              const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
+                              if (placeholder) placeholder.style.display = 'flex';
+                            }
+                          }}
+                        />
+                        <div className="w-full h-full hidden items-center justify-center">
+                          <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                          </svg>
+                        </div>
+                      </>
+                    ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
