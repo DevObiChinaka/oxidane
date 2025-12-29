@@ -100,6 +100,44 @@ const removeAuthToken = (): void => {
   }
 };
 
+// Known user-facing error codes that should be shown as-is
+const KNOWN_ERROR_CODES = [
+  'ACCOUNT_NOT_FOUND',
+  'INVALID_PASSWORD',
+  'EMAIL_NOT_VERIFIED',
+  'ACCOUNT_INACTIVE',
+  'EMAIL_ALREADY_EXISTS',
+  'INVALID_OTP',
+  'OTP_EXPIRED',
+  'SESSION_EXPIRED',
+  'INVALID_EMAIL',
+  'WEAK_PASSWORD',
+];
+
+// Helper to determine if error message should be shown to user
+const sanitizeError = (errorData: any, defaultMessage: string): string => {
+  // If there's a known error code, use the error message
+  if (errorData.code && KNOWN_ERROR_CODES.includes(errorData.code)) {
+    return errorData.error || errorData.message || defaultMessage;
+  }
+  
+  // For validation errors, show them
+  if (errorData.error && typeof errorData.error === 'string') {
+    const lowerError = errorData.error.toLowerCase();
+    if (lowerError.includes('email') || 
+        lowerError.includes('password') || 
+        lowerError.includes('otp') ||
+        lowerError.includes('required') ||
+        lowerError.includes('invalid') ||
+        lowerError.includes('verification')) {
+      return errorData.error;
+    }
+  }
+  
+  // For all other errors (technical/server errors), show generic message
+  return defaultMessage;
+};
+
 const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
   const token = getAuthToken();
   
@@ -184,25 +222,10 @@ export function UserAuthProvider({ children }: UserAuthProviderProps) {
 
       if (!response.ok) {
 
-        // Handle specific error codes
-        if (data.code === 'ACCOUNT_NOT_FOUND') {
-          const errorMsg = 'No account found with this email address. Please sign up first.';
+        // Sanitize error message - show user-friendly errors or generic message
+        const errorMsg = sanitizeError(data, 'Something went wrong. Please try again later.');
 
-          throw new Error(errorMsg);
-        } else if (data.code === 'INVALID_PASSWORD') {
-          const errorMsg = 'Incorrect password. Please try again.';
-
-          throw new Error(errorMsg);
-        } else if (data.code === 'EMAIL_NOT_VERIFIED') {
-          const errorMsg = 'Please verify your email before signing in. Check your inbox for the verification code.';
-
-          throw new Error(errorMsg);
-        } else if (data.code === 'ACCOUNT_INACTIVE') {
-          const errorMsg = 'Your account is inactive. Please contact support.';
-
-          throw new Error(errorMsg);
-        }
-        throw new Error(data.error || 'Login failed');
+        throw new Error(errorMsg);
       }
 
       // OTP should be required
@@ -216,10 +239,10 @@ export function UserAuthProvider({ children }: UserAuthProviderProps) {
         };
       }
 
-      throw new Error('Invalid response from server');
+      throw new Error('Something went wrong. Please try again later.');
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Login failed';
-            setError(errorMessage);
+      const errorMessage = err instanceof Error ? err.message : 'Something went wrong. Please try again later.';
+      setError(errorMessage);
       setLoading(false);
       throw err;
     }
@@ -243,7 +266,8 @@ export function UserAuthProvider({ children }: UserAuthProviderProps) {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'OTP verification failed');
+        const errorMsg = sanitizeError(result, 'Something went wrong. Please try again later.');
+        throw new Error(errorMsg);
       }
 
       // Store the JWT token
@@ -253,10 +277,10 @@ export function UserAuthProvider({ children }: UserAuthProviderProps) {
         setLoading(false);
         router.push('/dashboard');
       } else {
-        throw new Error('No token received');
+        throw new Error('Something went wrong. Please try again later.');
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'OTP verification failed';
+      const errorMessage = err instanceof Error ? err.message : 'Something went wrong. Please try again later.';
       setError(errorMessage);
       setLoading(false);
       throw err;
@@ -269,15 +293,21 @@ export function UserAuthProvider({ children }: UserAuthProviderProps) {
     setError(null);
 
     try {
-      await fetch(`${API_URL}/api/auth/resend-login-otp/`, {
+      const response = await fetch(`${API_URL}/api/auth/resend-login-otp/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ session_token: sessionToken }),
       });
+      
+      if (!response.ok) {
+        const data = await response.json();
+        const errorMsg = sanitizeError(data, 'Something went wrong. Please try again later.');
+        throw new Error(errorMsg);
+      }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to resend OTP';
+      const errorMessage = err instanceof Error ? err.message : 'Something went wrong. Please try again later.';
       setError(errorMessage);
       throw err;
     }
@@ -316,7 +346,7 @@ export function UserAuthProvider({ children }: UserAuthProviderProps) {
 
       setUser(updatedUser);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to update profile';
+      const errorMessage = err instanceof Error ? err.message : 'Something went wrong. Please try again later.';
       setError(errorMessage);
       throw err;
     }
@@ -339,7 +369,9 @@ export function UserAuthProvider({ children }: UserAuthProviderProps) {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to upload avatar');
+        const data = await response.json().catch(() => ({}));
+        const errorMsg = sanitizeError(data, 'Something went wrong. Please try again later.');
+        throw new Error(errorMsg);
       }
 
       const data = await response.json();
@@ -351,7 +383,7 @@ export function UserAuthProvider({ children }: UserAuthProviderProps) {
 
       return data.avatar;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to upload avatar';
+      const errorMessage = err instanceof Error ? err.message : 'Something went wrong. Please try again later.';
       setError(errorMessage);
       throw err;
     }
