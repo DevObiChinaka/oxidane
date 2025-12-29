@@ -176,9 +176,13 @@ export default function CouponsPage() {
 
       const payload = {
         ...formData,
+        plans: formData.plan_ids, // Backend expects 'plans', not 'plan_ids'
         max_uses: formData.max_uses ? parseInt(formData.max_uses) : null,
         valid_until: formData.valid_until || null
       };
+      
+      // Remove plan_ids from payload since we renamed it to plans
+      delete (payload as any).plan_ids;
 
       const response = await fetch(url, {
         method,
