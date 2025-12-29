@@ -555,10 +555,13 @@ export function useCouponActions() {
     valid_until: string;
     is_active?: boolean;
   }) => {
+    console.log('🚀 API Hook - createCoupon received:', couponData);
     try {
       setLoading(true);
       setError(null);
+      console.log('📡 API Hook - Sending to /admin/pricing/coupons/:', couponData);
       const coupon = await apiClient.post('/admin/pricing/coupons/', couponData);
+      console.log('✅ API Hook - Response:', coupon);
       return coupon;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create coupon';
@@ -570,10 +573,13 @@ export function useCouponActions() {
   };
 
   const updateCoupon = async (couponId: string, updates: any) => {
+    console.log('🚀 API Hook - updateCoupon received:', updates);
     try {
       setLoading(true);
       setError(null);
+      console.log(`📡 API Hook - Sending to /admin/pricing/coupons/${couponId}/:`, updates);
       const coupon = await apiClient.put(`/admin/pricing/coupons/${couponId}/`, updates);
+      console.log('✅ API Hook - Response:', coupon);
       return coupon;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update coupon';

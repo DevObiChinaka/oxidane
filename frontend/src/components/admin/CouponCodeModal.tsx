@@ -51,6 +51,8 @@ export default function CouponCodeModal({
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     
+    console.log('🔍 Modal - selectedPlans state:', selectedPlans);
+    
     const couponData: Omit<CouponCode, 'id'> = {
       code: formData.get('code') as string,
       description: formData.get('description') as string,
@@ -63,6 +65,8 @@ export default function CouponCodeModal({
       valid_until: formData.get('valid_until') as string,
       is_active: formData.get('is_active') === 'on'
     };
+
+    console.log('📤 Modal - Submitting couponData:', couponData);
 
     try {
       await onSubmit(couponData);
@@ -84,11 +88,14 @@ export default function CouponCodeModal({
   };
 
   const handlePlanSelection = (planId: string) => {
-    setSelectedPlans(prev => 
-      prev.includes(planId) 
+    console.log('🎯 Plan selected/deselected:', planId);
+    setSelectedPlans(prev => {
+      const newPlans = prev.includes(planId) 
         ? prev.filter(id => id !== planId)
-        : [...prev, planId]
-    );
+        : [...prev, planId];
+      console.log('📋 Updated selectedPlans:', newPlans);
+      return newPlans;
+    });
   };
 
   const formatDate = (dateString: string) => {

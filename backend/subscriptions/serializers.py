@@ -614,6 +614,14 @@ class CouponSerializer(serializers.ModelSerializer):
     Comprehensive serializer for coupon management (Phase 0.5 - Task 0.5.23).
     Includes validation, computed fields, and plan relationship management.
     """
+    # Explicitly define plans field to handle ManyToMany relationship
+    plans = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=SubscriptionPlan.objects.all(),
+        required=False,
+        allow_empty=True
+    )
+    
     # Computed fields
     discount_display = serializers.ReadOnlyField(source='get_discount_display')
     is_valid_now = serializers.SerializerMethodField()
@@ -741,20 +749,54 @@ class CouponSerializer(serializers.ModelSerializer):
         
         return data
     
+    def create(self, validated_data):
+        """Override create to handle ManyToMany plans field"""
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        # Log incoming data for debugging
+        logger.info(f"Creating coupon with validated_data: {validated_data}")
+        
+        # Extract plans for ManyToMany relationship handling
+        plans = validated_data.pop('plans', [])
+        logger.info(f"Extracted plans: {plans} (type: {type(plans)})")
+        
+        # Create the coupon instance with scalar fields
+        instance = super().create(validated_data)
+        logger.info(f"Created coupon instance: {instance.id}")
+        
+        # Set ManyToMany plans field
+        if plans:
+            logger.info(f"Setting {len(plans)} plans to coupon")
+            instance.plans.set(plans)
+        else:
+            logger.info("No plans to set (empty list)")
+        
+        return instance
+    
     def update(self, instance, validated_data):
         """Override update to prevent code modification and handle ManyToMany plans"""
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        logger.info(f"Updating coupon {instance.id} with validated_data: {validated_data}")
+        
         # Remove code from validated_data if present (code is immutable)
         validated_data.pop('code', None)
         
         # Extract plans for ManyToMany relationship handling
         plans = validated_data.pop('plans', None)
+        logger.info(f"Extracted plans: {plans} (type: {type(plans)})")
         
         # Update scalar fields
         instance = super().update(instance, validated_data)
         
         # Update ManyToMany plans field if provided
         if plans is not None:
+            logger.info(f"Setting {len(plans)} plans to coupon")
             instance.plans.set(plans)
+        else:
+            logger.info("Plans is None, not updating")
         
         return instance
 
