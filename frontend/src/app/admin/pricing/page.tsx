@@ -41,7 +41,7 @@ interface CouponCode {
   minimum_amount?: number;
   usage_limit?: number;
   usage_count: number;
-  applicable_plans: string[];
+  plans: string[];
   valid_from: string;
   valid_until: string;
   is_active: boolean;

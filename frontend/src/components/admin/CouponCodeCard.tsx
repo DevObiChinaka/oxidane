@@ -7,7 +7,7 @@ interface CouponCode {
   minimum_amount?: number;
   usage_limit?: number;
   usage_count: number;
-  applicable_plans: string[];
+  plans: string[];
   valid_from: string;
   valid_until: string;
   is_active: boolean;
@@ -173,8 +173,8 @@ export default function CouponCodeCard({
             {coupon.minimum_amount && (
               <div>Minimum order: ${coupon.minimum_amount}</div>
             )}
-            {coupon.applicable_plans.length > 0 && (
-              <div>Applies to: {coupon.applicable_plans.length} plan(s)</div>
+            {coupon.plans.length > 0 && (
+              <div>Applies to: {coupon.plans.length} plan(s)</div>
             )}
           </div>
         </div>

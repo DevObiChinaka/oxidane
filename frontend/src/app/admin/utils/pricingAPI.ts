@@ -139,7 +139,7 @@ export const pricingAPI = {
     minimum_amount?: number;
     currency: string;
     max_uses?: number;
-    applicable_plans: string[];
+    plans: string[];
     valid_from: string;
     valid_until: string;
     is_active?: boolean;

@@ -42,7 +42,7 @@ export interface CouponCode {
   currency: string;
   max_uses?: number;
   used_count: number;
-  applicable_plans: string[]; // Plan IDs or empty array for all plans
+  plans: string[]; // Plan IDs or empty array for all plans
   valid_from: string;
   valid_until: string;
   is_active: boolean;

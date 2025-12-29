@@ -8,7 +8,7 @@ interface CouponCode {
   discount_value: number;
   minimum_amount?: number;
   usage_limit?: number;
-  applicable_plans: string[];
+  plans: string[];
   valid_from: string;
   valid_until: string;
   is_active: boolean;
@@ -31,7 +31,7 @@ export default function CouponCodeModal({
   isLoading = false,
   availablePlans = []
 }: CouponCodeModalProps) {
-  const [selectedPlans, setSelectedPlans] = useState<string[]>(editingCoupon?.applicable_plans || []);
+  const [selectedPlans, setSelectedPlans] = useState<string[]>(editingCoupon?.plans || []);
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed_amount'>(
     editingCoupon?.discount_type || 'percentage'
   );
@@ -47,7 +47,7 @@ export default function CouponCodeModal({
       discount_value: parseFloat(formData.get('discount_value') as string),
       minimum_amount: formData.get('minimum_amount') ? parseFloat(formData.get('minimum_amount') as string) : undefined,
       usage_limit: formData.get('usage_limit') ? parseInt(formData.get('usage_limit') as string) : undefined,
-      applicable_plans: selectedPlans,
+      plans: selectedPlans,
       valid_from: formData.get('valid_from') as string,
       valid_until: formData.get('valid_until') as string,
       is_active: formData.get('is_active') === 'on'
